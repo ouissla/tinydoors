@@ -24,7 +24,7 @@ body.w3d { overflow: hidden; height: 100dvh; }
   transition: opacity 0.6s;
 }
 body.w3d:not(.entered) .hud { opacity: 0; }
-body.card-open .hud, body.closeup .hud { opacity: 0; }
+body.card-open .hud, body.closeup .hud, body.zoomed .hud { opacity: 0; }
 body.previewing .hud { top: 46px; }
 
 .tool-text {
@@ -49,7 +49,9 @@ body.previewing .hud { top: 46px; }
   color: #fff;
   font-weight: 800;
   font-size: 0.9rem;
-  white-space: nowrap;
+  text-align: center;
+  width: max-content;
+  max-width: calc(100vw - 32px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s, translate 0.5s;

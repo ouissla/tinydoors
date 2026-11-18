@@ -46,7 +46,11 @@ A full Three.js version of both worlds, alongside the 2D one (the **3D** / **2D*
 - **Summer:** 24 striped beach boxes on sandy terraces above an animated ocean with foam, a palm in fairy lights wearing a Santa hat, a surfing Santa and drifting clouds
 - The tree (or palm) has **24 lights, one per opened door**
 - Tap a door: the camera flies in, the door swings open on its hinge, light spills out, the surprise pops out, confetti, then the same surprise cards as 2D
-- Drag to look around, tilt the phone or move the mouse for parallax, arrow keys / Enter in family (TV) mode
+- **Explore freely:** drag to orbit, scroll / pinch to zoom right up to the houses, right-drag / two-finger drag to pan; 🏠 (or `H`) flies back to the whole village. Limits keep you from getting lost or going under the ground.
+- **Characters with routines:** in winter, elves walk their terrace and stop at doors to knock, wave or deliver presents; penguins waddle and belly-slide in the square; an elf pulls a sled of gifts; reindeer graze by the tree. In summer, elves in board shorts carry surfboards and beach balls; little penguins, crabs scuttling sideways, a hopping kangaroo, circling seagulls. **Tap any of them** for a reaction.
+- **Detail:** fairy lights along every roof (twinkling), chimney smoke, wreaths, icicles, framed windows, lamp posts / tiki torches, presents under the tree, candy canes, beach umbrellas, towels, a sandcastle, surfboards, an esky; stone and timber terrace walls, rolling snow hills
+- Arrow keys / Enter in family (TV) mode
+- Performance: house parts are merged per material and roof lights are instanced (~200 draw calls); phones get fewer characters
 - Layout adapts to the screen: 3 rows of 8 on landscape/TV, 4×6 on tablets, 6 rows of 4 on phones
 - Everything is built in code (no 3D model files); Three.js 0.160 loads from jsDelivr, so `3d.html` needs a web server (not `file://`) and an internet connection
 
@@ -80,7 +84,9 @@ Recipient links (`index.html?c=<id>`) open on real December dates in the chosen 
 - `js/huts.js` — door/hut markup and colours shared by viewer and editor
 - `js3d/main.js` — 3D renderer, camera framing, tap-to-open sequence, HUD, keyboard
 - `js3d/worlds.js` — the snowy and summer 3D worlds (terraces, tree/palm lights, sky, ocean, weather)
-- `js3d/houses.js` — 3D cottages / beach boxes with hinged numbered doors
+- `js3d/houses.js` — 3D cottages / beach boxes with hinged numbered doors (static parts merged)
+- `js3d/characters.js` — elves, penguins, reindeer, crabs, kangaroo, seagulls and their behaviours
+- `js3d/props.js` — roof fairy lights, chimney smoke, lamps / torches, presents, beach props
 - `js/cards.js` — surprise card overlay used by the 3D view
 - `js/fx.js` — snow, glints and confetti (canvas)
 - `js/audio.js` — synthesised sounds

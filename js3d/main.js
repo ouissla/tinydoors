@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildWorld, disposeTree, makeStar } from './worlds.js';
 
 const A = window.Advent;
@@ -195,21 +196,46 @@ function setOpenInstant(h) {
   h.icon.scale.setScalar(0.8);
 }
 
-// ---------------- Camera framing ----------------
+// ---------------- Camera: free orbit, pan and zoom ----------------
 const camDir = new THREE.Vector3(0, 0.46, 1).normalize();
-const view = { dist: 40, offY: 0, yaw: 0, yawTarget: 0, tiltX: 0, tiltY: 0, intro: 0 };
+const UP = new THREE.Vector3(0, 1, 0);
+const home = { pos: new THREE.Vector3(), target: new THREE.Vector3(), dist: 40 };
 let W = 1, H = 1;
 
-function headerLimit() {
-  const top = $('top').getBoundingClientRect().bottom + (preview ? 0 : 0);
-  return 1 - (2 * (top + 8)) / H;
-}
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = false; // pan across the ground, not up into the sky
+controls.rotateSpeed = 0.55;
+controls.zoomSpeed = 1.0;
+controls.panSpeed = 0.9;
+controls.zoomToCursor = true;
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+controls.minPolarAngle = 0.22;
+controls.maxPolarAngle = 1.36;
+controls.minAzimuthAngle = -1.15;
+controls.maxAzimuthAngle = 1.15;
+controls.minDistance = 2.5;
+controls.enabled = false;
 
+// Keep the look-at point over the village so nobody gets lost.
+controls.addEventListener('change', () => {
+  if (!world || cam.mode !== 'free') return;
+  const L = world.layout, t = controls.target;
+  const bx = L.backR * Math.sin(L.spread) + 8;
+  const c = new THREE.Vector3(A.clamp(t.x, -bx, bx), A.clamp(t.y, -1, L.topY + 10), A.clamp(t.z, -(L.backR + 14), -(L.frontR - 14)));
+  if (!c.equals(t)) {
+    const d = c.clone().sub(t);
+    t.add(d);
+    camera.position.add(d);
+  }
+});
+
+// Find the distance (and a vertical nudge) that fits the whole village between the title and toolbar.
 function fitCamera() {
   camera.aspect = W / H;
-  camera.clearViewOffset();
   camera.updateProjectionMatrix();
-  const topLim = headerLimit();
+  const topLim = 1 - (2 * ($('top').getBoundingClientRect().bottom + 8)) / H;
   const botLim = -1 + (2 * 74) / H;
   const v = new THREE.Vector3();
   let best = 200, bestOff = 0;
@@ -223,93 +249,71 @@ function fitCamera() {
       if (v.z > 1) { bad = true; break; }
       x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
     }
-    const margin = 0.05;
-    if (bad || x0 < -1 + margin || x1 > 1 - margin || y1 - y0 > topLim - botLim) break;
+    if (bad || x0 < -0.95 || x1 > 0.95 || y1 - y0 > topLim - botLim) break;
     best = d;
     bestOff = (topLim + botLim) / 2 - (y0 + y1) / 2;
   }
-  view.dist = best;
-  view.offY = bestOff;
+  camera.position.copy(world.focus).addScaledVector(camDir, best);
+  camera.lookAt(world.focus);
+  camera.updateMatrixWorld();
+  const camUp = UP.clone().applyQuaternion(camera.quaternion);
+  const halfH = best * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  home.dist = best;
+  home.target.copy(world.focus).addScaledVector(camUp, -bestOff * halfH);
+  home.pos.copy(home.target).addScaledVector(camDir, best);
+  controls.maxDistance = best * 1.45;
 }
 
-function applyViewOffset() {
-  // Shift the picture vertically so the village sits between the header and the toolbar.
-  camera.setViewOffset(W, H, 0, (view.offY * H) / 2, W, H);
-}
-
+const cam = { mode: 'intro', saved: null, spin: 0 };
 const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
-function overviewPose(outPos, outLook) {
-  const yaw = view.yaw + Math.sin(clock.elapsedTime * 0.12) * 0.035 + view.tiltX * 0.1;
-  const dir = camDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-  dir.y += view.tiltY * 0.06;
-  const d = view.dist * (1 + view.intro * 1.6);
-  outPos.copy(world.focus).addScaledVector(dir.normalize(), d);
-  outPos.y += view.intro * 30;
-  outLook.copy(world.focus);
-}
-
-// Camera modes: overview (live) or a tween between poses (to/from a house)
-const cam = { mode: 'overview', from: null, to: null, t0: 0, dur: 1, pos: new THREE.Vector3(), look: new THREE.Vector3(), house: null };
 
 function housePose(h, outPos, outLook) {
   const door = h.group.localToWorld(h.doorLocal.clone());
   const ry = h.group.rotation.y;
   const front = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry));
-  // High enough to clear the roofs of the row below.
   const portrait = W / H < 0.8;
   // Stay in the gap before the next row down, and look down at the door.
   outPos.copy(door).addScaledVector(front, portrait ? 2.2 : 3.3).add(new THREE.Vector3(0, portrait ? 3.6 : 2.5, 0));
   outLook.copy(door).add(new THREE.Vector3(0, 0.05, 0));
 }
 
-function flyTo(h, dur) {
-  cam.from = { pos: cam.pos.clone(), look: cam.look.clone() };
-  cam.house = h;
-  cam.mode = 'toHouse';
-  document.body.classList.add('closeup');
-  cam.t0 = clock.elapsedTime;
-  cam.dur = A.reducedMotion ? 0.01 : dur / 1000;
-  return A.wait(A.reducedMotion ? 0 : dur);
-}
-function flyBack(dur = 950) {
-  cam.from = { pos: cam.pos.clone(), look: cam.look.clone() };
-  cam.mode = 'toOverview';
-  cam.t0 = clock.elapsedTime;
-  cam.dur = A.reducedMotion ? 0.01 : dur / 1000;
-  cam.house = null;
-  document.body.classList.remove('closeup');
-}
 const easeIO = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const easeBack = (k) => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
 
-function updateCamera() {
-  const ov = new THREE.Vector3(), ol = new THREE.Vector3();
-  overviewPose(ov, ol);
-  if (cam.mode === 'overview') {
-    cam.pos.lerp(ov, 0.12);
-    cam.look.lerp(ol, 0.12);
-  } else {
-    const k = Math.min(1, (clock.elapsedTime - cam.t0) / cam.dur);
-    const e = easeIO(k);
-    if (cam.mode === 'toHouse' || cam.mode === 'atHouse') {
-      housePose(cam.house, tmpA, tmpB);
-      if (cam.mode === 'atHouse') { cam.pos.copy(tmpA); cam.look.copy(tmpB); }
-      else {
-        cam.pos.lerpVectors(cam.from.pos, tmpA, e);
-        cam.look.lerpVectors(cam.from.look, tmpB, e);
-        if (k >= 1) cam.mode = 'atHouse';
-      }
-    } else if (cam.mode === 'toOverview') {
-      cam.pos.lerpVectors(cam.from.pos, ov, e);
-      cam.look.lerpVectors(cam.from.look, ol, e);
-      if (k >= 1) cam.mode = 'overview';
-    }
-  }
-  camera.position.copy(cam.pos);
-  camera.lookAt(cam.look);
-  // Only frame-shift in overview, so close-ups stay centred
-  const shiftK = cam.mode === 'overview' ? 1 : cam.mode === 'toOverview' ? easeIO(Math.min(1, (clock.elapsedTime - cam.t0) / cam.dur)) : cam.mode === 'toHouse' ? 1 - easeIO(Math.min(1, (clock.elapsedTime - cam.t0) / cam.dur)) : 0;
-  camera.setViewOffset(W, H, 0, (view.offY * shiftK * H) / 2, W, H);
+function flyCam(toPos, toTarget, dur) {
+  controls.enabled = false;
+  cam.mode = 'fly';
+  const fp = camera.position.clone(), ft = controls.target.clone();
+  return tween(dur, (e) => {
+    camera.position.lerpVectors(fp, toPos, e);
+    controls.target.lerpVectors(ft, toTarget, e);
+    camera.lookAt(controls.target);
+  });
+}
+function enableFree() {
+  cam.mode = 'free';
+  controls.enabled = true;
+  controls.update();
+}
+async function flyTo(h, dur) {
+  if (cam.mode === 'free') cam.saved = { pos: camera.position.clone(), target: controls.target.clone() };
+  document.body.classList.add('closeup');
+  housePose(h, tmpA, tmpB);
+  await flyCam(tmpA.clone(), tmpB.clone(), dur);
+  cam.mode = 'house';
+}
+async function flyBack(dur = 950) {
+  document.body.classList.remove('closeup');
+  const s = cam.saved || home; // back to wherever you were looking from
+  cam.saved = null;
+  await flyCam(s.pos.clone(), s.target.clone(), dur);
+  enableFree();
+}
+function goHome() {
+  if (cam.mode !== 'free') return;
+  A.Sound.init();
+  A.Sound.whoosh(0.7, 300, 1800, 0.12);
+  flyCam(home.pos.clone(), home.target.clone(), 900).then(enableFree);
 }
 
 // ---------------- Tweens ----------------
@@ -338,7 +342,7 @@ function screenOf(h) {
 let busy = false;
 
 async function openDay(d) {
-  if (busy || A.Cards.isOpen() || !world) return;
+  if (busy || A.Cards.isOpen() || !world || cam.mode !== 'free') return;
   const h = world.houses[d - 1];
   A.Sound.init();
   if (!isUnlocked(d)) {
@@ -412,63 +416,56 @@ const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 let hovered = null;
 
-function houseAt(clientX, clientY) {
-  if (!world) return null;
+// What's under the pointer: a house, or one of the characters (whichever is nearer).
+function pick(clientX, clientY) {
+  if (!world) return {};
   ndc.set((clientX / W) * 2 - 1, -(clientY / H) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
-  const hit = raycaster.intersectObjects(world.houses.map((h) => h.group), true)[0];
-  if (!hit) return null;
-  let o = hit.object;
-  while (o && o.userData.day == null) o = o.parent;
-  return o ? world.houses[o.userData.day - 1] : null;
+  const hh = raycaster.intersectObjects(world.houses.map((h) => h.group), true)[0];
+  const ha = raycaster.intersectObjects(world.agents.map((a) => a.m.root), true)[0];
+  if (ha && (!hh || ha.distance < hh.distance)) {
+    let o = ha.object;
+    while (o && !o.userData.agent) o = o.parent;
+    if (o) return { agent: o.userData.agent };
+  }
+  if (hh) {
+    let o = hh.object;
+    while (o && o.userData.day == null) o = o.parent;
+    if (o) return { house: world.houses[o.userData.day - 1] };
+  }
+  return {};
 }
 
 let down = null;
+let pointers = 0;
 canvas.addEventListener('pointerdown', (e) => {
-  down = { x: e.clientX, y: e.clientY, yaw: view.yawTarget, moved: false, id: e.pointerId };
+  pointers++;
+  down = pointers > 1 ? null : { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, id: e.pointerId };
 });
 window.addEventListener('pointermove', (e) => {
-  if (down && e.pointerId === down.id) {
-    const dx = e.clientX - down.x;
-    if (Math.abs(dx) > 6 || Math.abs(e.clientY - down.y) > 6) down.moved = true;
-    if (down.moved && cam.mode === 'overview') view.yawTarget = A.clamp(down.yaw - dx * 0.0035, -0.45, 0.45);
-  }
-  if (e.pointerType === 'mouse') {
-    view.tiltX = (e.clientX / W - 0.5) * 2;
-    view.tiltY = (e.clientY / H - 0.5) * 2;
-    if (!down && cam.mode === 'overview') {
-      hovered = houseAt(e.clientX, e.clientY);
-      canvas.style.cursor = hovered ? 'pointer' : 'grab';
-    }
+  if (down && e.pointerId === down.id && (Math.abs(e.clientX - down.x) > 6 || Math.abs(e.clientY - down.y) > 6)) down.moved = true;
+  if (e.pointerType === 'mouse' && !pointers && cam.mode === 'free') {
+    const p = pick(e.clientX, e.clientY);
+    hovered = p.house || null;
+    canvas.style.cursor = p.house || p.agent ? 'pointer' : 'grab';
   }
 });
-window.addEventListener('pointerup', (e) => {
+const endPointer = (e) => {
+  pointers = Math.max(0, pointers - 1);
   if (!down || e.pointerId !== down.id) return;
-  const wasTap = !down.moved;
+  const tap = !down.moved && performance.now() - down.t < 600;
   down = null;
-  if (!wasTap || cam.mode !== 'overview' || !$('splash').classList.contains('gone')) return;
-  const h = houseAt(e.clientX, e.clientY);
-  if (h) {
-    state.focus = h.day;
+  if (!tap || cam.mode !== 'free' || !$('splash').classList.contains('gone')) return;
+  const p = pick(e.clientX, e.clientY);
+  if (p.agent) { p.agent.poke(); return; }
+  if (p.house) {
+    state.focus = p.house.day;
     focusRing.visible = false;
-    openDay(h.day);
+    openDay(p.house.day);
   }
-});
-
-function enableMotion() {
-  const listen = () => {
-    window.addEventListener('deviceorientation', (e) => {
-      if (e.gamma == null) return;
-      view.tiltX = A.clamp(e.gamma / 25, -1, 1);
-      view.tiltY = A.clamp((e.beta - 45) / 25, -1, 1);
-    });
-  };
-  try {
-    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission().then((p) => p === 'granted' && listen()).catch(() => {});
-    } else listen();
-  } catch (e) { /* bonus only */ }
-}
+};
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', (e) => { pointers = Math.max(0, pointers - 1); if (down && e.pointerId === down.id) down = null; });
 
 document.addEventListener('keydown', (e) => {
   if (!$('splash').classList.contains('gone')) {
@@ -489,6 +486,8 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'Enter') {
     e.preventDefault();
     openDay(state.focus);
+  } else if (e.key === 'h' || e.key === 'Home') {
+    goHome();
   }
 });
 
@@ -529,6 +528,7 @@ document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement) document.documentElement.classList.remove('family');
 });
 $('credit').addEventListener('click', () => { location.href = 'editor.html?new'; });
+$('btnHome').addEventListener('click', goHome);
 
 // ---------------- Resize ----------------
 function resize() {
@@ -538,8 +538,18 @@ function resize() {
   composer.setSize(W, H);
   bloom.resolution.set(W / 2, H / 2);
   const nc = colsFor(W / H);
-  if (nc !== cols) buildAll(nc);
+  const rebuilt = nc !== cols;
+  if (rebuilt) buildAll(nc);
+  const keep = cam.mode === 'free' && !rebuilt ? { pos: camera.position.clone(), target: controls.target.clone() } : null;
   fitCamera();
+  if (keep) {
+    camera.position.copy(keep.pos);
+    controls.target.copy(keep.target);
+  } else if (cam.mode === 'free') {
+    camera.position.copy(home.pos);
+    controls.target.copy(home.target);
+  }
+  camera.lookAt(controls.target);
 }
 window.addEventListener('resize', resize);
 
@@ -549,7 +559,6 @@ function frame() {
   const dt = Math.min(0.05, clock.getDelta());
   const t = clock.elapsedTime;
   runTweens();
-  view.yaw = A.lerp(view.yaw, view.yawTarget, 0.08);
   world.update(t, dt);
   if (todayStar.visible) {
     const h = world.houses[state.today - 1];
@@ -561,11 +570,21 @@ function frame() {
   }
   world.houses.forEach((h) => {
     if (h.group.userData.anim) return; // a tween owns the scale right now
-    const target = h === hovered && cam.mode === 'overview' ? 1.06 : 1;
+    const target = h === hovered && cam.mode === 'free' ? 1.06 : 1;
     const s = A.lerp(h.group.scale.x, target, 0.15);
     if (Math.abs(s - h.group.scale.x) > 0.0005) h.group.scale.setScalar(s);
   });
-  updateCamera();
+  if (cam.mode === 'intro') {
+    // slow drift behind the splash screen
+    cam.spin += dt * 0.05;
+    const off = camera.position.clone().sub(controls.target).applyAxisAngle(UP, dt * 0.05 * Math.cos(cam.spin));
+    camera.position.copy(controls.target).add(off);
+    camera.lookAt(controls.target);
+  } else if (cam.mode === 'free') {
+    controls.update();
+    // Fade the title away once you've zoomed in to explore
+    document.body.classList.toggle('zoomed', camera.position.distanceTo(controls.target) < home.dist * 0.6);
+  }
   composer.render(dt);
   requestAnimationFrame(frame);
 }
@@ -575,9 +594,20 @@ refreshHUD();
 await (document.fonts ? Promise.race([document.fonts.ready, A.wait(2500)]) : Promise.resolve());
 try { await document.fonts.load('900 100px Fraunces'); } catch (e) { /* fallback font is fine */ }
 resize();
-overviewPose(cam.pos, cam.look);
-view.intro = params.has('skip') ? 0 : 1;
-overviewPose(cam.pos, cam.look);
+if (params.has('skip')) {
+  camera.position.copy(home.pos);
+  controls.target.copy(home.target);
+  camera.lookAt(home.target);
+  enableFree();
+  $('splash').classList.add('gone');
+  document.body.classList.add('entered');
+} else {
+  const far = home.target.clone().addScaledVector(camDir.clone().applyAxisAngle(UP, -0.55), home.dist * 2.4);
+  far.y += 26;
+  camera.position.copy(far);
+  controls.target.copy(home.target);
+  camera.lookAt(home.target);
+}
 $('loading3d').classList.add('done');
 $('splashGo').disabled = false;
 requestAnimationFrame(frame);
@@ -585,7 +615,6 @@ requestAnimationFrame(frame);
 function intro() {
   A.Sound.enabled = state.sound;
   A.Sound.init();
-  enableMotion();
   A.Sound.whoosh(1.2, 200, 3000, 0.22);
   setTimeout(() => A.Sound.chime(), 900);
   $('splash').classList.add('gone');
@@ -598,12 +627,11 @@ function intro() {
         .then(() => { h.group.userData.anim = false; }), 500 + i * 45);
     });
   }
-  tween(2600, (e) => { view.intro = 1 - e; });
+  flyCam(home.pos.clone(), home.target.clone(), 2600).then(enableFree);
   setTimeout(() => $('hint3d').classList.add('show'), 2800);
-  setTimeout(() => $('hint3d').classList.remove('show'), 7500);
+  setTimeout(() => $('hint3d').classList.remove('show'), 9000);
 }
 $('splashGo').addEventListener('click', intro);
-if (params.has('skip')) {
-  $('splash').classList.add('gone');
-  document.body.classList.add('entered');
-}
+
+// Debug handle for testing in the browser console (no effect on the page).
+window.__littleDoors3d = { get world() { return world; }, camera, controls, renderer };

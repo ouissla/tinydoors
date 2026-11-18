@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeHouse, canvasTexture } from './houses.js';
+import { buildProps } from './props.js';
+import { populate } from './characters.js';
 
 const A = window.Advent;
 const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, flatShading: true, ...o });
@@ -106,7 +108,7 @@ function pineGeometry(snowy) {
   const trunk = new THREE.CylinderGeometry(0.15, 0.2, 0.8, 5);
   trunk.translate(0, 0.4, 0);
   add(trunk, '#5a3b2a');
-  [[1.3, 1.8, 0.7], [1.05, 1.6, 1.6], [0.75, 1.4, 2.4]].forEach(([r, h, y]) => {
+  [[1.35, 1.7, 0.6], [1.12, 1.55, 1.35], [0.88, 1.4, 2.05], [0.6, 1.2, 2.7]].forEach(([r, h, y]) => {
     const cone = new THREE.ConeGeometry(r, h, 7);
     cone.translate(0, y + h / 2, 0);
     add(cone, '#1f5245');
@@ -138,11 +140,70 @@ function instanced(geo, mat, items) {
     s.setScalar(it.s);
     m.compose(p, q, s);
     mesh.setMatrixAt(i, m);
+    if (it.tint) mesh.setColorAt(i, new THREE.Color(it.tint, it.tint * (0.95 + Math.sin(i) * 0.05), it.tint));
   });
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
 }
+
+// ---------- Surface textures ----------
+function noiseTex(base, dots, size = 256, repeat = 24) {
+  const t = canvasTexture(size, size, (g, w, h) => {
+    g.fillStyle = base;
+    g.fillRect(0, 0, w, h);
+    const r = A.rng(size + base.length);
+    for (let i = 0; i < 2600; i++) {
+      g.fillStyle = dots[(r() * dots.length) | 0];
+      g.globalAlpha = 0.25 + r() * 0.5;
+      g.fillRect(r() * w, r() * h, 1.6, 1.6);
+    }
+    g.globalAlpha = 1;
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1 / repeat, 1 / repeat);
+  t.userData.shared = true;
+  return t;
+}
+const snowTex = noiseTex('#eef3ff', ['#ffffff', '#dfe7fb', '#f7faff', '#d3ddf5'], 256, 14);
+const sandTex = noiseTex('#ffd796', ['#f1c47c', '#fff0c8', '#e3b06a', '#ffe2a8'], 256, 10);
+const stoneTex = (() => {
+  const t = canvasTexture(256, 256, (g, w, h) => {
+    g.fillStyle = '#6f7fa6';
+    g.fillRect(0, 0, w, h);
+    const r = A.rng(77);
+    for (let row = 0; row < 8; row++) {
+      const off = row % 2 ? 0 : 24;
+      for (let x = -48 + off; x < w; x += 48) {
+        const shade = 120 + ((r() * 40) | 0);
+        g.fillStyle = `rgb(${shade - 18},${shade},${shade + 34})`;
+        g.fillRect(x + 2, row * 32 + 2, 44, 28);
+      }
+    }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(0.4, 0.4);
+  t.userData.shared = true;
+  return t;
+})();
+const timberTex = (() => {
+  const t = canvasTexture(256, 256, (g, w, h) => {
+    g.fillStyle = '#c98d55';
+    g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 32) {
+      g.fillStyle = y % 64 ? '#bf8250' : '#d39a62';
+      g.fillRect(0, y, w, 30);
+      g.fillStyle = 'rgba(0,0,0,.18)';
+      g.fillRect(0, y + 30, w, 2);
+    }
+    g.fillStyle = 'rgba(60,30,10,.35)';
+    for (let x = 20; x < w; x += 80) g.fillRect(x, 0, 6, h);
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(0.4, 0.4);
+  t.userData.shared = true;
+  return t;
+})();
 
 // ---------- Palm ----------
 function makePalm(h, lean, rng, lights) {
@@ -382,6 +443,16 @@ function makeSleigh() {
 export function buildWorld(theme, cols, calItems) {
   const snow = theme === 'snow';
   const L = layoutFor(cols);
+  // Gentle snowy hills, flat where the village and its square are.
+  const groundAt = (x, z) => {
+    if (!snow) return 0;
+    const d = Math.hypot(x, z);
+    const th = Math.atan2(x, -z);
+    const inWedge = Math.abs(th) < L.spread + 0.45 && d < L.backR + 8;
+    const fade = inWedge || d < L.frontR + 2 ? 0 : Math.min(1, (d - L.frontR) / 30);
+    const n = Math.sin(x * 0.07) * Math.cos(z * 0.06) * 2.2 + Math.sin(x * 0.17 + z * 0.11) * 0.8 + Math.sin(z * 0.23) * 0.4;
+    return Math.max(0, n + 1.2) * fade;
+  };
   const rng = A.rng(snow ? 1225 : 2512);
   const root = new THREE.Group();
   const updaters = [];
@@ -405,11 +476,18 @@ export function buildWorld(theme, cols, calItems) {
   root.add(sun, sun.target);
 
   // Ground + terraces
-  const capMat = std({ color: snow ? '#eef4ff' : '#ffd796', roughness: 1 });
-  const wallMat = std({ color: snow ? '#8ea0cc' : '#c98d55' });
+  const capMat = std({ color: '#ffffff', map: snow ? snowTex : sandTex, roughness: 1 });
+  const wallMat = std({ color: '#ffffff', map: snow ? stoneTex : timberTex });
   if (snow) {
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(220, 64), std({ color: '#dfe8fb', roughness: 1 }));
-    ground.rotation.x = -Math.PI / 2;
+    const gGeo = new THREE.PlaneGeometry(440, 440, 110, 110);
+    gGeo.rotateX(-Math.PI / 2);
+    const gp = gGeo.attributes.position;
+    for (let i = 0; i < gp.count; i++) gp.setY(i, groundAt(gp.getX(i), gp.getZ(i)));
+    gGeo.computeVertexNormals();
+    const groundTex = snowTex.clone();
+    groundTex.repeat.set(30, 30);
+    groundTex.needsUpdate = true;
+    const ground = new THREE.Mesh(gGeo, std({ color: '#ffffff', map: groundTex, roughness: 1 }));
     ground.receiveShadow = true;
     root.add(ground);
   } else {
@@ -452,6 +530,12 @@ export function buildWorld(theme, cols, calItems) {
   tree.group.position.set(0, L.topY, -(L.backR + (snow ? 6 : 5)));
   root.add(tree.group);
 
+  // Fairy lights along every roof, chimney smoke, props, and the characters who live here
+  const extras = buildProps(theme, L, rng, root, houses, tree.group.position);
+  updaters.push(extras.update);
+  const agents = populate(theme, L, rng, root, { lite: matchMedia('(pointer: coarse)').matches, treePos: tree.group.position });
+  updaters.push((t, dt) => agents.forEach((a) => a.update(dt, t)));
+
   // Scenery
   const avoid = (x, z) => Math.hypot(x - tree.group.position.x, z - tree.group.position.z) < 7;
   if (snow) {
@@ -461,7 +545,7 @@ export function buildWorld(theme, cols, calItems) {
       if (side) {
         th = (rng() < 0.5 ? -1 : 1) * (L.spread + 0.3 + rng() * 0.9);
         R = L.frontR + 3 + rng() * (L.backR - L.frontR + 20);
-        y = 0;
+        y = 0; // set from groundAt below
       } else {
         th = (rng() - 0.5) * 2 * (L.spread + 0.55);
         R = L.backR + 2.5 + rng() * 34;
@@ -469,7 +553,7 @@ export function buildWorld(theme, cols, calItems) {
       }
       const x = R * Math.sin(th), z = -R * Math.cos(th);
       if (!side && avoid(x, z)) return null;
-      return { x, y, z, s: 1.1 + rng() * 1.6, rot: rng() * 6 };
+      return { x, y: side ? groundAt(x, z) - 0.1 : y, z, s: 1.1 + rng() * 1.6, rot: rng() * 6, tint: 0.85 + rng() * 0.3 };
     });
     root.add(instanced(pineGeometry(true), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }), items));
 
@@ -673,9 +757,16 @@ export function buildWorld(theme, cols, calItems) {
     keyPoints.push(new THREE.Vector3(p.x, p.y, p.z), new THREE.Vector3(p.x, p.y + h.height + 0.4, p.z));
   });
   keyPoints.push(tree.group.position.clone().add(new THREE.Vector3(0, tree.height + 0.8, 0)));
+  // the square / beach in front, where the penguins live
+  [-L.spread * 0.6, 0, L.spread * 0.6].forEach((th) => {
+    const r = L.frontR - (snow ? 5.5 : 4.5);
+    keyPoints.push(new THREE.Vector3(r * Math.sin(th), 0, -r * Math.cos(th)));
+  });
 
   return {
     root,
+    agents,
+    groundAt,
     fog,
     houses,
     tree,
@@ -691,6 +782,7 @@ export function disposeTree(obj) {
     if (o.geometry) o.geometry.dispose();
     const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
     mats.forEach((m) => {
+      if (m.userData.shared) return;
       if (m.map && !m.map.userData.shared) m.map.dispose();
       m.dispose();
     });
