@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en" data-theme="snow">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Make a calendar — Little Doors</title>
+  <meta name="theme-color" content="#0b1638">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..900,0..100,0..1;1,9..144,400..900,0..100,0..1&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/editor.css">
+</head>
+<body class="editor">
+  <div id="scene" aria-hidden="true"></div>
+  <canvas id="ambient" aria-hidden="true"></canvas>
+  <div id="foreground" aria-hidden="true"></div>
+
+  <header class="ed-top">
+    <a class="logo" href="editor.html?new"><span>🚪</span> Little Doors</a>
+    <ol class="ed-steps" id="steps">
+      <li data-step="start"><button type="button" data-go="start">1 <span>Who</span></button></li>
+      <li data-step="doors"><button type="button" data-go="doors">2 <span>Doors</span></button></li>
+      <li data-step="share"><button type="button" data-go="share">3 <span>Share</span></button></li>
+    </ol>
+    <span class="saved" id="saved" aria-live="polite"></span>
+  </header>
+
+  <main class="ed-main">
+    <!-- 1. Who + theme -->
+    <section class="screen" id="s-start" hidden>
+      <div class="panel hero">
+        <p class="kicker">An advent calendar they’ll actually look forward to</p>
+        <h1 class="ed-h1">Give someone <em>24 little moments</em> of Christmas</h1>
+        <div class="fields">
+          <label>Who’s it for?<input id="fTo" type="text" maxlength="20" placeholder="Emma" autocomplete="off"></label>
+          <label>From<input id="fFrom" type="text" maxlength="20" placeholder="Grandma" autocomplete="off"></label>
+        </div>
+        <p class="label">Pick their world</p>
+        <div class="theme-cards">
+          <button type="button" class="theme-card" data-theme-pick="snow">
+            <svg viewBox="0 0 240 120" aria-hidden="true">
+              <defs><linearGradient id="ms" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1540"/><stop offset="1" stop-color="#3a5597"/></linearGradient></defs>
+              <rect width="240" height="120" fill="url(#ms)"/>
+              <circle cx="200" cy="26" r="14" fill="#fff6d8"/>
+              <circle cx="40" cy="20" r="1.5" fill="#fff"/><circle cx="90" cy="34" r="1.2" fill="#fff"/><circle cx="150" cy="16" r="1.5" fill="#fff"/>
+              <path d="M0,92 Q60,70 120,86 T240,80 V120 H0Z" fill="#e8f0ff"/>
+              <g transform="translate(52,98)"><path d="M-18,-20 L0,-38 L18,-20Z" fill="#7a2e2a"/><path d="M-8,-29 L0,-38 L8,-29 L4,-30 L0,-27 L-4,-30Z" fill="#fff"/><rect x="-15" y="-21" width="30" height="24" fill="#f3e3c3"/><path d="M-6,3 V-10 Q0,-16 6,-10 V3Z" fill="#b23a32"/></g>
+              <g transform="translate(120,96)"><path d="M-20,-22 L0,-42 L20,-22Z" fill="#24453a"/><path d="M-9,-33 L0,-42 L9,-33 L4,-34 L0,-31 L-4,-34Z" fill="#fff"/><rect x="-17" y="-23" width="34" height="27" fill="#c8473d"/><path d="M-7,4 V-11 Q0,-18 7,-11 V4Z" fill="#ffd77a"/></g>
+              <g transform="translate(188,98)"><path d="M-18,-20 L0,-38 L18,-20Z" fill="#3b2f4a"/><path d="M-8,-29 L0,-38 L8,-29 L4,-30 L0,-27 L-4,-30Z" fill="#fff"/><rect x="-15" y="-21" width="30" height="24" fill="#e9b949"/><path d="M-6,3 V-10 Q0,-16 6,-10 V3Z" fill="#2f6b4f"/></g>
+            </svg>
+            <b>Snowy village</b>
+            <small>Cosy cottages, northern lights and frost to wipe away</small>
+          </button>
+          <button type="button" class="theme-card" data-theme-pick="summer">
+            <svg viewBox="0 0 240 120" aria-hidden="true">
+              <defs><linearGradient id="mu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff86b4"/><stop offset="1" stop-color="#ffd98e"/></linearGradient>
+                <pattern id="st1" width="8" height="10" patternUnits="userSpaceOnUse"><rect width="4" height="10" fill="#ff6f91"/><rect x="4" width="4" height="10" fill="#fff"/></pattern>
+                <pattern id="st2" width="8" height="10" patternUnits="userSpaceOnUse"><rect width="4" height="10" fill="#2ec4b6"/><rect x="4" width="4" height="10" fill="#fff"/></pattern>
+                <pattern id="st3" width="8" height="10" patternUnits="userSpaceOnUse"><rect width="4" height="10" fill="#ffbf3c"/><rect x="4" width="4" height="10" fill="#fff"/></pattern></defs>
+              <rect width="240" height="120" fill="url(#mu)"/>
+              <circle cx="196" cy="30" r="17" fill="#ffe56e"/>
+              <rect y="70" width="240" height="22" fill="#2fb6c8"/>
+              <path d="M0,96 Q120,84 240,96 V120 H0Z" fill="#ffd796"/>
+              <g transform="translate(52,100)"><path d="M-18,-22 L0,-38 L18,-22Z" fill="#e23d66"/><rect x="-15" y="-23" width="30" height="25" fill="url(#st1)"/><rect x="-6" y="-12" width="12" height="14" fill="#2ec4b6"/></g>
+              <g transform="translate(120,98)"><path d="M-20,-24 L0,-42 L20,-24Z" fill="#14918a"/><rect x="-17" y="-25" width="34" height="28" fill="url(#st2)"/><rect x="-7" y="-13" width="14" height="16" fill="#ff9f1c"/></g>
+              <g transform="translate(188,100)"><path d="M-18,-22 L0,-38 L18,-22Z" fill="#f08a00"/><rect x="-15" y="-23" width="30" height="25" fill="url(#st3)"/><rect x="-6" y="-12" width="12" height="14" fill="#6a4c93"/></g>
+            </svg>
+            <b>Summer Christmas</b>
+            <small>Beach boxes, sunshine and sand to brush off photos</small>
+          </button>
+        </div>
+        <button type="button" class="btn primary big" id="goDoors">Fill my 24 doors ✨</button>
+        <p class="fine">Free to make and preview. No sign-up, no subscription.</p>
+      </div>
+    </section>
+
+    <!-- 2. Doors -->
+    <section class="screen" id="s-doors" hidden>
+      <div class="panel doors-head">
+        <h2 class="ed-h2" id="dTitle"></h2>
+        <p class="lede">All 24 doors already have a surprise behind them. <b>Tap any door</b> to make it personal.</p>
+        <div class="meter">
+          <span id="meterText"></span>
+          <div class="bar"><i id="meterBar"></i></div>
+        </div>
+        <div class="suggest" id="suggest"></div>
+      </div>
+      <div class="grid ed-grid" id="edGrid"></div>
+    </section>
+
+    <!-- 3. Share -->
+    <section class="screen" id="s-share" hidden>
+      <div class="panel share">
+        <div class="share-emblem" id="shareEmblem"></div>
+        <h2 class="ed-h2" id="shareTitle"></h2>
+        <p class="lede" id="shareSummary"></p>
+        <a class="btn primary big" id="previewBtn" href="#">👀 Preview it as they’ll see it</a>
+        <p class="label">Their private link</p>
+        <div class="linkbox">
+          <input id="shareLink" type="text" readonly aria-label="Calendar link">
+          <button type="button" class="btn primary" id="copyBtn">Copy</button>
+        </div>
+        <button type="button" class="btn ghost" id="nativeShare">📤 Send it…</button>
+        <label class="tzrow">Doors open at midnight in
+          <select id="tz"></select>
+        </label>
+        <p class="fine">Starting late? Doors they’ve missed are ready to open straight away.</p>
+        <p class="proto-note">Prototype: links open on this device only until the server is connected.</p>
+      </div>
+      <div class="panel upgrade" id="upgradeCard"></div>
+    </section>
+  </main>
+
+  <nav class="ed-bar" id="edBar">
+    <button type="button" class="btn ghost" id="backBtn">← Back</button>
+    <button type="button" class="btn primary" id="nextBtn">Preview &amp; share →</button>
+  </nav>
+
+  <!-- Day editor -->
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-backdrop" data-act="done"></div>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shKind">
+      <div class="sheet-head">
+        <span class="day-badge" id="shDay"></span>
+        <span class="kind" id="shKind"></span>
+        <button type="button" class="close" data-act="done" aria-label="Close">×</button>
+      </div>
+      <div class="sheet-body" id="shBody"></div>
+    </div>
+  </div>
+
+  <!-- Season pass -->
+  <div class="sheet" id="upsell" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet-panel upsell" role="dialog" aria-modal="true" aria-labelledby="upTitle">
+      <div class="up-emblem">🎁</div>
+      <h2 class="ed-h2" id="upTitle">Make it unforgettable</h2>
+      <p class="lede" id="upWhy">You’ve used your 3 free photos.</p>
+      <ul class="perks">
+        <li>📸 <b>Unlimited photos</b> behind any door</li>
+        <li>✨ No “Made with Little Doors” credit</li>
+        <li>🎄 Keep it open until 31 January</li>
+        <li>💛 One payment for this Christmas — <b>no subscription</b></li>
+      </ul>
+      <button type="button" class="btn primary big" id="buyBtn">Unlock for A$12.95</button>
+      <p class="fine">Demo: no payment is taken. Stripe Checkout goes here.</p>
+      <button type="button" class="btn ghost" data-close>Maybe later</button>
+    </div>
+  </div>
+
+  <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+  <input type="file" id="libIn" accept="image/*" hidden>
+  <input type="file" id="bulkIn" accept="image/*" multiple hidden>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/huts.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>
