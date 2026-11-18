@@ -70,6 +70,7 @@
         $('selectedWorld').textContent = `${A.THEMES[t].name} — ${b.dataset.description}`;
       }
     });
+    $('worldPassNotice').hidden = !A.THEMES[t].premium || cal?.plan === 'season';
   }
 
   // ---------------- Saving ----------------
@@ -203,13 +204,43 @@
 
   let pendingPass = false; // Season Pass bought before the calendar exists
   const hasPass = () => pendingPass || (cal && cal.plan === 'season');
+  const needsPass = () => !hasPass() && (A.THEMES[cal.theme].premium || photoCount() > FREE_PHOTOS);
+  function updatePassNotice() {
+    const notice = $('doorsPassNotice');
+    notice.hidden = !needsPass();
+    notice.textContent = 'Season Pass selected · A$12.95 once. Free to customise and preview; pay when you’re ready to share.';
+  }
+  function openPreview(src, title) {
+    $('worldPreviewTitle').textContent = title;
+    $('worldPreviewFrame').src = src;
+    $('worldPreview').showModal();
+  }
+  $('worldPreviewBtn').addEventListener('click', () => openPreview(`3d.html?theme=${encodeURIComponent(theme)}&skip`, A.THEMES[theme].name));
+  $('closeWorldPreview').addEventListener('click', () => $('worldPreview').close());
+  $('worldPreview').addEventListener('close', () => $('worldPreviewFrame').removeAttribute('src'));
+  $('worldPreviewFrame').addEventListener('load', () => {
+    // Keep the recipient preview's return links inside this editing session.
+    $('worldPreviewFrame').contentDocument?.addEventListener('click', (e) => {
+      const link = e.target.closest('a[href]');
+      if (link && new URL(link.href).pathname.endsWith('/editor.html')) {
+        e.preventDefault();
+        $('worldPreview').close();
+      }
+    });
+  });
+  async function previewCalendar(e) {
+    e.preventDefault();
+    const page = e.currentTarget.id === 'preview2dBtn' ? 'index.html' : '3d.html';
+    try {
+      clearTimeout(saveT);
+      await persist();
+      openPreview(linkFor('&preview', page), `Preview for ${cal.to}`);
+    } catch { toast('Couldn’t save your preview. Please try again.'); }
+  }
+  ['calendarPreviewBtn', 'previewBtn', 'preview2dBtn'].forEach((id) => $(id).addEventListener('click', previewCalendar));
 
   $('goDoors').addEventListener('click', () => {
     if (A.DB.isCloud && !A.Auth.user) { A.Auth.prompt(); return; }
-    if (A.THEMES[theme].premium && !hasPass()) {
-      upsell(`${A.THEMES[theme].name} is part of the Season Pass.`);
-      return;
-    }
     const to = $('fTo').value.trim();
     const from = $('fFrom').value.trim();
     if (!to) {
@@ -252,6 +283,7 @@
 
   function renderDoors(animate) {
     $('dTitle').textContent = fill(A.THEMES[cal.theme].title);
+    updatePassNotice();
     grid.innerHTML = '';
     huts = A.makeHuts(cal.theme, (d) => A.iconFor(cal.days[d - 1], cal.theme), (d) => openSheet(d));
     huts.forEach((h, i) => {
@@ -502,6 +534,7 @@
     }
     decorate(d);
     renderHelpers();
+    updatePassNotice();
     if (opts.celebrate && huts[d - 1]) celebrate(huts[d - 1].querySelector('.doorway'), 60);
   }
 
@@ -545,7 +578,6 @@
         break;
       }
       case 'camera': case 'library':
-        if (!canAddPhoto(d)) return upsell();
         photoTarget = d;
         $(act === 'camera' ? 'camIn' : 'libIn').click();
         break;
@@ -583,7 +615,6 @@
   }
 
   const resetItem = (d) => clone(A.CONTENT[cal.theme][d - 1]);
-  const canAddPhoto = (d) => cal.plan === 'season' || cal.days[d - 1].photoId || photoCount() < FREE_PHOTOS;
 
   async function addPhotoTo(d, file) {
     const blob = await A.preparePhoto(file);
@@ -591,6 +622,7 @@
     photoURL[id] = URL.createObjectURL(blob);
     const old = cal.days[d - 1];
     await setDay(d, { type: 'photo', caption: old.type === 'photo' ? old.caption || '' : '', photoId: id, personal: true });
+    updatePassNotice();
   }
 
   async function onPhotoPicked(e) {
@@ -624,7 +656,6 @@
     for (const f of files) {
       const d = slots.shift();
       if (!d) break;
-      if (!canAddPhoto(d)) { upsell(`Your ${FREE_PHOTOS} free photos are in. Unlock the Season Pass to add the other ${files.length - added}.`); break; }
       try { await addPhotoTo(d, f); added++; } catch (err) { /* skip unreadable */ }
     }
     if (added) {
@@ -662,9 +693,31 @@
 
   // Calendars open in the 3D world by default (it falls back to 2D on devices without WebGL).
   function linkFor(extra = '', page = '3d.html') {
-    if (A.DB.isCloud && !extra.includes('preview') && !shareToken) return '';
+    if (!extra.includes('preview') && (needsPass() || (A.DB.isCloud && !shareToken))) return '';
     const share = A.DB.isCloud && !extra.includes('preview') ? '&s=' + shareToken : '';
     return new URL(`${page}?c=${cal.id}${share}${extra}`, location.href).href;
+  }
+
+  let shareRevision = 0;
+  async function prepareShare() {
+    const revision = ++shareRevision;
+    $('shareLink').placeholder = 'Preparing your private link…';
+    try {
+      clearTimeout(saveT);
+      await persist();
+      if (needsPass()) return;
+      const token = A.DB.isCloud ? await A.DB.shareCalendar(cal.id) : null;
+      if (revision !== shareRevision || needsPass()) return;
+      shareToken = token;
+      $('shareLink').value = linkFor();
+      $('copyBtn').disabled = false;
+      $('nativeShare').disabled = false;
+      $('saved').textContent = 'Saved ✓';
+    } catch {
+      $('shareLink').value = '';
+      $('shareLink').placeholder = 'Couldn’t prepare the link. Go back and try again.';
+      $('saved').textContent = 'Couldn’t share';
+    }
   }
 
   async function renderShare() {
@@ -675,25 +728,14 @@
     $('previewBtn').href = linkFor('&preview');
     $('previewBtn').textContent = `👀 Preview as ${cal.to}`;
     $('preview2dBtn').href = linkFor('&preview', 'index.html');
-    $('shareLink').value = linkFor();
-    if (A.DB.isCloud) {
-      $('copyBtn').disabled = true;
-      $('nativeShare').disabled = true;
-      $('shareLink').placeholder = 'Preparing your private link…';
-      try {
-        clearTimeout(saveT);
-        await persist();
-        shareToken = await A.DB.shareCalendar(cal.id);
-        $('shareLink').value = linkFor();
-        $('copyBtn').disabled = false;
-        $('nativeShare').disabled = false;
-        $('saved').textContent = 'Saved ✓';
-      } catch {
-        $('shareLink').value = '';
-        $('shareLink').placeholder = 'Couldn’t prepare the link. Go back and try again.';
-        $('saved').textContent = 'Couldn’t share';
-      }
-    }
+    ++shareRevision;
+    const gated = needsPass();
+    $('shareControls').hidden = gated;
+    $('shareGateNotice').hidden = !gated;
+    $('shareLink').value = '';
+    $('copyBtn').disabled = true;
+    $('nativeShare').disabled = true;
+    if (!gated) await prepareShare();
     const tz = $('tz');
     const zones = ZONES.includes(cal.tz) ? ZONES : [cal.tz, ...ZONES];
     tz.innerHTML = zones.map((z) => `<option value="${esc(z)}"${z === cal.tz ? ' selected' : ''}>${esc(z.replace(/_/g, ' ').replace('/', ' — '))}</option>`).join('');
@@ -703,21 +745,24 @@
       up.innerHTML = `<div class="paid"><span>🎉</span><div><b>Season Pass active</b><small>Every world, unlimited photos, no credit, open until 31 January.</small></div></div>`;
     } else {
       up.innerHTML = `
-        <p class="kicker">Free calendar</p>
-        <h3>Want to go all out?</h3>
+        <p class="kicker">${gated ? 'Season Pass selected' : 'Free calendar'}</p>
+        <h3>${gated ? 'Ready to share their Christmas magic?' : 'Want to go all out?'}</h3>
         <ul class="perks">
           <li>✨ All seven Season Pass worlds, from Gingerbread Lane to Neon City</li>
-          <li>📸 Unlimited photos (you’ve used ${p} of ${FREE_PHOTOS})</li>
+          <li>📸 Unlimited photos (${p} added; free sharing includes ${FREE_PHOTOS})</li>
           <li>✨ Remove the “Made with Tiny Doors” credit</li>
           <li>💛 One-time A$12.95 for this Christmas — no subscription</li>
         </ul>
-        <button type="button" class="btn primary" id="upBtn">Get the Season Pass</button>`;
-      $('upBtn').addEventListener('click', () => upsell('Make it unforgettable.'));
+        <button type="button" class="btn primary" id="upBtn">${gated ? 'Unlock &amp; share · A$12.95' : 'Get the Season Pass'}</button>
+        ${gated ? '<button type="button" class="btn ghost" id="chooseFreeWorld">Choose a free world</button><p class="fine">Your messages and personal edits stay saved. Free sharing includes up to 3 photos; remove any extra photos before sharing.</p>' : ''}`;
+      $('upBtn').addEventListener('click', () => upsell('Unlock the Season Pass to share this calendar. Your edits are saved.'));
+      if (gated) $('chooseFreeWorld').addEventListener('click', () => { go('start'); toast('Choose Snowy village or Summer Christmas. Your personal edits stay saved.'); });
     }
   }
 
   $('tz').addEventListener('change', (e) => { cal.tz = e.target.value; save(); });
   $('copyBtn').addEventListener('click', async () => {
+    if (needsPass() || !$('shareLink').value) return;
     const link = $('shareLink').value;
     try {
       await navigator.clipboard.writeText(link);
@@ -731,6 +776,7 @@
     setTimeout(() => ($('copyBtn').textContent = 'Copy'), 1800);
   });
   $('nativeShare').addEventListener('click', async () => {
+    if (needsPass() || !$('shareLink').value) return;
     const data = { title: fill(A.THEMES[cal.theme].title), text: `${cal.from} made you an advent calendar 🎄 A new door opens every day in December.`, url: linkFor() };
     if (navigator.share) {
       try { await navigator.share(data); } catch (e) { /* cancelled */ }
@@ -743,6 +789,7 @@
   // ---------------- Keyboard ----------------
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    if ($('worldPreview').open) return;
     if (!$('upsell').hidden) $('upsell').hidden = true;
     else if (!$('sheet').hidden) closeSheet();
   });

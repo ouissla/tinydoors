@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../server/worker.js';
 import { publicConfiguration } from '../server/config.js';
-import { createShare, readShare, tokenHash } from '../server/sharing.js';
+import { createShare, readShare, tokenHash, requiresSeasonPass } from '../server/sharing.js';
 const env = {
   APP_MODE:'cloud', APP_URL:'https://little-doors.test', SUPABASE_URL:'https://project.supabase.co',
   SUPABASE_PUBLISHABLE_KEY:'sb_publishable_example-test-key', SUPABASE_SECRET_KEY:'sb_secret_server-only', SUPABASE_STORAGE_BUCKET:'calendar-photos',
 };
 const owner = '82d62867-c7f5-416b-bf06-a8c884d11267';
-const calendar = { id:'calendar1234',owner_id:owner,document:{year:2090,days:[{photoId:owner+'/photo.jpg'}]},calendar_entitlements:null };
+const calendar = { id:'calendar1234',owner_id:owner,document:{theme:'snow',year:2090,days:[{photoId:owner+'/photo.jpg'}]},calendar_entitlements:null };
 function fakeClient({ cal=structuredClone(calendar), user=owner, share=null } = {}) {
   const state={saved:null,signed:[],cal,share};
   const client = {
@@ -85,4 +85,39 @@ test('cloud mode never reports demo payments as ready',async()=>{
   const response=await worker.fetch(new Request('https://little-doors.test/api/health'),env);
   const health=await response.json();
   assert.equal(health.authentication,'email-magic-link');assert.equal(health.payments,'unavailable');assert.equal(health.paidLaunchReady,false);
+});
+
+for (const premium of [true, false]) {
+  test(`unpaid ${premium ? 'world' : 'extra photos'} cannot be shared or read through an old link`, async () => {
+    const cal = structuredClone(calendar);
+    if (premium) cal.document.theme = 'cyber';
+    else cal.document.days = Array.from({length:4}, () => ({photoId:owner+'/photo.jpg'}));
+    const share = {token_hash:await tokenHash('a'.repeat(64)),calendar_id:cal.id,expires_at:'2091-02-01T00:00:00Z',revoked_at:null};
+    const {client,state} = fakeClient({cal,share});
+    const request = new Request('https://example.com', {headers:{Authorization:'Bearer valid'}});
+    assert.equal((await createShare(request,cal.id,env,client)).status,402);
+    assert.equal(state.saved,null);
+    assert.equal((await readShare('a'.repeat(64),env,client)).status,402);
+    assert.equal(state.signed.length,0);
+    cal.calendar_entitlements = {status:'active',expires_at:'2091-02-01T00:00:00Z'};
+    assert.equal((await createShare(request,cal.id,env,client)).status,200);
+    state.share = share;
+    assert.equal((await readShare('a'.repeat(64),env,client)).status,200);
+  });
+}
+
+test('sharing requires a current server entitlement and counts photo doors', () => {
+  const row = structuredClone(calendar);
+  row.document.theme = 'cyber';
+  row.document.plan = 'season';
+  assert.equal(requiresSeasonPass(row),true);
+  row.calendar_entitlements = {status:'active',expires_at:'2020-01-01T00:00:00Z'};
+  assert.equal(requiresSeasonPass(row),true);
+  row.calendar_entitlements = {status:'revoked',expires_at:'2091-01-01T00:00:00Z'};
+  assert.equal(requiresSeasonPass(row),true);
+  row.document.theme = 'summer';
+  row.document.days = Array.from({length:3}, () => ({photoId:owner+'/same.jpg'}));
+  assert.equal(requiresSeasonPass(row),false);
+  row.document.days.push({photoId:owner+'/same.jpg'});
+  assert.equal(requiresSeasonPass(row),true);
 });

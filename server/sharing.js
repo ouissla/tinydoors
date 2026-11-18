@@ -8,14 +8,24 @@ export const adminClient = (env) => createClient(env.SUPABASE_URL, env.SUPABASE_
 export async function tokenHash(token) {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token)))].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+export function requiresSeasonPass(row) {
+  const entitlement = row.calendar_entitlements;
+  const active = entitlement?.status === 'active' && Date.parse(entitlement.expires_at) > Date.now();
+  const premium = !['snow', 'summer'].includes(row.document.theme);
+  const photos = (row.document.days || []).filter((day) => day.photoId).length;
+  return !active && (premium || photos > 3);
+}
+const paymentRequired = () => json({ error: 'Unlock the Season Pass to share this calendar, or choose a free world with up to 3 photos.' }, 402);
+
 export async function createShare(request, id, env, client = adminClient(env)) {
   const bearer = request.headers.get('Authorization')?.match(/^Bearer ([^\s]+)$/)?.[1];
   if (!bearer) return json({ error: 'Please sign in.' }, 401);
   const { data: auth, error: authError } = await client.auth.getUser(bearer);
   if (authError || !auth.user) return json({ error: 'Please sign in again.' }, 401);
-  const { data: row, error } = await client.from('calendars').select('id,owner_id,document').eq('id', id).eq('owner_id', auth.user.id).maybeSingle();
+  const { data: row, error } = await client.from('calendars').select('id,owner_id,document,calendar_entitlements(status,expires_at)').eq('id', id).eq('owner_id', auth.user.id).maybeSingle();
   if (error) return json({ error: 'Could not load the calendar.' }, 503);
   if (!row) return json({ error: 'Calendar not found.' }, 404);
+  if (requiresSeasonPass(row)) return paymentRequired();
   const year = Number(row.document.year);
   if (!Number.isInteger(year) || year < 2020 || year > 2100) return json({ error: 'Check the calendar year before sharing.' }, 400);
   const expires = new Date(Date.UTC(year + 1, 1, 1)); // End of 31 January, UTC.
@@ -33,6 +43,7 @@ export async function readShare(token, env, client = adminClient(env)) {
   const { data: row, error: calError } = await client.from('calendars').select('id,owner_id,document,calendar_entitlements(status,expires_at)').eq('id', share.calendar_id).maybeSingle();
   if (calError) return json({ error: 'Could not load the calendar.' }, 503);
   if (!row) return json({ error: 'Calendar not found.' }, 404);
+  if (requiresSeasonPass(row)) return paymentRequired();
   const paths = [...new Set(row.document.days.map((day) => day.photoId).filter(Boolean))];
   // Administrative signing must never grant access to a different creator's photos.
   if (paths.some((path) => typeof path !== 'string' || !path.startsWith(row.owner_id + '/') || path.includes('..'))) return json({ error: 'This calendar has an invalid photo reference.' }, 422);

@@ -146,6 +146,8 @@
           </button>
           </div>
           <p class="selected-world" id="selectedWorld" aria-live="polite" aria-atomic="true"></p>
+          <button type="button" class="btn ghost world-preview-button" id="worldPreviewBtn">👀 Preview this world</button>
+          <p class="pass-notice" id="worldPassNotice" hidden>Season Pass · A$12.95 once. Free to customise and preview; pay when you’re ready to share.</p>
         </section>
         <div class="world-picker-footer">
           <button type="button" class="btn primary big" id="goDoors">Fill my 24 doors ✨</button>
@@ -159,6 +161,8 @@
       <div class="doors-head">
         <h2 class="ed-h2" id="dTitle"></h2>
         <p class="lede">All 24 doors already have a surprise behind them. <b>Tap any door</b> to make it personal.</p>
+        <p class="pass-notice" id="doorsPassNotice" hidden></p>
+        <button type="button" class="btn ghost" id="calendarPreviewBtn">👀 Preview your calendar</button>
         <div class="meter">
           <span id="meterText"></span>
           <div class="bar"><i id="meterBar"></i></div>
@@ -176,12 +180,15 @@
         <p class="lede" id="shareSummary"></p>
         <a class="btn primary big" id="previewBtn" href="#">👀 Preview it as they’ll see it</a>
         <a class="btn ghost" id="preview2dBtn" href="#">Preview the 2D version</a>
+        <div id="shareControls">
         <p class="label">Their private link</p>
         <div class="linkbox">
           <input id="shareLink" type="text" readonly aria-label="Calendar link">
           <button type="button" class="btn primary" id="copyBtn">Copy</button>
         </div>
         <button type="button" class="btn ghost" id="nativeShare">📤 Send it…</button>
+        </div>
+        <p class="pass-notice" id="shareGateNotice" hidden>Free to customise and preview. Unlock the Season Pass below when you’re ready to share.</p>
         <label class="tzrow">Doors open at midnight in
           <select id="tz"></select>
         </label>
@@ -196,6 +203,11 @@
     <button type="button" class="btn ghost" id="backBtn">← Back</button>
     <button type="button" class="btn primary" id="nextBtn">Preview &amp; share →</button>
   </nav>
+
+  <dialog id="worldPreview" class="world-preview-dialog" aria-labelledby="worldPreviewTitle">
+    <div class="world-preview-head"><h2 id="worldPreviewTitle">World preview</h2><button type="button" class="btn primary" id="closeWorldPreview">← Back to editing</button></div>
+    <iframe id="worldPreviewFrame" title="Interactive world preview" allow="fullscreen"></iframe>
+  </dialog>
 
   <!-- Day editor -->
   <div class="sheet" id="sheet" hidden>
