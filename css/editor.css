@@ -698,3 +698,9 @@ body:has(.world-preview-dialog[open]) { overflow: hidden; }
   .editor[data-editor-step="start"] .pass-notice { margin: 5px 0; font-size: .7rem; }
   .editor[data-editor-step="start"] .world-preview-button { padding: 5px 10px; }
 }
+
+.ed-top .language-select { flex-shrink: 0; }
+@media (max-width: 600px) {
+  .ed-top { flex-wrap: wrap; gap: 8px; }
+  .ed-top .language-select { max-width: 110px; margin-left: auto; }
+}

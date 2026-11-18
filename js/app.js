@@ -4,6 +4,7 @@
    index.html?c=<id>&preview → the creator previewing it (every door unlocked, nothing saved) */
 (async function () {
   const A = window.Advent;
+  const tr = A.I18n.t;
   const $ = (id) => document.getElementById(id);
   const KEY = 'littledoors:v1';
   const params = new URLSearchParams(location.search);
@@ -18,20 +19,21 @@
     try { await A.DBReady; cal = await A.DB.getCalendar(cid); }
     catch {
       document.body.classList.add('entered');
-      document.getElementById('title').textContent = 'Couldn’t open this calendar';
-      document.getElementById('sub').textContent = 'Please refresh to try again.';
+      document.getElementById('title').textContent = tr("Couldn’t open this calendar");
+      document.getElementById('sub').textContent = tr("Please refresh to try again.");
       document.getElementById('splash').classList.add('gone');
       return;
     }
     if (!cal) {
       document.body.classList.add('entered');
       $('splash').innerHTML = `<div class="splash-inner"><div class="splash-emblem">🔍</div>
-        <h2 class="splash-title" style="font-size:2.2rem">We couldn’t find<br>this calendar</h2>
-        <p class="splash-note" style="max-width:340px;margin:0 auto 18px">${A.DB.isCloud ? 'This link may have expired or been removed. Ask the person who made it for a fresh link.' : 'In this prototype, calendars are saved on the device that made them. Open the link on that device, or make a new one.'}</p>
-        <a class="btn primary" href="editor.html">Make a calendar ✨</a></div>`;
+        <h2 class="splash-title" style="font-size:2.2rem">${tr("We couldn’t find")}<br>${tr("this calendar")}</h2>
+        <p class="splash-note" style="max-width:340px;margin:0 auto 18px">${A.DB.isCloud ? tr("This link may have expired or been removed. Ask the person who made it for a fresh link.") : tr("In this prototype, calendars are saved on the device that made them. Open the link on that device, or make a new one.")}</p>
+        <a class="btn primary" href="editor.html">${tr("Make a calendar ✨")}</a></div>`;
       A.Scene.build('snow', $('scene'), $('foreground'));
       return;
     }
+    cal.days = cal.days.map(A.I18n.localizePreset);
     await Promise.all(cal.days.map(async (day, i) => {
       if (day.photoId) photoURLs[i + 1] = await A.DB.getPhotoURL(day.photoId);
     }));
@@ -56,7 +58,7 @@
     unlockAll: preview || params.has('unlock') || (!cal && !!saved.unlockAll),
     sound: saved.sound !== false,
     to: cal ? cal.to : params.get('to') || saved.to || 'Emma',
-    from: cal ? cal.from : params.get('from') || saved.from || 'Grandma',
+    from: cal ? cal.from : params.get('from') || saved.from || tr("Grandma"),
     opened: cal ? { [cal.theme]: preview ? [] : A.store.get(realOpenKey, []) } : saved.opened || { snow: [], summer: [] },
     photos: [],
     cols: 4,
@@ -95,7 +97,7 @@
   const openedSet = () => new Set(state.opened[state.theme] || []);
   const isUnlocked = (d) => state.unlockAll || d <= state.today;
   const fill = (s) => s.replace(/\{to\}/g, state.to).replace(/\{from\}/g, state.from);
-  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const plural = (n, w) => `${n} ${tr(w)}${n === 1 ? '' : 's'}`;
 
   const grid = $('grid');
   let huts = [];
@@ -123,8 +125,8 @@
       h.classList.toggle('today', d === state.today && !op.has(d));
       h.classList.toggle('ready', isUnlocked(d) && !op.has(d));
       const label = op.has(d)
-        ? `Day ${d}, opened. ${A.KIND_LABEL[list[i].type]}`
-        : isUnlocked(d) ? `Day ${d}, ready to open` : `Day ${d}, opens in ${plural(sleepsUntil(d), 'day')}`;
+        ? `${tr("Day")} ${d}${tr(", opened.")} ${A.KIND_LABEL[list[i].type]}`
+        : isUnlocked(d) ? `${tr("Day")} ${d}${tr(", ready to open")}` : `${tr("Day")} ${d}${tr(", opens in")} ${plural(sleepsUntil(d), 'day')}`;
       h.setAttribute('aria-label', label);
     });
     // Garland: one bulb per opened door.
@@ -151,14 +153,15 @@
     $('eyebrow').textContent = fill(T.eyebrow);
     const toXmas = sleepsUntil(25);
     let when;
-    if (state.today === 0) when = `Doors start opening 1 December — ${plural(sleepsUntil(1), 'sleep')} to go`;
-    else if (toXmas <= 0) when = 'Merry Christmas! 🎄';
-    else if (toXmas === 1) when = 'Christmas Eve! 🎅';
-    else when = `${toXmas} sleeps to Christmas`;
-    $('sub').innerHTML = `<span>${op.size}/24 doors open</span><span class="dot">•</span><span>${when}</span>`;
+    if (state.today === 0) when = `${tr("Doors start opening 1 December —")} ${plural(sleepsUntil(1), 'sleep')} ${tr("to go")}`;
+    else if (toXmas <= 0) when = tr("Merry Christmas! 🎄");
+    else if (toXmas === 1) when = tr("Christmas Eve! 🎅");
+    else when = `${toXmas} ${tr("sleeps to Christmas")}`;
+    $('sub').innerHTML = `<span>${op.size}${tr("/24 doors open")}</span><span class="dot">•</span><span>${when}</span>`;
     $('btnTheme').textContent = state.theme === 'snow' ? '☀️' : '❄️';
-    $('btnTheme').setAttribute('aria-label', state.theme === 'snow' ? 'Switch to summer' : 'Switch to snowy');
+    $('btnTheme').setAttribute('aria-label', state.theme === 'snow' ? tr("Switch to summer") : tr("Switch to snowy"));
     $('btnSound').textContent = state.sound ? '🔊' : '🔇';
+    $('btnSound').setAttribute('aria-label', tr(state.sound ? 'Sound off' : 'Sound on'));
   }
 
   function fit() {
@@ -182,7 +185,7 @@
       hut.classList.add('rattle');
       A.Sound.thunk();
       const n = sleepsUntil(d);
-      toast(`Not yet! Door ${d} opens in ${plural(n, 'sleep')} 💤`);
+      toast(`${tr("Not yet! Door")} ${d} ${tr("opens in")} ${plural(n, 'sleep')} 💤`);
       return;
     }
 
@@ -226,7 +229,7 @@
       hut.classList.remove('knock');
       void hut.offsetWidth;
       hut.classList.add('knock');
-      A.popText(r.left + r.width * (0.3 + (i % 2) * 0.4), r.top + r.height * 0.25, 'knock!');
+      A.popText(r.left + r.width * (0.3 + (i % 2) * 0.4), r.top + r.height * 0.25, tr("knock!"));
     }, t * 1000));
     await A.wait(A.Sound.KNOCK_LENGTH * 1000 + 120);
     hut.classList.remove('knock');
@@ -243,14 +246,14 @@
     card.className = `card type-${item.type}`;
 
     const head = A.el('div', 'card-head', `
-      <span class="day-badge">Day ${d}</span>
+      <span class="day-badge">${tr("Day")} ${d}</span>
       <span class="kind" id="cardTitle">${A.KIND_LABEL[item.type]}</span>
-      <button class="close" type="button" aria-label="Close">×</button>`);
+      <button class="close" type="button" aria-label="${tr("Close")}">×</button>`);
     const body = A.el('div', 'card-body');
     const foot = A.el('div', 'card-foot');
     const primaryBtn = A.el('button', 'btn primary', '');
     primaryBtn.type = 'button';
-    const closeBtn = A.el('button', 'btn ghost', 'Back to the village');
+    const closeBtn = A.el('button', 'btn ghost', tr("Back to the village"));
     closeBtn.type = 'button';
 
     const ctx = {
@@ -354,7 +357,7 @@
     A.Scene.build(look, $('scene'), $('foreground'));
     const T = A.THEMES[theme];
     $('splashEmblem').textContent = T.emblem;
-    $('splashEyebrow').textContent = `${state.to}, ${state.from} made you something`;
+    $('splashEyebrow').textContent = `${state.to}, ${state.from} ${tr("made you something")}`;
     $('splashTitle').innerHTML = T.splashTitle;
     document.querySelectorAll('[data-theme-pick]').forEach((b) => b.classList.toggle('on', b.dataset.themePick === theme));
     buildGrid();
@@ -414,6 +417,7 @@
 
   // ---------------- Keyboard (and TV remotes, which send arrow keys) ----------------
   document.addEventListener('keydown', (e) => {
+    if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     if (!$('splash').classList.contains('gone')) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('splashGo') && $('splashGo').click(); }
       return;
@@ -445,7 +449,7 @@
     } catch (e) {}
     setTimeout(fit, 120);
     if (on) {
-      toast('Family mode — use the arrow keys or a remote');
+      toast(tr("Family mode — use the arrow keys or a remote"));
       const first = huts.find((h) => h.classList.contains('ready')) || huts[Math.max(0, state.today - 1)];
       first && first.focus();
     }
@@ -497,29 +501,30 @@
   $('unlockAll').addEventListener('change', (e) => { state.unlockAll = e.target.checked; refresh(); save(); });
   $('toName').value = state.to;
   $('fromName').value = state.from;
-  $('toName').addEventListener('input', (e) => { state.to = e.target.value || 'you'; refresh(); save(); });
-  $('fromName').addEventListener('input', (e) => { state.from = e.target.value || 'someone'; refresh(); save(); });
+  $('toName').addEventListener('input', (e) => { state.to = e.target.value || tr("you"); refresh(); save(); });
+  $('fromName').addEventListener('input', (e) => { state.from = e.target.value || tr("someone"); refresh(); save(); });
   $('resetBtn').addEventListener('click', () => {
     state.opened[state.theme] = [];
     save();
     buildGrid();
     enterHuts();
-    toast('All doors closed again');
+    toast(tr("All doors closed again"));
   });
 
   $('photoInput').addEventListener('change', async (e) => {
     const files = [...e.target.files].slice(0, 8);
     if (!files.length) return;
-    toast('Preparing your photos…');
+    toast(tr("Preparing your photos…"));
     const out = [];
     for (const f of files) {
       try { out.push(URL.createObjectURL(await A.preparePhoto(f, 1400))); } catch (err) { /* skip unreadable files */ }
     }
     state.photos = out;
-    toast(`${out.length} photo${out.length === 1 ? '' : 's'} added behind days ${A.PHOTO_DAYS.join(', ')} 📸`);
+    toast(tr('{count} photo{suffix} added behind days {days} 📸', { count: out.length, suffix: out.length === 1 ? '' : 's', days: A.PHOTO_DAYS.join(', ') }));
   });
 
-  $('credit').addEventListener('click', () => { location.href = 'editor.html?new'; });
+  $('credit').addEventListener('click', () => { location.href = A.I18n.url('editor.html?new'); });
+  $('btn3d').href = A.I18n.url('3d.html' + location.search);
   // Same calendar, same flags, in the 3D world (theme follows the current one in demo mode)
   $('btn3d').addEventListener('click', (e) => {
     e.preventDefault();
@@ -538,7 +543,7 @@
     document.title = fill(A.THEMES[cal.theme].title);
   }
   if (preview) {
-    const bar = A.el('div', 'preview-bar', `<span>👀 Preview — this is what <b>${A.esc(state.to)}</b> will see (every door unlocked)</span><a href="editor.html?c=${encodeURIComponent(cal.id)}&step=doors">✏️ Back to editing</a>`);
+    const bar = A.el('div', 'preview-bar', `<span>${tr("👀 Preview — this is what")} <b>${A.esc(state.to)}</b> ${tr("will see (every door unlocked)")}</span><a href="editor.html?lang=${A.I18n.locale}&c=${encodeURIComponent(cal.id)}&step=doors">${tr('✏️ Back to editing')}</a>`);
     document.body.appendChild(bar);
     document.body.classList.add('previewing');
   }

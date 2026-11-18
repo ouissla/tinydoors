@@ -8,6 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildWorld, disposeTree, makeStar } from './worlds.js';
 
 const A = window.Advent;
+const tr = A.I18n.t;
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const KEY3D = 'littledoors:3d:v1';
@@ -31,6 +32,7 @@ if (cid) {
     location.replace('index.html' + location.search); // the 2D view explains "not found"
     throw new Error('calendar not found');
   }
+  cal.days = cal.days.map(A.I18n.localizePreset);
   await Promise.all(cal.days.map(async (day, i) => {
     if (day.photoId) photoURLs[i + 1] = await A.DB.getPhotoURL(day.photoId);
   }));
@@ -52,7 +54,7 @@ const qTheme = params.get('theme');
 const theme = cal && A.THEMES[cal.theme] ? cal.theme : A.THEMES[qTheme] ? qTheme : A.THEMES[saved.theme] ? saved.theme : 'snow';
 const state = {
   to: cal ? cal.to : params.get('to') || 'Emma',
-  from: cal ? cal.from : params.get('from') || 'Grandma',
+  from: cal ? cal.from : params.get('from') || tr("Grandma"),
   sound: A.store.get('littledoors:v1', {}).sound !== false,
   unlockAll: preview || params.has('unlock'),
   today: 9,
@@ -76,7 +78,7 @@ if (cal) {
 const items = cal ? cal.days : A.CONTENT[theme];
 const isUnlocked = (d) => state.unlockAll || d <= state.today;
 const fill = (s) => s.replace(/\{to\}/g, state.to).replace(/\{from\}/g, state.from);
-const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const plural = (n, w) => `${n} ${tr(w)}${n === 1 ? '' : 's'}`;
 
 function save() {
   if (cal) {
@@ -100,7 +102,7 @@ A.FX.init($('ambient'), $('fx'));
 A.FX.setTheme(theme);
 const T = A.THEMES[theme];
 $('splashEmblem').textContent = T.emblem;
-$('splashEyebrow').textContent = `${state.to}, ${state.from} made you something`;
+$('splashEyebrow').textContent = `${state.to}, ${state.from} ${tr("made you something")}`;
 $('splashTitle').innerHTML = T.splashTitle;
 $('btn2d').href = 'index.html' + location.search;
 if (cal) {
@@ -110,10 +112,10 @@ if (cal) {
 } else {
   const nextTheme = A.THEME_ORDER[(A.THEME_ORDER.indexOf(theme) + 1) % A.THEME_ORDER.length];
   $('btnTheme').textContent = A.THEMES[nextTheme].emblem;
-  $('btnTheme').setAttribute('aria-label', `Switch to ${A.THEMES[nextTheme].name}`);
+  $('btnTheme').setAttribute('aria-label', `${tr("Switch to")} ${A.THEMES[nextTheme].name}`);
 }
 if (preview) {
-  document.body.appendChild(A.el('div', 'preview-bar', `<span>👀 Preview — this is what <b>${A.esc(state.to)}</b> will see</span><a href="editor.html?c=${encodeURIComponent(cal.id)}&step=share">✏️ Back to editing</a>`));
+  document.body.appendChild(A.el('div', 'preview-bar', `<span>${tr("👀 Preview — this is what")} <b>${A.esc(state.to)}</b> ${tr("will see")}</span><a href="editor.html?lang=${A.I18n.locale}&c=${encodeURIComponent(cal.id)}&step=share">${tr('✏️ Back to editing')}</a>`));
   document.body.classList.add('previewing');
 }
 
@@ -131,12 +133,13 @@ function refreshHUD() {
   $('eyebrow').textContent = fill(T.eyebrow);
   const toX = sleepsUntil(25);
   let when;
-  if (state.today === 0) when = `Doors open 1 December — ${plural(sleepsUntil(1), 'sleep')} to go`;
-  else if (toX <= 0) when = 'Merry Christmas! 🎄';
-  else if (toX === 1) when = 'Christmas Eve! 🎅';
-  else when = `${toX} sleeps to Christmas`;
-  $('sub').innerHTML = `<span>${opened.size}/24 lights on</span><span class="dot">•</span><span>${when}</span>`;
+  if (state.today === 0) when = `${tr("Doors open 1 December —")} ${plural(sleepsUntil(1), 'sleep')} ${tr("to go")}`;
+  else if (toX <= 0) when = tr("Merry Christmas! 🎄");
+  else if (toX === 1) when = tr("Christmas Eve! 🎅");
+  else when = `${toX} ${tr("sleeps to Christmas")}`;
+  $('sub').innerHTML = `<span>${opened.size}${tr("/24 lights on")}</span><span class="dot">•</span><span>${when}</span>`;
   $('btnSound').textContent = state.sound ? '🔊' : '🔇';
+  $('btnSound').setAttribute('aria-label', tr(state.sound ? 'Sound off' : 'Sound on'));
 }
 
 // ---------------- Renderer ----------------
@@ -159,7 +162,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 1000);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), { snow: 0.7, summer: 0.45, gingerbread: 0.6, toys: 0.35, space: 0.6, workshop: 0.7, jungle: 0.55, japan: 0.45, cyber: 0.8 }[theme], 0.55, 0.97);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), { snow: 0.7, summer: 0.45, gingerbread: 0.6, toys: 0.35, space: 0.6, workshop: 0.7, jungle: 0.55, japan: 0.45, cyber: 0.48 }[theme], theme === 'cyber' ? 0.32 : 0.55, 0.97);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -369,7 +372,7 @@ async function openDay(d) {
   if (!isUnlocked(d)) {
     A.Sound.thunk();
     const n = sleepsUntil(d);
-    toast(`Not yet! Door ${d} opens in ${plural(n, 'sleep')} 💤`);
+    toast(`${tr("Not yet! Door")} ${d} ${tr("opens in")} ${plural(n, 'sleep')} 💤`);
     tween(450, (e, k) => { h.group.rotation.z = Math.sin(k * Math.PI * 6) * 0.06 * (1 - k); }, (k) => k);
     return;
   }
@@ -420,7 +423,7 @@ async function knockOn(h) {
   A.Sound.KNOCK_TIMES.forEach((t, i) => setTimeout(() => {
     if (!A.reducedMotion) tween(170, (e, k) => { h.pivot.rotation.y = Math.sin(k * Math.PI) * 0.07; }, (k) => k);
     const sp = screenOf(h);
-    A.popText(sp.x + (i % 2 ? 46 : -46), sp.y - 70 - i * 6, 'knock!');
+    A.popText(sp.x + (i % 2 ? 46 : -46), sp.y - 70 - i * 6, tr("knock!"));
   }, t * 1000));
   await A.wait(A.Sound.KNOCK_LENGTH * 1000 + 120);
   h.pivot.rotation.y = 0;
@@ -479,7 +482,7 @@ function letItSnow() {
   A.Sound.init();
   A.Sound.whoosh(1.4, 2600, 500, 0.1);
   A.Sound.sparkle(8);
-  if (!snowedOnce) { snowedOnce = true; toast('❄️ Let it snow!'); }
+  if (!snowedOnce) { snowedOnce = true; toast(tr("❄️ Let it snow!")); }
 }
 A.Motion.onShake(letItSnow);
 let motionAsked = false;
@@ -589,6 +592,7 @@ function walk(dt) {
 }
 
 document.addEventListener('keydown', (e) => {
+  if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
   if (!$('splash').classList.contains('gone')) {
     if ((e.key === 'Enter' || e.key === ' ') && !$('splashGo').disabled) { e.preventDefault(); $('splashGo').click(); }
     return;
@@ -642,7 +646,7 @@ $('btnFamily').addEventListener('click', () => {
     if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
   } catch (e) {}
   if (on) {
-    toast('Family mode — arrow keys or a remote, Enter to open');
+    toast(tr("Family mode — arrow keys or a remote, Enter to open"));
     const first = world.houses.find((h) => isUnlocked(h.day) && !opened.has(h.day));
     if (first) {
       state.focus = first.day;
@@ -654,7 +658,7 @@ $('btnFamily').addEventListener('click', () => {
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement) document.documentElement.classList.remove('family');
 });
-$('credit').addEventListener('click', () => { location.href = 'editor.html?new'; });
+$('credit').addEventListener('click', () => { location.href = A.I18n.url('editor.html?new'); });
 $('btnHome').addEventListener('click', goHome);
 
 // ---------------- Resize ----------------
@@ -663,7 +667,7 @@ function resize() {
   H = window.innerHeight;
   renderer.setSize(W, H, false);
   composer.setSize(W, H);
-  bloom.resolution.set(W / 2, H / 2);
+  // EffectComposer sizes bloom buffers with the same pixel ratio as the scene.
   const nc = colsFor(W / H);
   const rebuilt = nc !== cols;
   if (rebuilt) buildAll(nc);
@@ -768,7 +772,13 @@ requestAnimationFrame(frame);
 
 function intro() {
   askMotion();
-  if (!coarse) $('hint3d').textContent = 'Drag or use W A S D to move · scroll to zoom · Space for snow · tap a door';
+  if (!coarse) $('hint3d').textContent = tr("Drag or use W A S D to move · scroll to zoom · Space for snow · tap a door");
+  if (theme === 'gingerbread') $('hint3d').textContent = tr('Tap the lollipops, gumdrops and cupcake for sweet surprises · drag to explore');
+  if (theme === 'toys') $('hint3d').textContent = tr('Tap the carousel, jack-in-the-box, stacking rings or train · drag to explore');
+  if (theme === 'space') $('hint3d').textContent = tr('Tap the rocket to launch · tap its empty pad to recall it · try the crystals, solar panels and dish');
+  if (theme === 'jungle') $('hint3d').textContent = tr('Tap the drum, butterfly flower, firefly lanterns or frog pond');
+  if (theme === 'japan') $('hint3d').textContent = tr('Try the tea set and wish bell · tap the lucky cat, daruma and capsule machine');
+  if (theme === 'cyber') $('hint3d').textContent = tr('Tap a vehicle for a boost · use the signal console to change routes · try the cargo teleporter');
   A.Sound.enabled = state.sound;
   A.Sound.init();
   A.Sound.whoosh(1.2, 200, 3000, 0.22);
@@ -787,7 +797,7 @@ function intro() {
   setTimeout(() => $('hint3d').classList.add('show'), 2800);
   setTimeout(() => $('hint3d').classList.remove('show'), 9000);
   if (coarse && A.Motion.available()) {
-    setTimeout(() => { $('hint3d').textContent = 'Shake your phone to make it snow ❄️'; $('hint3d').classList.add('show'); }, 9600);
+    setTimeout(() => { $('hint3d').textContent = tr("Shake your phone to make it snow ❄️"); $('hint3d').classList.add('show'); }, 9600);
     setTimeout(() => $('hint3d').classList.remove('show'), 14000);
   }
 }

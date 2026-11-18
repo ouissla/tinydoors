@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeHouse, canvasTexture, surfaceMaterial } from './houses.js';
 import { buildProps } from './props.js';
+import { parquetTex } from './toy-town.js';
+import { lunarTex } from './environment-details.js';
 import { populate } from './characters.js';
 import { buildTree, buildScenery, icingTex, biscuitTex, blockTex, moonTex, panelTex, mossTex, rockTex, gridTex } from './worlds-extra.js';
 
@@ -259,7 +261,7 @@ function makePalm(h, lean, rng, lights) {
 function makeLightTree(theme, rng) {
   const g = new THREE.Group();
   const bulbs = [];
-  const BULB = ['#ff4f5e', '#ffd23f', '#5fd4ff', '#7cf29a', '#ff8ad8', '#ffa94d'];
+  const BULB = theme === 'snow' ? ['#ffe0a0'] : ['#ff4f5e', '#ffd23f', '#5fd4ff', '#7cf29a', '#ff8ad8', '#ffa94d'];
   let surface; // (frac, angle) -> local position on the tree
   let H;
   if (theme === 'snow') {
@@ -281,13 +283,10 @@ function makeLightTree(theme, rng) {
       const r = 4.9 * (1 - f) + 0.6;
       return new THREE.Vector3(Math.sin(a) * r, y, Math.cos(a) * r);
     };
-    const star = makeStar('#ffd36b', 1.0);
+    const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape(0.8, 0.36), { depth: 0.18, bevelEnabled: false }), std({ color: '#c99c59' }));
     star.position.y = 12.9;
     g.add(star);
     g.userData.star = star;
-    const halo = glowSprite('#ffd36b', 6, 0.55);
-    halo.position.y = 12.9;
-    g.add(halo);
   } else if (theme !== 'summer') {
     const t = buildTree(theme, g, rng, { makeStar, glowSprite, std, pineGeometry });
     H = t.H;
@@ -325,7 +324,7 @@ function makeLightTree(theme, rng) {
     const c = new THREE.Color(BULB[i % BULB.length]);
     const dim = c.clone().multiplyScalar(0.32);
     const mat = new THREE.MeshStandardMaterial({ color: dim, roughness: 0.25, metalness: 0.5, emissive: c, emissiveIntensity: 0.05 });
-    const b = new THREE.Mesh(new THREE.SphereGeometry(theme === 'snow' ? 0.36 : 0.28, 10, 8), mat);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(theme === 'snow' ? 0.23 : 0.28, 10, 8), mat);
     b.position.copy(p);
     b.userData.color = c;
     b.userData.dim = dim;
@@ -333,6 +332,7 @@ function makeLightTree(theme, rng) {
     bulbs.push(b);
   }
   g.traverse((o) => { if (o.isMesh && o.material && !o.material.isMeshBasicMaterial) o.castShadow = true; });
+  if (theme === 'snow') { g.scale.setScalar(0.62); H *= 0.62; }
   return {
     group: g,
     height: H,
@@ -340,7 +340,7 @@ function makeLightTree(theme, rng) {
     setLit(i, on) {
       const b = bulbs[i];
       if (!b) return;
-      b.material.emissiveIntensity = on ? 3.2 : 0.05;
+      b.material.emissiveIntensity = on ? (theme === 'snow' ? 1.3 : 3.2) : 0.05;
       b.material.color.copy(on ? b.userData.color : b.userData.dim);
       b.userData.on = on;
     },
@@ -448,17 +448,17 @@ function makeSleigh() {
 // ---------- World ----------
 // Look of each world: sky (top, middle, horizon), hemisphere light, sun, surfaces, snowfall.
 const STYLES = {
-  snow: { sky: ['#040a26', '#12245a', '#3d5aa0'], hemi: ['#7f9cff', '#1b2340', 0.85], sun: ['#c6d6ff', 1.1, [30, 50, 40]], cap: 'snow', wall: 'stone', plateau: '#eef4ff', snow: { base: 2200, color: '#ffffff', size: 0.32, speed: 1 } },
+  snow: { sky: ['#080f26', '#1b2c49', '#71849b'], hemi: ['#7f9cff', '#1b2340', 0.85], sun: ['#c6d6ff', 1.1, [30, 50, 40]], cap: 'snow', wall: 'timber', plateau: '#eef4ff', snow: { base: 850, color: '#ffffff', size: 0.32, speed: 1 } },
   summer: { sky: ['#ff6fa3', '#ffa58a', '#ffd9a8'], hemi: ['#ffe0ea', '#ffb070', 1.1], sun: ['#ffd8a8', 2.2, [-35, 50, 55]], cap: 'sand', wall: 'timber', plateau: '#a9d27a', snow: { base: 0, color: '#ffffff', size: 0.32, speed: 1 } },
   gingerbread: { sky: ['#1a0b33', '#5b2a72', '#e994b8'], hemi: ['#ffd0ea', '#40203a', 1.0], sun: ['#ffe6cc', 1.25, [25, 50, 40]], cap: 'icing', wall: 'biscuit', plateau: '#fff3f8', snow: { base: 1300, color: '#fff6fb', size: 0.3, speed: 0.9 } },
-  toys: { sky: ['#3f8fe0', '#8cc8ff', '#e3f3ff'], hemi: ['#ffffff', '#8fa8c8', 1.05], sun: ['#fff2dc', 1.9, [-30, 55, 45]], cap: 'snow', wall: 'blocks', plateau: '#f4f7ff', snow: { base: 700, color: '#ffffff', size: 0.3, speed: 0.9 } },
+  toys: { sky: ['#3f8fe0', '#8cc8ff', '#e3f3ff'], hemi: ['#ffffff', '#8fa8c8', 1.05], sun: ['#fff2dc', 1.9, [-30, 55, 45]], cap: 'parquet', wall: 'timber', plateau: '#dfbb88', snow: { base: 700, color: '#ffffff', size: 0.3, speed: 0.9 } },
   workshop: { sky: ['#071229', '#16305a', '#3f6a96'], hemi: ['#9fb6ff', '#1b2340', 0.85], sun: ['#c6d6ff', 1.15, [30, 50, 40]], cap: 'snow', wall: 'stone', plateau: '#eef4ff', snow: { base: 2000, color: '#ffffff', size: 0.32, speed: 1 } },
   jungle: { sky: ['#0f3b3a', '#3f7d62', '#f2c46d'], hemi: ['#fff0c8', '#1d4a30', 1.05], sun: ['#ffd28a', 1.9, [-35, 45, 40]], cap: 'moss', wall: 'rock', plateau: '#3f8a4e', snow: { base: 380, color: '#fff09a', size: 0.22, speed: 0.12, glow: true } },
   japan: { sky: ['#6f7be0', '#c3a3ec', '#ffcadc'], hemi: ['#fff0f7', '#9a8fd0', 0.95], sun: ['#fff2e8', 1.25, [-30, 45, 45]], cap: 'snow', wall: 'stone', plateau: '#fff4f8', snow: { base: 900, color: '#ffb7d5', size: 0.36, speed: 0.4 } },
   cyber: { sky: ['#05020f', '#1a0b3a', '#5a1a6e'], hemi: ['#b8a8ff', '#2a1a48', 1.35], sun: ['#c0d8ff', 1.1, [30, 50, 40]], cap: 'grid', wall: 'panel', plateau: '#14121f', snow: { base: 2600, color: '#8fd0ff', size: 0.14, speed: 4.5, glow: true } },
-  space: { sky: ['#010008', '#0d0626', '#2a1a55'], hemi: ['#9fb4ff', '#120a26', 0.75], sun: ['#e6ecff', 1.5, [40, 45, 30]], cap: 'moon', wall: 'panel', plateau: '#9a9aa8', snow: { base: 450, color: '#cfeaff', size: 0.24, speed: 0.25, glow: true } },
+  space: { sky: ['#010008', '#0d0626', '#2a1a55'], hemi: ['#9fb4ff', '#120a26', 0.75], sun: ['#e6ecff', 1.5, [40, 45, 30]], cap: 'lunar', wall: 'panel', plateau: '#706882', snow: { base: 450, color: '#cfeaff', size: 0.24, speed: 0.25, glow: true } },
 };
-const SURF = () => ({ snow: snowTex, sand: sandTex, stone: stoneTex, timber: timberTex, icing: icingTex, biscuit: biscuitTex, blocks: blockTex, moon: moonTex, panel: panelTex, moss: mossTex, rock: rockTex, grid: gridTex });
+const SURF = () => ({ snow: snowTex, sand: sandTex, stone: stoneTex, timber: timberTex, icing: icingTex, biscuit: biscuitTex, blocks: blockTex, parquet: parquetTex, moon: moonTex, lunar: lunarTex, panel: panelTex, moss: mossTex, rock: rockTex, grid: gridTex });
 
 // Falling snow for every world, with a blizzard on demand (shake the phone / press S).
 function makeSnowfall(root, rng, cfg) {
@@ -603,12 +603,13 @@ export function buildWorld(theme, cols, calItems) {
   const extras = buildProps(theme, L, rng, root, houses, tree.group.position);
   updaters.push(extras.update);
   const agents = populate(theme, L, rng, root, { lite: A.forceLite || matchMedia('(pointer: coarse)').matches, treePos: tree.group.position });
+  agents.push(...(extras.tappables || []));
   updaters.push((t, dt) => agents.forEach((a) => a.update(dt, t)));
 
   // Scenery
   const avoid = (x, z) => Math.hypot(x - tree.group.position.x, z - tree.group.position.z) < 7;
   if (snow) {
-    const items = scatter(rng, 110, () => {
+    const items = scatter(rng, 42, () => {
       const side = rng() < 0.55;
       let th, R, y;
       if (side) {
@@ -628,10 +629,10 @@ export function buildWorld(theme, cols, calItems) {
 
     // Far mountains with snowcaps
     const mMat = std({ color: '#6f84c2' });
-    for (let i = 0; i < 11; i++) {
-      const th = -1.25 + (2.5 * i) / 10 + (rng() - 0.5) * 0.15;
+    for (let i = 0; i < 7; i++) {
+      const th = -1.25 + (2.5 * i) / 6 + (rng() - 0.5) * 0.15;
       const R = 110 + rng() * 50;
-      const h = 34 + rng() * 34, rad = 22 + rng() * 16;
+      const h = 16 + rng() * 14, rad = 30 + rng() * 18;
       const m = new THREE.Mesh(new THREE.ConeGeometry(rad, h, 6), mMat);
       m.position.set(R * Math.sin(th), h / 2 - 2, -R * Math.cos(th));
       m.rotation.y = rng() * 3;
@@ -666,7 +667,7 @@ export function buildWorld(theme, cols, calItems) {
     sm.rotation.y = -smTh;
     root.add(sm);
 
-    // Moon, stars, aurora, sleigh
+    // Quiet moonlit sky
     const moon = new THREE.Mesh(new THREE.SphereGeometry(10, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff4d6').multiplyScalar(1.5), toneMapped: false, fog: false }));
     moon.position.set(90, 95, -260);
     root.add(moon);
@@ -685,31 +686,6 @@ export function buildWorld(theme, cols, calItems) {
     const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 1.8, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.9, depthWrite: false }));
     root.add(stars);
     updaters.push((t) => { stars.material.opacity = 0.75 + Math.sin(t * 1.3) * 0.15; });
-
-    const aur = new THREE.Mesh(new THREE.PlaneGeometry(520, 110, 80, 1), new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, side: THREE.DoubleSide,
-      uniforms: { uTime: { value: 0 } },
-      vertexShader: `uniform float uTime; varying vec2 vUv; void main(){ vUv = uv; vec3 p = position; p.z += sin(p.x*0.02 + uTime*0.25)*18.0; gl_Position = projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
-      fragmentShader: `uniform float uTime; varying vec2 vUv;
-        void main(){ float band = sin(vUv.x*14.0 + uTime*0.35 + sin(vUv.x*5.0 + uTime*0.2)*2.5)*0.5 + 0.5;
-          band = pow(band, 2.0);
-          float fade = smoothstep(0.0, 0.25, vUv.y) * pow(1.0 - vUv.y, 1.6) * smoothstep(0.0, 0.15, vUv.x) * smoothstep(1.0, 0.85, vUv.x);
-          vec3 c = mix(vec3(0.15,1.0,0.6), vec3(0.45,0.5,1.0), vUv.y);
-          gl_FragColor = vec4(c * band * fade * 0.55, 1.0); }`,
-    }));
-    aur.position.set(0, 95, -300);
-    root.add(aur);
-    updaters.push((t) => { aur.material.uniforms.uTime.value = t; });
-
-    const sleigh = makeSleigh();
-    root.add(sleigh);
-    updaters.push((t) => {
-      const k = (t % 34) / 34;
-      sleigh.visible = k < 0.5;
-      const u = k / 0.5;
-      sleigh.position.set(-170 + u * 340, 62 + Math.sin(u * Math.PI) * 14, -210);
-      sleigh.rotation.z = Math.cos(u * Math.PI) * 0.12;
-    });
 
   } else if (!summer) {
     buildScenery(theme, { root, L, rng, updaters, groundAt, avoid, std, glowSprite, instanced, makeSleigh, pineGeometry, dotTexture, tappables: agents });
@@ -798,9 +774,9 @@ export function buildWorld(theme, cols, calItems) {
   // Tree star spin, neon rings, house flags
   const rings = tree.group.userData.rings || [];
   updaters.push((t, dt) => {
-    if (tree.group.userData.star) tree.group.userData.star.rotation.y = t * 0.8;
+    if (!snow && tree.group.userData.star) tree.group.userData.star.rotation.y = t * 0.8;
     rings.forEach((r) => { r.rotation.z += r.userData.spin * dt; });
-    tree.bulbs.forEach((b, i) => { if (b.userData.on) b.material.emissiveIntensity = 2.6 + Math.sin(t * 3 + i * 1.7) * 0.8; });
+    tree.bulbs.forEach((b, i) => { if (b.userData.on) b.material.emissiveIntensity = snow ? 1.3 : 2.6 + Math.sin(t * 3 + i * 1.7) * 0.8; });
     houses.forEach((h) => {
       const eyes = h.group.userData.eyes;
       if (eyes) {
@@ -819,6 +795,22 @@ export function buildWorld(theme, cols, calItems) {
     keyPoints.push(new THREE.Vector3(p.x, p.y, p.z), new THREE.Vector3(p.x, p.y + h.height + 0.4, p.z));
   });
   keyPoints.push(tree.group.position.clone().add(new THREE.Vector3(0, tree.height + 0.8, 0)));
+  if (theme === 'toys') {
+    const rx = Math.min(7, L.frontR * Math.sin(L.spread) * 0.55), cz = -(L.frontR - 4.3);
+    keyPoints.push(new THREE.Vector3(-rx - 5.8, 4.8, cz - 0.7), new THREE.Vector3(rx + 4.6, 3.6, cz));
+    keyPoints.push(new THREE.Vector3(0, 0, cz + 3.8));
+  }
+  if (['space', 'jungle', 'japan', 'cyber'].includes(theme)) {
+    const z = -(L.frontR - 4.3);
+    keyPoints.push(new THREE.Vector3(0, 0, z + (theme === 'cyber' ? 6.5 : theme === 'japan' || theme === 'jungle' ? 4.8 : 3)));
+    if (theme === 'jungle') [-1, 1].forEach((side) => keyPoints.push(new THREE.Vector3(side * 7, 1.6, z + 4)));
+    if (theme === 'space') {
+      const a = L.spread + 0.3, r = L.frontR + 2;
+      keyPoints.push(new THREE.Vector3(r * Math.sin(a) + 3, 10.8, -r * Math.cos(a)));
+      const dishR = L.frontR + 5, dishA = L.spread + 0.4;
+      keyPoints.push(new THREE.Vector3(-dishR * Math.sin(dishA) - 2, 4, -dishR * Math.cos(dishA)));
+    }
+  }
   // the square / beach in front, where the penguins live
   [-L.spread * 0.6, 0, L.spread * 0.6].forEach((th) => {
     const r = L.frontR - (summer ? 4.5 : 5.5);

@@ -245,6 +245,14 @@
       }
       if (kind === 'fanfare') this.note(root * tuning / 2, t + count * spacing, vol * 0.65);
     },
+    // A single struck wind bell, independent of each world's musical instrument.
+    bell() {
+      if (!this.ok()) return;
+      const t = this.ctx.currentTime + 0.01;
+      if (t - (this.lastPlayed.bell ?? -Infinity) < 0.25) return;
+      this.lastPlayed.bell = t;
+      this.strike(880, t, 0.18, [[1, 1], [2.76, 0.38], [5.4, 0.12]], 3.2);
+    },
     chime() { this.melody('chime', 4, 0.115, 0.16, 329.63); },
     sparkle(n = 6) { this.melody('sparkle', Math.max(1, Math.min(12, n)), 0.085, 0.065, 392); },
     fanfare() { this.melody('fanfare', 7, 0.15, 0.18, 329.63); },

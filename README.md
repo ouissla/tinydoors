@@ -63,14 +63,14 @@ Same URL flags as 2D: `3d.html?theme=summer`, `?c=<id>`, `?preview`, `?unlock`, 
 
 Seven extra 3D worlds alongside Snowy and Summer, each with its own houses, light-tree, scenery, characters, colours, 24 surprises, game symbols and scratch-off effect:
 
-- 🍪 **Gingerbread Lane** — iced gingerbread houses with gumdrops and candy windows, a tree of stacked star cookies, lollipop lamps, candy forest, ice-cream mountains; gingerbread people and elves; icing-sugar photo reveal
-- 🧸 **Toy Town** — wooden toy houses (pyramid roofs, castles, towers), a block tree, a toy train looping the square, building blocks, giant alphabet-block hills, a hot-air balloon; marching toy soldiers (some drumming) and wind-up penguins
-- 🚀 **Space Christmas** — moon-base domes with airlock doors, a spinning neon ring tree, Earth and a ringed planet, a rocket on its pad, craters, a satellite dish, UFOs; bouncing astronaut elves and robot reindeer; stardust photo reveal
+- 🍪 **Gingerbread Lane** — iced gingerbread houses with gumdrops and candy windows, a tree of stacked star cookies, lollipop lamps, candy forest, ice-cream mountains; gingerbread people and elves; tap lollipops to spin them, bounce the gumdrops, or tap the cupcake for a sprinkle fountain; icing-sugar photo reveal
+- 🧸 **Toy Town** — wooden toy houses (pyramid roofs, castles, towers), a block tree, a stitched railway playmat on warm wooden flooring, painted terrace edging and brass studs, rounded alphabet-block hills and a hot-air balloon; tap the musical carousel, spring-loaded jack-in-the-box, rainbow stacking rings or the train (a burst of speed and steam); marching toy soldiers (some drumming) and wind-up penguins
+- 🚀 **Space Christmas** — moon-base domes with airlock doors, a spinning neon ring tree, Earth and a ringed planet, a rocket on its pad, craters, a satellite dish, UFOs; violet cratered terrain, lit hex landing tiles and bootprints; tap the rocket to launch and its empty pad to recall it, deploy the solar panels, tune the dish or light up the moon crystals; bouncing astronaut elves and robot reindeer; stardust photo reveal
 
 - 🛠️ **Santa’s Workshop** — snowy timber workshops and a magical toy factory
-- 🌿 **Treetop Jungle** — raised treehouses, leafy canopies and waterfalls
-- 🌸 **Kawaii Sakura Town** — pastel shops, cherry blossoms and lanterns
-- 🌃 **Neon City** — capsule apartments, flying cars and a glowing skyline
+- 🌿 **Treetop Jungle** — raised treehouses, denser leafy canopies and waterfalls; low foreground firefly lanterns, a playable drum, a butterfly flower and a frog pond with jumping and ripples; tall trees stay outside the house sightlines
+- 🌸 **Kawaii Sakura Town** — pastel shops, cherry blossoms and lanterns; a tappable tea set and swinging wish bell alongside the lucky cat, daruma and capsule machine
+- 🌃 **Neon City** — capsule apartments with aligned neon trim, flying cars and a glowing skyline; cars and motorbikes take crossing streets and alternate routes, with tappable boosts, a routing console and a cargo teleporter
 
 Preview: `3d.html?theme=gingerbread` / `toys` / `space`. In the editor they're marked **✨ Season Pass**; choosing one opens the (mock) upgrade. Without WebGL, the 2D view shows them over the snowy backdrop with their own colours and content.
 

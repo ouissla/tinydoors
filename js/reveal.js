@@ -1,6 +1,7 @@
 /* The surprise cards behind each door. Each format has its own little interaction. */
 (function () {
   const A = (window.Advent = window.Advent || {});
+  const tr = A.I18n.t;
   const { el, esc } = A;
 
   const fill = (s, ctx) => esc(s).replace(/\{to\}/g, esc(ctx.to)).replace(/\{from\}/g, esc(ctx.from));
@@ -162,7 +163,7 @@
     return {
       node,
       shown() { paint(); },
-      label: 'Wipe it all away',
+      label: tr("Wipe it all away"),
       primary() {
         // TV / keyboard: sweep the frost away automatically.
         if (done) return false;
@@ -185,9 +186,9 @@
   // ---- Message: tap the envelope ----
   function message(day, item, ctx) {
     const node = el('div', 'msg', `
-      <button class="envelope" type="button" aria-label="Open the envelope">
+      <button class="envelope" type="button" aria-label="${tr("Open the envelope")}">
         <span class="env-back"></span>
-        <span class="letter-peek"><span>Dear ${esc(ctx.to)},</span></span>
+        <span class="letter-peek"><span>${tr("Dear")} ${esc(ctx.to)},</span></span>
         <span class="env-front"></span>
         <span class="flap"></span>
         <span class="seal">${ctx.theme === 'snow' ? '❄' : '♥'}</span>
@@ -210,7 +211,7 @@
       return true;
     };
     env.addEventListener('click', open);
-    return { node, primary: open, label: 'Open the envelope' };
+    return { node, primary: open, label: tr("Open the envelope") };
   }
 
   // ---- Riddle / joke: question, then the reveal ----
@@ -235,7 +236,7 @@
       ctx.setPrimary(null);
       return true;
     };
-    return { node, primary: reveal, label: isJoke ? 'Tell me! 😆' : 'Reveal the answer' };
+    return { node, primary: reveal, label: isJoke ? tr("Tell me! 😆") : tr("Reveal the answer") };
   }
 
   // ---- Activity / recipe ----
@@ -246,7 +247,7 @@
       <p>${fill(item.body, ctx)}</p>
       ${item.steps ? `<ol class="steps">${item.steps.map((s) => `<li>${fill(s, ctx)}</li>`).join('')}</ol>` : ''}
       <div class="chips">${(item.chips || []).map((c) => `<span>${esc(c)}</span>`).join('')}</div>
-      <div class="done-stamp">Done! ✓</div>`);
+      <div class="done-stamp">${tr("Done! ✓")}</div>`);
     let done = false;
     const markDone = () => {
       if (done) return false;
@@ -259,7 +260,7 @@
       ctx.setPrimary(null);
       return true;
     };
-    return { node, primary: markDone, label: 'We did it! ✓' };
+    return { node, primary: markDone, label: tr("We did it! ✓") };
   }
 
   // ---- Voucher ----
@@ -267,13 +268,13 @@
     const node = el('div', 'voucher-wrap', `
       <div class="voucher">
         <div class="v-main">
-          <span class="v-label">Voucher</span>
+          <span class="v-label">${tr("Voucher")}</span>
           <h2>${fill(item.title, ctx)}</h2>
           <p>${fill(item.body, ctx)}</p>
-          <p class="v-from">Issued with love by <b>${esc(ctx.from)}</b></p>
+          <p class="v-from">${tr("Issued with love by")} <b>${esc(ctx.from)}</b></p>
         </div>
         <div class="v-stub"><span>Nº ${String(day).padStart(3, '0')}</span></div>
-        <div class="v-stamp">Yours!</div>
+        <div class="v-stamp">${tr("Yours!")}</div>
       </div>`);
     return {
       node,
@@ -292,9 +293,9 @@
   function finale(day, item, ctx) {
     const node = el('div', 'finale', `
       <div class="finale-emoji">${A.THEMES[ctx.theme].finaleIcon}</div>
-      <h2 class="shimmer">Merry Christmas,<br>${esc(ctx.to)}!</h2>
+      <h2 class="shimmer">${tr("Merry Christmas,")}<br>${esc(ctx.to)}!</h2>
       <div class="hand">${paras(item.text, ctx)}</div>
-      <p class="sig">— all my love, ${esc(ctx.from)}</p>`);
+      <p class="sig">${tr("— all my love,")} ${esc(ctx.from)}</p>`);
     return {
       node,
       shown() {

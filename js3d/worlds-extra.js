@@ -2,8 +2,11 @@
    Surface textures, the light-tree for each, and their scenery. Shared helpers are passed in
    (ctx) so this module doesn't need to import back from worlds.js. */
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, mat } from './houses.js';
+import { buildToyPlayground } from './toy-town.js';
+import { buildEnvironmentDetails } from './environment-details.js';
 
 const A = window.Advent;
 const TAU = Math.PI * 2;
@@ -371,7 +374,9 @@ function makeTrail(color, height, n = 56) {
   const hist = [];
   return {
     mesh,
+    clear() { hist.length = 0; },
     push(p) {
+      if (hist.length && hist[0].distanceTo(p) > 8) hist.length = 0;
       hist.unshift(p.clone());
       if (hist.length > n) hist.pop();
       for (let i = 0; i < n; i++) {
@@ -713,12 +718,12 @@ export function buildTree(theme, g, rng, ctx) {
   if (theme === 'toys') {
     // A stacked tree of wooden toy blocks
     const H = 12;
-    const cols = ['#2f9e5b', '#23804a', '#3fb86b'];
+    const cols = ['#56877d', '#356d65', '#79a08a'];
     const n = 7;
     for (let i = 0; i < n; i++) {
       const k = i / (n - 1);
       const s = 7.2 * (1 - k * 0.8);
-      const m = new THREE.Mesh(new THREE.BoxGeometry(s, 1.45, s), mat(cols[i % 3], { roughness: 0.6 }));
+      const m = new THREE.Mesh(new RoundedBoxGeometry(s, 1.45, s, 2, 0.13), mat(cols[i % 3], { roughness: 0.38, flatShading: false }));
       m.position.y = 0.75 + i * 1.5;
       m.rotation.y = i * 0.4;
       g.add(m);
@@ -888,7 +893,7 @@ export function buildScenery(theme, c) {
     g.font = font;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText(text, w / 2, h / 2 + 4);
+    g.fillText(A.I18n.t(text), w / 2, h / 2 + 4, w - 28);
   });
 
   if (theme === 'workshop') {
@@ -1537,6 +1542,8 @@ export function buildScenery(theme, c) {
   }
 
   if (theme === 'jungle') {
+    const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
+    buildEnvironmentDetails(theme, c, fx);
     // Rainforest trees and ferns around the village
     const jungleTree = painted([
       [at(new THREE.CylinderGeometry(0.22, 0.34, 4.2, 6), 0, 2.1, 0), '#5a3b24'],
@@ -1545,7 +1552,11 @@ export function buildScenery(theme, c) {
       [at(new THREE.IcosahedronGeometry(1.2, 0), -1.0, 4.3, -0.4, 1, 0.7, 1), '#3fa35e'],
       [at(new THREE.IcosahedronGeometry(1.0, 0), 0.2, 5.6, 0.1, 1, 0.75, 1), '#4cb069'],
     ]);
-    const tall = sides(120).map((p) => ({ ...p, s: 1.0 + rng() * 1.6, rot: rng() * 6, tint: 0.8 + rng() * 0.35 }));
+    const groveEdge = L.backR * Math.sin(L.spread) + 6;
+    const tall = sides(A.forceLite ? 140 : 185).map((p) => ({
+      ...p, x: p.side ? Math.sign(p.x) * Math.max(Math.abs(p.x), groveEdge) : p.x,
+      s: 1.0 + rng() * 1.6, rot: rng() * 6, tint: 0.8 + rng() * 0.35,
+    }));
     root.add(instanced(jungleTree, vmat(), tall));
     const fern = painted([
       [at(new THREE.IcosahedronGeometry(0.9, 0), 0, 0.4, 0, 1.3, 0.5, 1), '#2f7d43'],
@@ -1827,6 +1838,7 @@ export function buildScenery(theme, c) {
 
     // ================= Kawaii things to tap =================
     const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
+    buildEnvironmentDetails(theme, c, fx);
     const W2 = (o, x = 0, y = 0, z = 0) => o.localToWorld(new THREE.Vector3(x, y, z));
     const white = std({ color: '#ffffff', flatShading: false }), ink = new THREE.MeshBasicMaterial({ color: '#2a2238' });
     const pink = std({ color: '#ff9ec4', flatShading: false }), gold = std({ color: '#ffd36b', flatShading: false });
@@ -2051,7 +2063,7 @@ export function buildScenery(theme, c) {
       g.fillStyle = c1;
       g.font = '900 54px "Bagel Fat One", Georgia, serif';
       g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(['XMAS', 'NOEL', 'JOY', 'SNOW?', 'GIFTS', '24/7'][k % 6], w / 2, h / 2 - 8);
+      g.fillText(A.I18n.t(['XMAS', 'NOEL', 'JOY', 'SNOW?', 'GIFTS', '24/7'][k % 6]), w / 2, h / 2 - 8, w - 20);
       g.shadowColor = c2; g.fillStyle = c2;
       for (let i = 0; i < 9; i++) g.fillRect(24 + i * 24, h - 26, 14, 6);
     });
@@ -2109,10 +2121,11 @@ export function buildScenery(theme, c) {
       model.scale.setScalar(1.3);
       car.add(model);
       const trail = new THREE.Mesh(new THREE.PlaneGeometry(9, 0.35), new THREE.MeshBasicMaterial({ color: NEON[k % 6], transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-      trail.position.set(-6.5, 0.8, 0);
-      car.add(trail);
+      trail.rotation.y = Math.PI / 2;
+      trail.position.set(0, 0.55, -5.7);
+      model.add(trail);
       const dir = k % 2 ? 1 : -1;
-      car.userData = { dir, speed: 18 + rng() * 22, y: 14 + (k % 6) * 5 + rng() * 2, z: -(45 + (k % 5) * 18 + rng() * 6), x: (rng() - 0.5) * 300, wheels: model.userData.wheels };
+      car.userData = { dir, speed: 18 + rng() * 22, y: 14 + (k % 6) * 5 + rng() * 2, z: -(45 + (k % 5) * 18 + rng() * 6), x: (rng() - 0.5) * 300, angle: (k % 3 - 1) * 0.35, wheels: model.userData.wheels };
       car.rotation.y = dir > 0 ? 0 : Math.PI;
       root.add(car);
       cars.push(car);
@@ -2122,47 +2135,46 @@ export function buildScenery(theme, c) {
       u.x += u.dir * u.speed * dt;
       if (u.x > 160) u.x = -160;
       if (u.x < -160) u.x = 160;
-      car.position.set(u.x, u.y + Math.sin(t * 2 + u.z) * 0.3, u.z);
+      car.position.set(u.x, u.y + Math.sin(t * 2 + u.z) * 0.3, u.z + u.x * Math.sin(u.angle));
+      car.rotation.y = (u.dir > 0 ? 0 : Math.PI) - u.angle;
     }));
 
-    // ---- The Grid: a glowing circuit round the square where light cycles and light cars race ----
-    const circuit = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-12, 0, -6.2), new THREE.Vector3(0, 0, -5.8), new THREE.Vector3(12, 0, -6.2),
-      new THREE.Vector3(15.5, 0, -8.6), new THREE.Vector3(12, 0, -10.9), new THREE.Vector3(0, 0, -11.3),
-      new THREE.Vector3(-12, 0, -10.9), new THREE.Vector3(-15.5, 0, -8.6),
-    ], true, 'catmullrom', 0.5);
-    const laneAt = (u, off) => {
-      const p2 = circuit.getPointAt(u), d = circuit.getTangentAt(u);
-      return { p: p2.add(new THREE.Vector3(-d.z, 0, d.x).multiplyScalar(off)), d };
-    };
-    [-1.3, 1.3].forEach((off) => {
-      const pts = [];
-      for (let k = 0; k <= 160; k++) pts.push(laneAt(k / 160, off).p.setY(0.04));
-      const line = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 320, 0.05, 4, true), neonMat('#00e5ff', 1.4));
-      root.add(line);
-    });
-    const deckPts = [];
-    for (let k = 0; k <= 160; k++) deckPts.push(laneAt(k / 160, 0).p.setY(0.02));
-    const deckLine = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(deckPts, true), 320, 0.025, 4, true), neonMat('#7c4dff', 1.2));
-    root.add(deckLine);
+    // ---- A small street network: straight traffic, turns and alternate routes ----
+    const streetZ = -(L.frontR - 4.3), streetW = Math.max(19, L.frontR * Math.sin(L.spread) + 10);
+    const path = (points) => new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0.08, z)), false, 'catmullrom', 0.15);
+    const routes = [
+      path([[-streetW, streetZ + 2], [-8, streetZ + 2], [8, streetZ + 2], [streetW, streetZ + 2]]),
+      path([[streetW, streetZ - 1.6], [8, streetZ - 1.6], [-8, streetZ - 1.6], [-streetW, streetZ - 1.6]]),
+      path([[-streetW, streetZ - 1.6], [-6, streetZ - 1.6], [-1, streetZ], [5, streetZ + 2], [streetW, streetZ + 2]]),
+      path([[streetW, streetZ + 2], [7, streetZ + 2], [2, streetZ], [-5, streetZ - 1.6], [-streetW, streetZ - 1.6]]),
+    ];
+    // Edge lights use the same paths as the vehicles, so the street and traffic agree.
+    routes.slice(0, 2).forEach((route) => [-1, 1].forEach((side) => {
+      const edge = route.getPoints(100).map((p) => p.add(new THREE.Vector3(0, -0.035, side * 0.65)));
+      root.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edge), 100, 0.035, 5, false), neonMat(side > 0 ? '#00e5ff' : '#7c4dff', 1.2)));
+    }));
+    let trafficMode = 0;
     const racers = [];
-    const addRacer = (model, color, height, off, speed, start) => {
-      model.scale.setScalar(1.1);
-      root.add(model);
-      const trail = makeTrail(color, height);
-      root.add(trail.mesh);
-      racers.push({ model, trail, off, speed, u: start, wob: rng() * 6 });
+    const addRacer = (model, color, height, speed, start, index) => {
+      model.scale.setScalar(1.1); root.add(model);
+      const trail = makeTrail(color, height, 35); root.add(trail.mesh);
+      const racer = { model, trail, speed, u: start, route: index % routes.length, boost: 0 };
+      racers.push(racer);
+      fx.tappable(model, (a) => { if (a.busy) return; a.busy = 2.5; racer.boost = 2.5; fx.sound()?.whoosh(0.3, 400, 1700, 0.12); });
     };
-    ['#00e5ff', '#ff8a00', '#a6ff00'].forEach((col, k) => addRacer(makeLightCycle(col), col, 0.95, -0.6 + (k % 2) * 0.4, 0.085 + k * 0.012, k * 0.33));
-    ['#ff2bd6', '#7c4dff'].forEach((col, k) => addRacer(makeLightCar(col), col, 0.7, 0.75, 0.07 + k * 0.01, 0.15 + k * 0.5));
-    updaters.push((t, dt) => racers.forEach((r) => {
-      r.u = (r.u + dt * r.speed) % 1;
-      const { p: p2, d } = laneAt(r.u, r.off + Math.sin(t * 0.9 + r.wob) * 0.25);
-      r.model.position.copy(p2);
-      r.model.rotation.y = Math.atan2(d.x, d.z);
-      r.model.rotation.z = -Math.sin(t * 0.9 + r.wob) * 0.12;
+    ['#00e5ff', '#ff8a00', '#a6ff00'].forEach((col, k) => addRacer(makeLightCycle(col), col, 0.65, 0.13 + k * 0.012, k * 0.3, k));
+    ['#ff2bd6', '#7c4dff'].forEach((col, k) => addRacer(makeLightCar(col), col, 0.45, 0.11 + k * 0.01, 0.15 + k * 0.5, k + 3));
+    buildEnvironmentDetails(theme, { ...c, traffic: { reroute(mode) { trafficMode = mode; } } }, fx);
+    updaters.push((t, dt) => racers.forEach((r, i) => {
+      r.boost = Math.max(0, r.boost - dt);
+      r.u += dt * r.speed * (r.boost > 0 && !A.reducedMotion ? 1.8 : 1);
+      if (r.u >= 1) { r.u %= 1; r.route = (r.route + 1 + trafficMode) % routes.length; r.trail.clear(); }
+      const route = routes[r.route], p2 = route.getPointAt(r.u), d = route.getTangentAt(r.u);
+      r.model.position.copy(p2); r.model.rotation.y = Math.atan2(d.x, d.z);
       r.model.userData.wheels.forEach((w) => { w.rotation.x += dt * 20; });
-      r.trail.push(p2);
+      r.model.updateMatrixWorld(true);
+      // Cars and bikes both face +z. Their light wall starts at the rear axle.
+      r.trail.push(r.model.localToWorld(new THREE.Vector3(0, 0, -1.15)));
     }));
 
     // ---- Maglev train looping round an elevated track behind the village ----
@@ -2290,6 +2302,8 @@ export function buildScenery(theme, c) {
   }
 
   if (theme === 'gingerbread') {
+    const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
+    const sweets = ['#ff8fc4', '#7fe3c4', '#ffd36b', '#ffffff'];
     // Candy forest in pinks, mints and whites
     const trees = sides(100).map((p) => ({ ...p, s: 1.1 + rng() * 1.5, rot: rng() * 6, tint: 0.9 + rng() * 0.2 }));
     root.add(instanced(candyTreeGeometry(['#ff8fc4', '#7fe3c4', '#ffb3d9']), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.6 }), trees));
@@ -2322,6 +2336,82 @@ export function buildScenery(theme, c) {
       g.rotation.y = rng() * 6;
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       root.add(g);
+      // Spin around the disc's cylinder axis; leave the pole planted in the icing.
+      fx.tappable(g, (a) => {
+        if (a.busy) return;
+        a.busy = A.reducedMotion ? 0.4 : 1.8;
+        fx.sound()?.sparkle(5);
+        if (!A.reducedMotion) fx.burst(g.localToWorld(new THREE.Vector3(0, h + 0.9, 0)), sweets, 12, 3, 0.4);
+      }, (dt, t, a) => {
+        const k = A.reducedMotion ? 0 : Math.max(0, 1 - a.busy / 1.8);
+        disc.rotation.y = a.busy > 0 ? TAU * 3 * (1 - Math.pow(1 - k, 3)) : 0;
+        disc.material.forEach((m) => {
+          m.emissive.set('#ffe6cc');
+          m.emissiveIntensity = a.busy > 0 ? 0.3 : 0;
+        });
+      });
+    });
+
+    // A little gumdrop patch in the front square, clear of the numbered doors.
+    [-1, 1].forEach((side) => {
+      for (let i = 0; i < 3; i++) {
+        const drop = new THREE.Group();
+        const color = sweets[i];
+        const jelly = part(drop, new THREE.SphereGeometry(0.65, 16, 10, 0, TAU, 0, Math.PI / 2),
+          std({ color, roughness: 0.32 }), 0, 0.12, 0, 1, 1.5, 1);
+        part(drop, new THREE.CylinderGeometry(0.65, 0.72, 0.16, 16), std({ color }), 0, 0.08, 0);
+        // Sugar freckles catch the light on the jelly dome.
+        for (let j = 0; j < 9; j++) {
+          const angle = j * 2.4, y = 0.2 + (j % 3) * 0.24;
+          const r = 0.66 * Math.sqrt(1 - Math.pow((y - 0.12) / 0.98, 2));
+          part(drop, new THREE.SphereGeometry(0.045, 4, 3), mat('#fff6fa'), Math.cos(angle) * r, y, Math.sin(angle) * r);
+        }
+        drop.position.set(side * (3.1 + i * 1.65), 0.03, -(L.frontR - 3.4) + i * 0.3);
+        root.add(drop);
+        const baseY = drop.position.y;
+        fx.tappable(drop, (a) => {
+          if (a.busy) return;
+          a.busy = A.reducedMotion ? 0.4 : 1.2;
+          jelly.material.emissive.set(color);
+          jelly.material.emissiveIntensity = 0.35;
+          fx.sound()?.pop(420 + i * 160, 180 + i * 60, 0.18);
+          if (!A.reducedMotion) fx.burst(drop.position.clone().add(new THREE.Vector3(0, 1, 0)), [color, '#ffffff'], 10, 2.5, 0.3);
+        }, (dt, t, a) => {
+          const k = Math.max(0, 1 - a.busy / 1.2);
+          const bounce = a.busy > 0 && !A.reducedMotion ? Math.abs(Math.sin(k * Math.PI * 3)) * (1 - k) : 0;
+          drop.position.y = baseY + bounce * 1.8;
+          drop.scale.set(1 + bounce * 0.12, 1 - bounce * 0.12, 1 + bounce * 0.12);
+          jelly.material.emissiveIntensity = a.busy > 0 ? 0.35 : 0;
+        });
+      }
+    });
+
+    // A cupcake fountain: the cherry is a button for a shower of sprinkles.
+    const cupcake = new THREE.Group();
+    part(cupcake, new THREE.CylinderGeometry(1.1, 0.8, 1.25, 16), std({ color: '#d78a54', map: biscuitTex }), 0, 0.65, 0);
+    for (let i = 0; i < 4; i++) {
+      part(cupcake, new THREE.TorusGeometry(0.87 - i * 0.19, 0.3 - i * 0.035, 8, 24),
+        std({ color: i % 2 ? '#fff6fa' : '#ffb3d9', roughness: 0.45 }), 0, 1.3 + i * 0.35, 0).rotation.x = Math.PI / 2;
+    }
+    const cherry = part(cupcake, new THREE.SphereGeometry(0.3, 12, 8), std({ color: '#e2283a', roughness: 0.25 }), 0, 2.7, 0);
+    cupcake.position.set(0, 0.03, -(L.frontR - 4));
+    root.add(cupcake);
+    let sprinkleIn = 0;
+    fx.tappable(cupcake, (a) => {
+      if (a.busy) return;
+      a.busy = A.reducedMotion ? 0.5 : 2.4;
+      sprinkleIn = 0;
+      cherry.material.emissive.set('#ff4f81');
+      fx.sound()?.sparkle(8);
+    }, (dt, t, a) => {
+      cherry.material.emissiveIntensity = a.busy > 0 ? 0.65 : 0;
+      cupcake.scale.setScalar(a.busy > 0 && !A.reducedMotion ? 1 + Math.sin(a.busy * 12) * 0.035 : 1);
+      if (a.busy <= 0 || A.reducedMotion) return;
+      sprinkleIn -= dt;
+      if (sprinkleIn <= 0) {
+        sprinkleIn = 0.18;
+        fx.burst(cupcake.localToWorld(new THREE.Vector3(0, 2.8, 0)), sweets, 7, 4, 0.25);
+      }
     });
     // Ice-cream mountains with cherries on top
     for (let i = 0; i < 10; i++) {
@@ -2359,9 +2449,11 @@ export function buildScenery(theme, c) {
   }
 
   if (theme === 'toys') {
-    // Bright toy trees
-    const trees = sides(90).map((p) => ({ ...p, s: 1.1 + rng() * 1.4, rot: rng() * 6, tint: 0.9 + rng() * 0.2 }));
-    root.add(instanced(candyTreeGeometry(['#2fbf63', '#26a957', '#45d07a']), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55 }), trees));
+    const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
+    buildToyPlayground(c, fx);
+    // Lacquered toy trees, spaced to let the crafted floor show through.
+    const trees = sides(48).map((p) => ({ ...p, s: 1.1 + rng() * 1.4, rot: rng() * 6, tint: 0.9 + rng() * 0.2 }));
+    root.add(instanced(candyTreeGeometry(['#62998b', '#39746e', '#a2bda0']), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55 }), trees));
     // Giant alphabet blocks as the hills on the horizon
     const letters = 'NOELJOYABC';
     for (let i = 0; i < 10; i++) {
@@ -2369,17 +2461,17 @@ export function buildScenery(theme, c) {
       const R = 115 + rng() * 45;
       const s = 18 + rng() * 14;
       const face = tex(128, 128, (g, w) => {
-        g.fillStyle = ['#e2483d', '#3f7be0', '#ffd23f', '#2f9e5b', '#ff8a2b'][i % 5];
+        g.fillStyle = ['#bc5e53', '#466d89', '#d8b16e', '#6b9789', '#ba855c'][i % 5];
         g.fillRect(0, 0, w, w);
         g.fillStyle = '#ffffff';
         g.fillRect(8, 8, w - 16, w - 16);
-        g.fillStyle = ['#e2483d', '#3f7be0', '#ffd23f', '#2f9e5b', '#ff8a2b'][(i + 2) % 5];
+        g.fillStyle = ['#bc5e53', '#466d89', '#d8b16e', '#6b9789', '#ba855c'][(i + 2) % 5];
         g.font = '900 90px Nunito, sans-serif';
         g.textAlign = 'center';
         g.textBaseline = 'middle';
         g.fillText(letters[i], w / 2, w / 2 + 6);
       });
-      const m = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), new THREE.MeshStandardMaterial({ map: face, roughness: 0.6 }));
+      const m = new THREE.Mesh(new RoundedBoxGeometry(s, s, s, 2, s * 0.035), new THREE.MeshStandardMaterial({ map: face, roughness: 0.6 }));
       m.position.set(R * Math.sin(th), s / 2 - 1 + (i % 3 === 0 ? s : 0) * 0, -R * Math.cos(th));
       m.rotation.y = -th + (rng() - 0.5) * 0.5;
       root.add(m);
@@ -2428,6 +2520,8 @@ export function buildScenery(theme, c) {
   }
 
   // ---- space ----
+  const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
+  buildEnvironmentDetails(theme, c, fx);
   const stars = starfield(root, rng, 2600, 1.6);
   updaters.push((t) => { stars.material.opacity = 0.8 + Math.sin(t * 1.1) * 0.12; });
   // Earth rising over the horizon
@@ -2465,7 +2559,7 @@ export function buildScenery(theme, c) {
   neb2.position.set(-60, 170, -340);
   root.add(neb2);
   // Moon rocks and craters at the sides
-  const rockMat = std({ color: '#8e8d9b' });
+  const rockMat = std({ color: '#877594' });
   sides(60, 3, 0.25).forEach((p) => {
     const s = 0.4 + rng() * 1.6;
     const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), rockMat);
@@ -2504,23 +2598,47 @@ export function buildScenery(theme, c) {
   }
   const pad = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.4, 0.6, 20), std({ color: '#5d6478', metalness: 0.5 }));
   pad.position.y = 0.3;
-  rocket.add(pad);
+  pad.position.x = 0;
+  const launchPad = new THREE.Group(); launchPad.add(pad);
+  const padRing = new THREE.Mesh(new THREE.TorusGeometry(2.8, 0.08, 8, 40), neonMat('#77e4e8', 1.3));
+  padRing.rotation.x = Math.PI / 2; padRing.position.y = 0.65; launchPad.add(padRing);
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffb347').multiplyScalar(2), toneMapped: false }));
   flame.rotation.x = Math.PI;
   flame.position.y = 0.2;
   flame.visible = false;
   rocket.add(flame);
   rocket.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-  const [rx, rz] = polar(L.frontR + 6, L.spread + 0.45);
-  rocket.position.set(rx, 0, rz);
-  root.add(rocket);
-  // Every so often it does a little hop-test with its engines
-  updaters.push((t) => {
-    const k = t % 20;
-    const lift = k > 16 && k < 19 ? Math.sin(((k - 16) / 3) * Math.PI) : 0;
-    rocket.position.y = lift * 2.2;
-    flame.visible = lift > 0.02;
-    flame.scale.set(1, 0.8 + Math.random() * 0.5, 1);
+  const [rx, rz] = polar(L.frontR + 2, L.spread + 0.3);
+  rocket.position.set(rx, 0, rz); launchPad.position.set(rx, 0, rz);
+  root.add(rocket, launchPad);
+  let flight = 'ready', flightT = 0;
+  const launch = () => {
+    if (flight !== 'ready') return;
+    flight = 'launching'; flightT = 0;
+    fx.sound()?.whoosh(1.4, 100, 1600, 0.2);
+  };
+  fx.tappable(rocket, launch);
+  fx.tappable(launchPad, () => {
+    if (flight === 'away') { flight = 'landing'; flightT = 0; rocket.visible = true; fx.sound()?.sparkle(7); }
+    else launch();
+  });
+  updaters.push((t, dt) => {
+    flightT += dt;
+    if (flight === 'launching') {
+      const k = Math.max(0, flightT - 0.7);
+      rocket.position.y = A.reducedMotion ? 0 : k * k * 5;
+      rocket.position.x = rx + (A.reducedMotion ? 0 : k * k * 0.3);
+      rocket.rotation.z = A.reducedMotion ? 0 : -Math.min(0.18, k * 0.035);
+      if (flightT > (A.reducedMotion ? 0.8 : 6.5)) { flight = 'away'; rocket.visible = false; rocket.position.set(rx, 200, rz); }
+    } else if (flight === 'landing') {
+      const k = Math.min(1, flightT / (A.reducedMotion ? 0.1 : 4));
+      rocket.position.set(rx, (1 - k) * (1 - k) * 120, rz); rocket.rotation.z = 0;
+      if (k === 1) { flight = 'ready'; fx.sound()?.thunk(); }
+    }
+    const firing = flight === 'launching' || flight === 'landing';
+    flame.visible = firing && !A.reducedMotion;
+    flame.scale.set(1, 1.5 + Math.sin(t * 37) * 0.4, 1);
+    padRing.material.color.set(flight === 'away' ? '#ffb76b' : '#77e4e8');
   });
   // Satellite dish
   const dish = new THREE.Group();
@@ -2533,7 +2651,9 @@ export function buildScenery(theme, c) {
   const [dx, dz] = polar(L.frontR + 5, -(L.spread + 0.4));
   dish.position.set(dx, 0, dz);
   root.add(dish);
-  updaters.push((t) => { bowl.rotation.z = Math.sin(t * 0.3) * 0.6; });
+  fx.tappable(dish, (a) => { if (a.busy) return; a.busy = 3; fx.sound()?.sparkle(8); if (!A.reducedMotion) fx.burst(dish.localToWorld(new THREE.Vector3(0, 3, 0)), ['#7af7ff', '#c9a6ff'], 24, 4, 0.4, 0); }, (dt, t, a) => {
+    bowl.rotation.z = A.reducedMotion ? 0 : Math.sin(t * (a.busy > 0 ? 3 : 0.3)) * 0.6;
+  });
   // Santa's rocket-sleigh streaking across the stars
   const sleigh = makeSleigh();
   root.add(sleigh);

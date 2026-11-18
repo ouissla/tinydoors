@@ -40,7 +40,7 @@ function mesh(geo, material, x, y, z) {
 }
 
 // A toy train looping round an oval track in the square.
-function buildTrain(root, L, updaters) {
+function buildTrain(root, L, updaters, tappables) {
   const cz = -(L.frontR - 4.3), rx = Math.min(7, L.frontR * Math.sin(L.spread) * 0.55), rz = 2.1;
   const pts = [];
   for (let i = 0; i < 64; i++) {
@@ -88,12 +88,36 @@ function buildTrain(root, L, updaters) {
     root.add(c);
   });
   const len = curve.getLength();
-  updaters.push((t) => {
+  let distance = 0, boost = 0;
+  const steam = [];
+  for (let i = 0; i < 8; i++) {
+    const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: puff, transparent: true, opacity: 0, depthWrite: false }));
+    root.add(p); steam.push(p);
+  }
+  cars.forEach((car) => {
+    const agent = { m: { root: car, kind: 'prop' }, poke() {
+      if (boost > 0) return;
+      boost = 4;
+      if (A.Sound) { A.Sound.init(); A.Sound.pop(440, 880, 0.18); A.Sound.sparkle(4); }
+    }, update() {} };
+    car.userData.agent = agent; tappables.push(agent);
+  });
+  updaters.push((t, dt) => {
+    boost = Math.max(0, boost - dt);
+    distance += dt * (boost > 0 && !A.reducedMotion ? 3.5 : 1.4);
     cars.forEach((c, i) => {
-      const u = (((t * 1.4) - i * 1.0) / len % 1 + 1) % 1;
+      const u = ((distance - i * 1.0) / len % 1 + 1) % 1;
       const p = curve.getPointAt(u), d = curve.getTangentAt(u);
       c.position.set(p.x, 0.05 + Math.abs(Math.sin(t * 12 + i)) * 0.02, p.z);
       c.rotation.y = Math.atan2(d.x, d.z);
+    });
+    engine.updateMatrixWorld(true);
+    const chimney = engine.localToWorld(new THREE.Vector3(0, 1.2, 0.42));
+    steam.forEach((p, i) => {
+      const k = (t * 0.7 + i / steam.length) % 1;
+      p.visible = boost > 0 && !A.reducedMotion;
+      p.position.copy(chimney).add(new THREE.Vector3(-k * 0.6, k * 2, 0));
+      p.scale.setScalar(0.25 + k * 0.9); p.material.opacity = (1 - k) * 0.55;
     });
   });
 }
@@ -103,6 +127,7 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
   const summer = theme === 'summer';
   const wintry = !summer; // presents under the tree etc.
   const updaters = [];
+  const tappables = [];
 
   // ---- Fairy lights along every roof (one instanced draw call) ----
   const pts = [];
@@ -124,6 +149,7 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
   let tw = 0;
   const tmp = new THREE.Color();
   updaters.push((t, dt) => {
+    if (!pts.length) return;
     tw += dt;
     if (tw < 0.12) return;
     tw = 0;
@@ -223,9 +249,10 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
   if (wintry) {
     // ---- Presents piled at the foot of the big tree ----
     const COLORS = ['#e2483d', '#2f9e5b', '#3f5a8a', '#e9b949', '#9b5de5', '#ffffff', '#ff8ad8'];
-    for (let i = 0; i < 14; i++) {
-      const th = -1.1 + (2.2 * i) / 13 + (rng() - 0.5) * 0.15;
-      const r = 5.6 + rng() * 1.2;
+    const presentCount = snow ? 4 : 14;
+    for (let i = 0; i < presentCount; i++) {
+      const th = -1.1 + (2.2 * i) / (presentCount - 1) + (rng() - 0.5) * 0.15;
+      const r = (snow ? 3.2 : 5.6) + rng() * 1.2;
       const s = 0.45 + rng() * 0.45;
       const g = new THREE.Group();
       g.add(mesh(new THREE.BoxGeometry(s, s * (0.7 + rng() * 0.5), s), mat(COLORS[i % COLORS.length]), 0, s * 0.45, 0));
@@ -244,7 +271,7 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
     ]);
     const caneGeo = new THREE.TubeGeometry(curve, 24, 0.09, 8);
     const caneMat = mat('#ffffff', { map: caneTex, flatShading: false, roughness: 0.4 });
-    for (let i = 0; i < (snow || theme === 'workshop' ? 6 : theme === 'gingerbread' ? 10 : 0); i++) {
+    for (let i = 0; i < (theme === 'workshop' ? 6 : theme === 'gingerbread' ? 10 : 0); i++) {
       const th = (i < 3 ? -1 : 1) * (L.spread + 0.05 + (i % 3) * 0.12);
       const [x, z] = polar(L.frontR - 1.6 - (i % 5) * 1.3, i < 6 ? th : th * 0.55);
       const c = mesh(caneGeo, caneMat, x, 0, z);
@@ -262,7 +289,7 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
         root.add(gd);
       }
     }
-    if (theme === 'toys') buildTrain(root, L, updaters);
+    if (theme === 'toys') buildTrain(root, L, updaters, tappables);
     if (theme === 'toys') {
       // stacks of building blocks at the corners of the square
       const cols = ['#e2483d', '#3f7be0', '#ffd23f', '#2f9e5b', '#ff8a2b'];
@@ -331,5 +358,5 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
     root.add(mesh(new THREE.BoxGeometry(0.84, 0.12, 0.54), mat('#2e7dd1'), ex, 0.56, ez));
   }
 
-  return { update: (t, dt) => updaters.forEach((u) => u(t, dt)) };
+  return { tappables, update: (t, dt) => updaters.forEach((u) => u(t, dt)) };
 }

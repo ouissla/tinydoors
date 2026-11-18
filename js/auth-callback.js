@@ -1,5 +1,7 @@
 (async function () {
-  const auth = window.Advent.Auth;
+  const A = window.Advent;
+  const tr = A.I18n.t;
+  const auth = A.Auth;
   const params = new URLSearchParams(location.search);
   const fragment = new URLSearchParams(location.hash.slice(1));
   try {
@@ -9,20 +11,20 @@
     // Optional token-hash email template also works when opened in a different browser.
     const tokenHash = params.get('token_hash');
     if (tokenHash) {
-      history.replaceState(null, '', 'auth.html');
+      history.replaceState(null, '', A.I18n.url('auth.html'));
       if (params.get('type') !== 'email') throw new Error('invalid');
       const { error } = await auth.client.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
       if (error) throw error;
     }
     const { data, error } = await auth.client.auth.getSession();
     if (error || !data.session) throw error || new Error('expired');
-    history.replaceState(null, '', 'auth.html');
-    location.replace('editor.html');
+    history.replaceState(null, '', A.I18n.url('auth.html'));
+    location.replace(A.I18n.url('editor.html'));
   } catch {
     // Never echo tokens or provider error text into the page.
-    history.replaceState(null, '', 'auth.html');
-    document.getElementById('authTitle').textContent = 'Let’s get you a fresh link';
-    document.getElementById('authMessage').textContent = 'That sign-in link may have expired or already been used. Request a new one to open your calendars.';
+    history.replaceState(null, '', A.I18n.url('auth.html'));
+    document.getElementById('authTitle').textContent = tr("Let’s get you a fresh link");
+    document.getElementById('authMessage').textContent = tr("That sign-in link may have expired or already been used. Request a new one to open your calendars.");
     document.getElementById('authRetry').hidden = false;
   }
 })();

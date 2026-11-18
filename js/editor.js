@@ -1,6 +1,7 @@
 /* The creator's editor: who + theme → 24 pre-filled doors → personalise → preview & share. */
 (async function () {
   const A = window.Advent;
+  const tr = A.I18n.t;
   const $ = (id) => document.getElementById(id);
   const esc = A.esc;
   const params = new URLSearchParams(location.search);
@@ -14,7 +15,7 @@
   let huts = [];
   const photoURL = {}; // photoId -> object URL
 
-  const fill = (s) => String(s || '').replace(/\{to\}/g, cal ? cal.to : 'them').replace(/\{from\}/g, cal ? cal.from : 'you');
+  const fill = (s) => String(s || '').replace(/\{to\}/g, cal ? cal.to : tr("them")).replace(/\{from\}/g, cal ? cal.from : tr("you"));
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const photoCount = () => cal.days.filter((d) => d.photoId).length;
   const personalCount = () => cal.days.filter((d) => d.personal).length;
@@ -34,7 +35,7 @@
     f.tabIndex = -1;
     f.setAttribute('aria-hidden', 'true');
     f.title = '';
-    f.src = `3d.html?theme=${encodeURIComponent(t)}&bg`;
+    f.src = A.I18n.url(`3d.html?theme=${encodeURIComponent(t)}&bg`);
     f._show = () => {
       if (bgTheme !== t) { f.remove(); return; } // picked another world meanwhile
       if (f.classList.contains('on')) return;
@@ -82,18 +83,31 @@
     return task;
   }
   function save() {
-    $('saved').textContent = 'Saving…';
+    $('saved').textContent = tr("Saving…");
     clearTimeout(saveT);
     saveT = setTimeout(async () => {
       try {
         await persist();
         A.store.set(LAST, cal.id);
-        $('saved').textContent = 'Saved ✓';
+        $('saved').textContent = tr("Saved ✓");
       } catch (e) {
-        $('saved').textContent = 'Couldn’t save';
+        $('saved').textContent = tr("Couldn’t save");
       }
     }, 250);
   }
+
+  // Finish queued saves before a language change reloads the editor.
+  A.I18n.beforeChange = async () => {
+    if (!cal) return;
+    clearTimeout(saveT);
+    try {
+      await persist();
+      A.store.set(LAST, cal.id);
+    } catch (error) {
+      toast(tr('Couldn’t save that change. Please try again.'));
+      throw error;
+    }
+  };
 
   let toastT;
   function toast(msg) {
@@ -115,11 +129,11 @@
   try { await A.DBReady; }
   catch { return; } // The account panel shows the retry message; never silently save locally.
   if (A.DB.isCloud) {
-    document.querySelectorAll('.proto-note').forEach((node) => { node.textContent = 'Your link is read-only. Recipients do not need to sign in.'; });
-    $('buyBtn').textContent = 'Season Pass coming soon';
+    document.querySelectorAll('.proto-note').forEach((node) => { node.textContent = tr("Your link is read-only. Recipients do not need to sign in."); });
+    $('buyBtn').textContent = tr("Season Pass coming soon");
     $('buyBtn').disabled = true;
-    $('goDoors').nextElementSibling.textContent = 'Save your calendar to your account. Recipients open their link without signing in.';
-    $('buyBtn').nextElementSibling.textContent = 'Online checkout is not available yet.';
+    $('goDoors').nextElementSibling.textContent = tr("Save your calendar to your account. Recipients open their link without signing in.");
+    $('buyBtn').nextElementSibling.textContent = tr("Online checkout is not available yet.");
     if (A.Auth.user) {
       LAST += ':' + A.Auth.user.id;
       try {
@@ -127,29 +141,30 @@
         $('accountCalendars').replaceChildren();
         calendars.forEach((item) => {
           const link = document.createElement('a');
-          link.href = 'editor.html?c=' + encodeURIComponent(item.id) + '&step=doors';
-          link.textContent = (item.to || 'Your calendar') + ' · ' + (A.THEMES[item.theme]?.name || 'Calendar');
+          link.href = A.I18n.url('editor.html?c=' + encodeURIComponent(item.id) + '&step=doors');
+          link.textContent = (item.to || tr("Your calendar")) + ' · ' + (A.THEMES[item.theme]?.name || tr("Calendar"));
           $('accountCalendars').append(link);
         });
-        if (!calendars.length) $('accountCalendars').textContent = 'Your first calendar starts below.';
-      } catch { $('accountCalendars').textContent = 'Couldn’t load your calendars. Refresh to try again.'; }
+        if (!calendars.length) $('accountCalendars').textContent = tr("Your first calendar starts below.");
+      } catch { $('accountCalendars').textContent = tr("Couldn’t load your calendars. Refresh to try again."); }
     }
   }
   const wanted = params.has('new') ? null : params.get('c') || A.store.get(LAST, null);
   if (wanted) {
     try { cal = await A.DB.getCalendar(wanted); }
     catch {
-      $('saved').textContent = 'Couldn’t load';
-      $('accountMessage').textContent = 'Couldn’t load that calendar. Please refresh to try again.';
+      $('saved').textContent = tr("Couldn’t load");
+      $('accountMessage').textContent = tr("Couldn’t load that calendar. Please refresh to try again.");
       $('accountMessage').setAttribute('role', 'alert');
       return;
     }
   }
   if (cal) {
+    cal.days = cal.days.map(A.I18n.localizePreset);
     await Promise.all(cal.days.map(async (d) => {
       if (d.photoId && !photoURL[d.photoId]) {
         try { photoURL[d.photoId] = await A.DB.getPhotoURL(d.photoId); }
-        catch { $('accountMessage').textContent = 'Some photos couldn’t load. Refresh to try again.'; }
+        catch { $('accountMessage').textContent = tr("Some photos couldn’t load. Refresh to try again."); }
       }
     }));
     setTheme(cal.theme);
@@ -178,7 +193,9 @@
     $('nextBtn').hidden = next !== 'doors';
     if (cal) {
       const url = new URL(location.href);
-      url.search = `?c=${cal.id}&step=${next}`;
+      url.searchParams.set('c', cal.id);
+      url.searchParams.set('step', next);
+      url.searchParams.set('lang', A.I18n.locale);
       history.replaceState(null, '', url);
     }
     if (next === 'doors') renderDoors(!instant);
@@ -208,11 +225,11 @@
   function updatePassNotice() {
     const notice = $('doorsPassNotice');
     notice.hidden = !needsPass();
-    notice.textContent = 'Season Pass selected · A$12.95 once. Free to customise and preview; pay when you’re ready to share.';
+    notice.textContent = tr("Season Pass selected · A$12.95 once. Free to customise and preview; pay when you’re ready to share.");
   }
   function openPreview(src, title) {
     $('worldPreviewTitle').textContent = title;
-    $('worldPreviewFrame').src = src;
+    $('worldPreviewFrame').src = A.I18n.url(src);
     $('worldPreview').showModal();
   }
   $('worldPreviewBtn').addEventListener('click', () => openPreview(`3d.html?theme=${encodeURIComponent(theme)}&skip`, A.THEMES[theme].name));
@@ -234,8 +251,8 @@
     try {
       clearTimeout(saveT);
       await persist();
-      openPreview(linkFor('&preview', page), `Preview for ${cal.to}`);
-    } catch { toast('Couldn’t save your preview. Please try again.'); }
+      openPreview(linkFor('&preview', page), `${tr("Preview for")} ${cal.to}`);
+    } catch { toast(tr("Couldn’t save your preview. Please try again.")); }
   }
   ['calendarPreviewBtn', 'previewBtn', 'preview2dBtn'].forEach((id) => $(id).addEventListener('click', previewCalendar));
 
@@ -248,7 +265,7 @@
       $('fTo').parentElement.classList.remove('shake');
       void $('fTo').offsetWidth;
       $('fTo').parentElement.classList.add('shake');
-      toast('Who is this calendar for?');
+      toast(tr("Who is this calendar for?"));
       return;
     }
     if (!cal) {
@@ -257,7 +274,7 @@
         id: A.DB.newId(),
         theme,
         to,
-        from: from || 'Someone who loves you',
+        from: from || tr("Someone who loves you"),
         year: now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear(),
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Australia/Sydney',
         plan: pendingPass ? 'season' : 'free',
@@ -311,7 +328,7 @@
     h.classList.toggle('has-photo', !!url);
     h.querySelector('.inside').style.backgroundImage = url ? `url("${url}")` : '';
     A.setHutIcon(h, A.iconFor(day, cal.theme));
-    h.setAttribute('aria-label', `Day ${d}: ${summary(day).title}. Tap to edit.`);
+    h.setAttribute('aria-label', `${tr("Day")} ${d}: ${summary(day).title}${tr(". Tap to edit.")}`);
   }
 
   function layoutGrid() {
@@ -323,19 +340,19 @@
 
   function renderHelpers() {
     const n = personalCount();
-    const msg = n === 0 ? 'No personal touches yet — even three makes it special'
-      : n < 3 ? `${n} personal touch${n === 1 ? '' : 'es'} · lovely start`
-      : n < 6 ? `${n} personal touches · this is going to land 💛`
-      : `${n} personal touches · absolutely legendary ✨`;
+    const msg = n === 0 ? tr("No personal touches yet — even three makes it special")
+      : n < 3 ? tr('{count} personal touch{suffix} · lovely start', { count: n, suffix: n === 1 ? '' : 'es', suffixFr: n === 1 ? '' : 's' })
+      : n < 6 ? tr('{count} personal touches · this is going to land 💛', { count: n })
+      : tr('{count} personal touches · absolutely legendary ✨', { count: n });
     $('meterText').textContent = msg;
     $('meterBar').style.width = Math.min(100, (n / 6) * 100) + '%';
 
     const tips = [];
     const emptyPhoto = cal.days.findIndex((d) => d.type === 'photo' && !d.photoId);
-    if (emptyPhoto >= 0) tips.push({ label: `📸 Add a photo to day ${emptyPhoto + 1}`, run: () => openSheet(emptyPhoto + 1) });
-    if (!cal.days[23].personal) tips.push({ label: '💌 Write the Christmas Eve letter', run: () => openSheet(24, 'note') });
-    tips.push({ label: '🖼️ Add several photos at once', run: () => $('bulkIn').click() });
-    if (!cal.days[0].personal && tips.length < 3) tips.push({ label: '👋 Write the welcome note', run: () => openSheet(1, 'note') });
+    if (emptyPhoto >= 0) tips.push({ label: `${tr("📸 Add a photo to day")} ${emptyPhoto + 1}`, run: () => openSheet(emptyPhoto + 1) });
+    if (!cal.days[23].personal) tips.push({ label: tr("💌 Write the Christmas Eve letter"), run: () => openSheet(24, 'note') });
+    tips.push({ label: tr("🖼️ Add several photos at once"), run: () => $('bulkIn').click() });
+    if (!cal.days[0].personal && tips.length < 3) tips.push({ label: tr("👋 Write the welcome note"), run: () => openSheet(1, 'note') });
     const box = $('suggest');
     box.innerHTML = '';
     tips.slice(0, 3).forEach((t) => {
@@ -348,25 +365,25 @@
 
   function summary(day) {
     switch (day.type) {
-      case 'photo': return { title: day.caption ? fill(day.caption) : 'A photo memory', text: day.photoId ? 'Your photo, hidden under ' + (cal.theme === 'snow' ? 'frost' : 'sand') : 'Add your own photo here' };
-      case 'message': return { title: 'A note', text: fill(day.text).slice(0, 110) };
-      case 'finale': return { title: 'Christmas Eve letter', text: fill(day.text).slice(0, 110) };
+      case 'photo': return { title: day.caption ? fill(day.caption) : tr("A photo memory"), text: day.photoId ? tr('Your photo, hidden under {cover}', { cover: tr(cal.theme === 'snow' ? 'frost' : 'sand') }) : tr("Add your own photo here") };
+      case 'message': return { title: tr("A note"), text: fill(day.text).slice(0, 110) };
+      case 'finale': return { title: tr("Christmas Eve letter"), text: fill(day.text).slice(0, 110) };
       case 'riddle': case 'joke': return { title: fill(day.q), text: A.KIND_LABEL[day.type] };
       case 'activity': return { title: fill(day.title), text: fill(day.body).slice(0, 110) };
       case 'voucher': return { title: fill(day.title), text: 'Voucher · ' + fill(day.body).slice(0, 80) };
       case 'game': {
-        const name = (A.GAME_INFO[day.game] || {}).name || 'Mini game';
-        const extra = day.game === 'wordsearch' && day.words ? ' · ' + day.words.join(', ') : day.game === 'sudoku' ? (day.size === 6 ? ' · 6×6, numbers' : ' · 4×4, pictures') : '';
+        const name = (A.GAME_INFO[day.game] || {}).name || tr("Mini game");
+        const extra = day.game === 'wordsearch' && day.words ? ' · ' + day.words.join(', ') : day.game === 'sudoku' ? (day.size === 6 ? tr(" · 6×6, numbers") : tr(" · 4×4, pictures")) : '';
         return { title: fill(day.title || name), text: name + extra };
       }
     }
-    return { title: 'A surprise', text: '' };
+    return { title: tr("A surprise"), text: '' };
   }
 
   // ---------------- Day sheet ----------------
   let sheetDay = null;
   let sheetMode = 'home';
-  let presetFilter = 'All';
+  let presetFilter = tr("All");
 
   function openSheet(d, mode) {
     A.Sound.init();
@@ -393,8 +410,8 @@
   function renderSheet() {
     const d = sheetDay;
     const day = cal.days[d - 1];
-    $('shDay').textContent = `Day ${d}`;
-    $('shKind').textContent = d === 24 ? 'Christmas Eve' : day.personal ? 'Made by you ♥' : 'Ready-made surprise';
+    $('shDay').textContent = `${tr("Day")} ${d}`;
+    $('shKind').textContent = d === 24 ? tr("Christmas Eve") : day.personal ? tr("Made by you ♥") : tr("Ready-made surprise");
     const body = $('shBody');
     const s = summary(day);
     const isEve = d === 24;
@@ -405,37 +422,37 @@
           <span class="cur-icon">${day.photoId ? `<img src="${photoURL[day.photoId]}" alt="">` : A.iconFor(day, cal.theme)}</span>
           <span class="cur-text"><b>${esc(s.title)}</b><small>${esc(s.text)}</small></span>
         </div>
-        <p class="label">Make it personal</p>
+        <p class="label">${tr("Make it personal")}</p>
         <div class="actions">
-          <button type="button" data-act="camera"><span>📸</span><b>Take a photo</b></button>
-          <button type="button" data-act="library"><span>🖼️</span><b>Choose a photo</b></button>
-          <button type="button" data-act="note"><span>💌</span><b>${isEve ? 'Write the letter' : 'Write a note'}</b></button>
-          <button type="button" data-act="voucher"><span>🎟️</span><b>Make a voucher</b></button>
-          <button type="button" class="wide" data-act="games"><span>🎮</span><b>Add a mini game</b><small>Sudoku, word search, memory…</small></button>
+          <button type="button" data-act="camera"><span>📸</span><b>${tr("Take a photo")}</b></button>
+          <button type="button" data-act="library"><span>🖼️</span><b>${tr("Choose a photo")}</b></button>
+          <button type="button" data-act="note"><span>💌</span><b>${isEve ? tr("Write the letter") : tr("Write a note")}</b></button>
+          <button type="button" data-act="voucher"><span>🎟️</span><b>${tr("Make a voucher")}</b></button>
+          <button type="button" class="wide" data-act="games"><span>🎮</span><b>${tr("Add a mini game")}</b><small>${tr("Sudoku, word search, memory…")}</small></button>
         </div>
-        ${day.type === 'game' && day.game === 'wordsearch' ? '<button type="button" class="pick-preset" data-act="words">✏️ Use your own words in this word search <span>→</span></button>' : ''}
-        <button type="button" class="pick-preset" data-act="presets">✨ Or pick a different surprise <span>${presets().length} ideas →</span></button>
+        ${day.type === 'game' && day.game === 'wordsearch' ? `<button type="button" class="pick-preset" data-act="words">${tr("✏️ Use your own words in this word search")} <span>→</span></button>` : ''}
+        <button type="button" class="pick-preset" data-act="presets">${tr("✨ Or pick a different surprise")} <span>${presets().length} ${tr("ideas →")}</span></button>
         <div class="sheet-foot">
-          ${day.personal ? '<button type="button" class="link" data-act="reset">Reset to the original</button>' : '<span></span>'}
-          <button type="button" class="btn primary" data-act="done">Done</button>
+          ${day.personal ? `<button type="button" class="link" data-act="reset">${tr("Reset to the original")}</button>` : '<span></span>'}
+          <button type="button" class="btn primary" data-act="done">${tr("Done")}</button>
         </div>`;
     } else if (sheetMode === 'photo') {
       body.innerHTML = `
         <div class="photo-edit">
-          <div class="pe-thumb">${day.photoId ? `<img src="${photoURL[day.photoId]}" alt="Your photo">` : '<span>📸</span>'}</div>
+          <div class="pe-thumb">${day.photoId ? `<img src="${photoURL[day.photoId]}" alt="${tr("Your photo")}">` : '<span>📸</span>'}</div>
           <div class="pe-side">
-            <label class="field">Caption <small>(written under the photo)</small>
-              <input type="text" id="capIn" maxlength="60" value="${esc(day.caption || '')}" placeholder="Remember this?">
+            <label class="field">${tr("Caption")} <small>${tr("(written under the photo)")}</small>
+              <input type="text" id="capIn" maxlength="60" value="${esc(day.caption || '')}" placeholder="${tr("Remember this?")}">
             </label>
             <div class="row-btns">
-              <button type="button" class="btn ghost small" data-act="camera">📸 Retake</button>
-              <button type="button" class="btn ghost small" data-act="library">🖼️ Another</button>
-              <button type="button" class="btn ghost small" data-act="removePhoto">Remove</button>
+              <button type="button" class="btn ghost small" data-act="camera">${tr("📸 Retake")}</button>
+              <button type="button" class="btn ghost small" data-act="library">${tr("🖼️ Another")}</button>
+              <button type="button" class="btn ghost small" data-act="removePhoto">${tr("Remove")}</button>
             </div>
           </div>
         </div>
-        <p class="hint">${esc(cal.to)} will ${cal.theme === 'snow' ? 'wipe away frost' : 'brush away sand'} to reveal it ✨</p>
-        <div class="sheet-foot"><button type="button" class="link" data-act="home">← Other options</button><button type="button" class="btn primary" data-act="done">Done</button></div>`;
+        <p class="hint">${esc(cal.to)} ${tr("will")} ${cal.theme === 'snow' ? tr("wipe away frost") : tr("brush away sand")} ${tr("to reveal it ✨")}</p>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("← Other options")}</button><button type="button" class="btn primary" data-act="done">${tr("Done")}</button></div>`;
       $('capIn').addEventListener('input', (e) => {
         day.caption = e.target.value;
         save();
@@ -444,11 +461,11 @@
     } else if (sheetMode === 'note') {
       const existing = day.type === 'message' || day.type === 'finale' ? fill(day.text) : '';
       body.innerHTML = `
-        <label class="field">${isEve ? 'Your Christmas Eve letter' : 'Your note'}
-          <textarea id="noteIn" rows="7" maxlength="900" placeholder="Dear ${esc(cal.to)},&#10;&#10;">${esc(existing)}</textarea>
+        <label class="field">${isEve ? tr("Your Christmas Eve letter") : tr("Your note")}
+          <textarea id="noteIn" rows="7" maxlength="900" placeholder="${tr('Dear')} ${esc(cal.to)},&#10;&#10;">${esc(existing)}</textarea>
         </label>
-        <p class="hint">It appears in handwriting${isEve ? ', with fireworks' : ', inside an envelope they tap to open'}. Signed “${esc(cal.from)}”.</p>
-        <div class="sheet-foot"><button type="button" class="link" data-act="home">← Back</button><button type="button" class="btn primary" data-act="saveNote">Save note</button></div>`;
+        <p class="hint">${tr("It appears in handwriting")}${isEve ? tr(", with fireworks") : tr(", inside an envelope they tap to open")}${tr(". Signed “")}${esc(cal.from)}${A.I18n.locale === 'fr' ? ' ».' : '”.'}</p>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("← Back")}</button><button type="button" class="btn primary" data-act="saveNote">${tr("Save note")}</button></div>`;
       // Ready-made words are selected, so typing replaces them; your own words keep the caret at the end.
       requestAnimationFrame(() => {
         const ta = $('noteIn');
@@ -460,32 +477,32 @@
     } else if (sheetMode === 'voucher') {
       const v = day.type === 'voucher' ? day : { title: '', body: '' };
       body.innerHTML = `
-        <div class="voucher mini-v"><div class="v-main"><span class="v-label">Voucher</span><h2 id="vPrevT">${esc(fill(v.title) || 'One…')}</h2></div><div class="v-stub"><span>Nº ${String(d).padStart(3, '0')}</span></div></div>
-        <label class="field">Good for one…
-          <input type="text" id="vTitle" maxlength="50" value="${esc(fill(v.title))}" placeholder="breakfast in bed">
+        <div class="voucher mini-v"><div class="v-main"><span class="v-label">${tr("Voucher")}</span><h2 id="vPrevT">${esc(fill(v.title) || tr("One…"))}</h2></div><div class="v-stub"><span>Nº ${String(d).padStart(3, '0')}</span></div></div>
+        <label class="field">${tr("Good for one…")}
+          <input type="text" id="vTitle" maxlength="50" value="${esc(fill(v.title))}" placeholder="${tr("breakfast in bed")}">
         </label>
-        <label class="field">The fine print <small>(optional)</small>
-          <input type="text" id="vBody" maxlength="120" value="${esc(fill(v.body))}" placeholder="Valid any morning you like. Pancakes guaranteed.">
+        <label class="field">${tr("The fine print")} <small>${tr("(optional)")}</small>
+          <input type="text" id="vBody" maxlength="120" value="${esc(fill(v.body))}" placeholder="${tr("Valid any morning you like. Pancakes guaranteed.")}">
         </label>
-        <div class="idea-chips">${['A day out, just us', 'Breakfast in bed', 'Movie night, you pick', 'A long phone call', 'One car wash', 'Dinner, my treat'].map((x) => `<button type="button" class="chip" data-idea="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-        <div class="sheet-foot"><button type="button" class="link" data-act="home">← Back</button><button type="button" class="btn primary" data-act="saveVoucher">Save voucher</button></div>`;
-      const sync = () => ($('vPrevT').textContent = $('vTitle').value ? ($('vTitle').value.match(/^one\b/i) ? '' : 'One ') + $('vTitle').value : 'One…');
+        <div class="idea-chips">${[tr("A day out, just us"), tr("Breakfast in bed"), tr("Movie night, you pick"), tr("A long phone call"), tr("One car wash"), tr("Dinner, my treat")].map((x) => `<button type="button" class="chip" data-idea="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("← Back")}</button><button type="button" class="btn primary" data-act="saveVoucher">${tr("Save voucher")}</button></div>`;
+      const sync = () => ($('vPrevT').textContent = $('vTitle').value ? ($('vTitle').value.match(A.I18n.locale === 'fr' ? /^un(?: bon pour)?\b/i : /^one\b/i) ? '' : tr("One ")) + $('vTitle').value : tr("One…"));
       $('vTitle').addEventListener('input', sync);
-      body.querySelectorAll('[data-idea]').forEach((b) => b.addEventListener('click', () => { $('vTitle').value = b.dataset.idea.toLowerCase(); sync(); }));
+      body.querySelectorAll('[data-idea]').forEach((b) => b.addEventListener('click', () => { $('vTitle').value = b.dataset.idea.charAt(0).toLowerCase() + b.dataset.idea.slice(1); sync(); }));
     } else if (sheetMode === 'words') {
       const cur = day.type === 'game' && day.game === 'wordsearch' ? day : { title: '', words: [] };
       body.innerHTML = `
-        <label class="field">Title
-          <input type="text" id="wsTitle" maxlength="40" value="${esc(fill(cur.title || 'Find the hidden words'))}">
+        <label class="field">${tr("Title")}
+          <input type="text" id="wsTitle" maxlength="40" value="${esc(fill(cur.title || tr("Find the hidden words")))}">
         </label>
-        <label class="field">Words to hide <small>(3–8 words, 2–10 letters each — names work brilliantly)</small>
-          <textarea id="wsWords" rows="3" maxlength="120" placeholder="MIA, DAD, BEACH, PAVLOVA">${esc((cur.words || []).join(', '))}</textarea>
+        <label class="field">${tr("Words to hide")} <small>${tr("(3–8 words, 2–10 letters each — names work brilliantly)")}</small>
+          <textarea id="wsWords" rows="3" maxlength="120" placeholder="${tr('MIA, DAD, BEACH, PAVLOVA')}">${esc((cur.words || []).join(', '))}</textarea>
         </label>
-        <p class="hint" id="wsHint">Letters only; spaces and punctuation are ignored.</p>
-        <div class="sheet-foot"><button type="button" class="link" data-act="home">← Back</button><button type="button" class="btn primary" data-act="saveWords">Save word search</button></div>`;
+        <p class="hint" id="wsHint">${tr("Letters only; spaces and punctuation are ignored.")}</p>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("← Back")}</button><button type="button" class="btn primary" data-act="saveWords">${tr("Save word search")}</button></div>`;
     } else if (sheetMode === 'presets') {
-      const cats = ['All', 'Games', 'Activities', 'Puzzles', 'Jokes', 'Vouchers', 'Notes'];
-      const list = presets().filter((p) => presetFilter === 'All' || p.cat === presetFilter);
+      const cats = [tr("All"), tr("Games"), tr("Activities"), tr("Puzzles"), tr("Jokes"), tr("Vouchers"), tr("Notes")];
+      const list = presets().filter((p) => presetFilter === tr("All") || p.cat === presetFilter);
       body.innerHTML = `
         <div class="filter">${cats.map((c) => `<button type="button" class="chip${c === presetFilter ? ' on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
         <div class="preset-list">${list.map((p) => `
@@ -493,7 +510,7 @@
             <span class="pe">${A.iconFor(p.item, cal.theme)}</span>
             <span class="pt"><b>${esc(fill(p.title))}</b><small>${p.item.type === 'game' ? esc(summary(p.item).text) : esc(A.KIND_LABEL[p.item.type])}${p.item.chips ? ' · ' + esc(p.item.chips.join(' · ')) : ''}</small></span>
           </button>`).join('')}</div>
-        <div class="sheet-foot"><button type="button" class="link" data-act="home">← Back</button><span></span></div>`;
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("← Back")}</button><span></span></div>`;
       body.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { presetFilter = b.dataset.cat; renderSheet(); }));
     }
   }
@@ -502,7 +519,7 @@
   let presetCache = null;
   function presets() {
     if (presetCache && presetCache.theme === cal.theme) return presetCache.list;
-    const CAT = { game: 'Games', activity: 'Activities', riddle: 'Puzzles', joke: 'Jokes', voucher: 'Vouchers', message: 'Notes' };
+    const CAT = { game: tr("Games"), activity: tr("Activities"), riddle: tr("Puzzles"), joke: tr("Jokes"), voucher: tr("Vouchers"), message: tr("Notes") };
     const seen = new Set();
     const list = [];
     [cal.theme, cal.theme === 'snow' ? 'summer' : 'snow'].forEach((t) =>
@@ -523,9 +540,9 @@
     cal.days[d - 1] = next;
     if (A.DB.isCloud) {
       clearTimeout(saveT);
-      $('saved').textContent = 'Saving…';
-      try { await persist(); $('saved').textContent = 'Saved ✓'; A.store.set(LAST, cal.id); }
-      catch (error) { cal.days[d - 1] = old; $('saved').textContent = 'Couldn’t save'; throw error; }
+      $('saved').textContent = tr("Saving…");
+      try { await persist(); $('saved').textContent = tr("Saved ✓"); A.store.set(LAST, cal.id); }
+      catch (error) { cal.days[d - 1] = old; $('saved').textContent = tr("Couldn’t save"); throw error; }
     } else save();
     if (old.photoId && old.photoId !== next.photoId) {
       A.DB.deletePhoto(old.photoId).catch(() => {}); // Cleanup follows a durable calendar update.
@@ -544,13 +561,13 @@
       const p = presets()[+presetBtn.dataset.preset];
       await setDay(sheetDay, clone(p.item));
       closeSheet();
-      toast('Surprise swapped ✨');
+      toast(tr("Surprise swapped ✨"));
       return;
     }
     const act = e.target.closest('[data-act]');
     if (act) await handle(act.dataset.act);
   }
-  const sheetError = () => toast('Couldn’t save that change. Please try again.');
+  const sheetError = () => toast(tr("Couldn’t save that change. Please try again."));
   $('shBody').addEventListener('click', (e) => onSheetClick(e).catch(sheetError));
   $('sheet').querySelectorAll('.sheet-backdrop, .sheet-head [data-act]').forEach((b) => b.addEventListener('click', () => handle(b.dataset.act).catch(sheetError)));
 
@@ -563,18 +580,18 @@
       case 'done': closeSheet(); break;
       case 'home': sheetMode = 'home'; renderSheet(); break;
       case 'note': case 'voucher': case 'presets': case 'words': sheetMode = act; renderSheet(); break;
-      case 'games': sheetMode = 'presets'; presetFilter = 'Games'; renderSheet(); break;
+      case 'games': sheetMode = 'presets'; presetFilter = tr("Games"); renderSheet(); break;
       case 'saveWords': {
-        const words = [...new Set($('wsWords').value.toUpperCase().split(/[^A-Z]+/).filter((w) => w.length >= 2 && w.length <= 10))].slice(0, 8);
+        const words = [...new Set(A.I18n.letters($('wsWords').value).split(/[^A-Z]+/).filter((w) => w.length >= 2 && w.length <= 10))].slice(0, 8);
         if (words.length < 3) {
-          $('wsHint').textContent = 'Add at least 3 words (2–10 letters each).';
+          $('wsHint').textContent = tr("Add at least 3 words (2–10 letters each).");
           $('wsHint').style.color = '#d22f4a';
           $('wsWords').focus();
           return;
         }
-        await setDay(d, { type: 'game', game: 'wordsearch', title: $('wsTitle').value.trim() || 'Find the hidden words', words, personal: true }, { celebrate: true });
+        await setDay(d, { type: 'game', game: 'wordsearch', title: $('wsTitle').value.trim() || tr("Find the hidden words"), words, personal: true }, { celebrate: true });
         closeSheet();
-        toast('Word search saved 🔎');
+        toast(tr("Word search saved 🔎"));
         break;
       }
       case 'camera': case 'library':
@@ -585,29 +602,29 @@
         await setDay(d, resetItem(d));
         sheetMode = 'home';
         renderSheet();
-        toast('Photo removed');
+        toast(tr("Photo removed"));
         break;
       case 'reset':
         await setDay(d, resetItem(d));
         sheetMode = 'home';
         renderSheet();
-        toast(`Day ${d} is back to its original surprise`);
+        toast(tr('Day {day} is back to its original surprise', { day: d }));
         break;
       case 'saveNote': {
         const text = $('noteIn').value.trim();
         if (!text) { $('noteIn').focus(); return; }
         await setDay(d, { type: d === 24 ? 'finale' : 'message', text, personal: true }, { celebrate: true });
         closeSheet();
-        toast(d === 24 ? 'Christmas Eve letter saved 💌' : 'Note saved 💌');
+        toast(d === 24 ? tr("Christmas Eve letter saved 💌") : tr("Note saved 💌"));
         break;
       }
       case 'saveVoucher': {
         let title = $('vTitle').value.trim();
         if (!title) { $('vTitle').focus(); return; }
-        if (!/^one\b/i.test(title)) title = 'One ' + title;
-        await setDay(d, { type: 'voucher', title, body: $('vBody').value.trim() || 'Valid whenever you like.', personal: true }, { celebrate: true });
+        if (!(A.I18n.locale === 'fr' ? /^un(?: bon pour)?\b/i : /^one\b/i).test(title)) title = tr("One ") + title;
+        await setDay(d, { type: 'voucher', title, body: $('vBody').value.trim() || tr("Valid whenever you like."), personal: true }, { celebrate: true });
         closeSheet();
-        toast('Voucher saved 🎟️');
+        toast(tr("Voucher saved 🎟️"));
         break;
       }
     }
@@ -630,14 +647,14 @@
     e.target.value = '';
     if (!file || !photoTarget) return;
     const d = photoTarget;
-    toast('Adding your photo…');
+    toast(tr("Adding your photo…"));
     try {
       await addPhotoTo(d, file);
       if (sheetDay === d) { sheetMode = 'photo'; renderSheet(); }
       celebrate(huts[d - 1].querySelector('.doorway'), 70);
-      toast(`Photo added to day ${d} 📸`);
+      toast(tr('Photo added to day {day} 📸', { day: d }));
     } catch (err) {
-      toast('Couldn’t add that photo. Check your connection and try again.');
+      toast(tr("Couldn’t add that photo. Check your connection and try again."));
     }
   }
   $('camIn').addEventListener('change', onPhotoPicked);
@@ -652,14 +669,14 @@
     cal.days.forEach((d, i) => { if (d.type === 'photo' && !d.photoId) slots.push(i + 1); });
     cal.days.forEach((d, i) => { if (!d.personal && d.type !== 'photo' && i > 0 && i < 23) slots.push(i + 1); });
     let added = 0;
-    toast('Adding your photos…');
+    toast(tr("Adding your photos…"));
     for (const f of files) {
       const d = slots.shift();
       if (!d) break;
       try { await addPhotoTo(d, f); added++; } catch (err) { /* skip unreadable */ }
     }
     if (added) {
-      toast(`${added} photo${added === 1 ? '' : 's'} spread across your doors 📸`);
+      toast(tr('{count} photo{suffix} spread across your doors 📸', { count: added, suffix: added === 1 ? '' : 's' }));
       A.Sound.init();
       A.Sound.sparkle(10);
     }
@@ -667,7 +684,7 @@
 
   // ---------------- Season pass (mock checkout) ----------------
   function upsell(why) {
-    $('upWhy').textContent = why || `You’ve used your ${FREE_PHOTOS} free photos.`;
+    $('upWhy').textContent = why || tr('You’ve used your {count} free photos.', { count: FREE_PHOTOS });
     $('upsell').hidden = false;
     A.Sound.init();
     A.Sound.pop(400, 900, 0.15);
@@ -684,7 +701,7 @@
     celebrate($('buyBtn'), 140);
     A.Sound.fanfare();
     $('upsell').hidden = true;
-    toast('Season Pass unlocked — every world and unlimited photos 🎉');
+    toast(tr("Season Pass unlocked — every world and unlimited photos 🎉"));
     if (step === 'share') renderShare();
   });
 
@@ -695,13 +712,13 @@
   function linkFor(extra = '', page = '3d.html') {
     if (!extra.includes('preview') && (needsPass() || (A.DB.isCloud && !shareToken))) return '';
     const share = A.DB.isCloud && !extra.includes('preview') ? '&s=' + shareToken : '';
-    return new URL(`${page}?c=${cal.id}${share}${extra}`, location.href).href;
+    return A.I18n.url(`${page}?c=${cal.id}${share}${extra}`);
   }
 
   let shareRevision = 0;
   async function prepareShare() {
     const revision = ++shareRevision;
-    $('shareLink').placeholder = 'Preparing your private link…';
+    $('shareLink').placeholder = tr("Preparing your private link…");
     try {
       clearTimeout(saveT);
       await persist();
@@ -712,21 +729,21 @@
       $('shareLink').value = linkFor();
       $('copyBtn').disabled = false;
       $('nativeShare').disabled = false;
-      $('saved').textContent = 'Saved ✓';
+      $('saved').textContent = tr("Saved ✓");
     } catch {
       $('shareLink').value = '';
-      $('shareLink').placeholder = 'Couldn’t prepare the link. Go back and try again.';
-      $('saved').textContent = 'Couldn’t share';
+      $('shareLink').placeholder = tr("Couldn’t prepare the link. Go back and try again.");
+      $('saved').textContent = tr("Couldn’t share");
     }
   }
 
   async function renderShare() {
     $('shareEmblem').textContent = A.THEMES[cal.theme].emblem;
-    $('shareTitle').textContent = `Ready for ${cal.to}!`;
+    $('shareTitle').textContent = `${tr("Ready for")} ${cal.to}!`;
     const n = personalCount(), p = photoCount();
-    $('shareSummary').innerHTML = `24 doors · <b>${n}</b> made by you · <b>${p}</b> photo${p === 1 ? '' : 's'}<br>The first door opens on <b>1 December</b>.`;
+    $('shareSummary').innerHTML = `${tr("24 doors ·")} <b>${n}</b> ${tr("made by you ·")} <b>${p}</b> photo${p === 1 ? '' : 's'}<br>${tr("The first door opens on")} <b>${tr("1 December")}</b>.`;
     $('previewBtn').href = linkFor('&preview');
-    $('previewBtn').textContent = `👀 Preview as ${cal.to}`;
+    $('previewBtn').textContent = `${tr("👀 Preview as")} ${cal.to}`;
     $('preview2dBtn').href = linkFor('&preview', 'index.html');
     ++shareRevision;
     const gated = needsPass();
@@ -742,21 +759,21 @@
 
     const up = $('upgradeCard');
     if (cal.plan === 'season') {
-      up.innerHTML = `<div class="paid"><span>🎉</span><div><b>Season Pass active</b><small>Every world, unlimited photos, no credit, open until 31 January.</small></div></div>`;
+      up.innerHTML = `<div class="paid"><span>🎉</span><div><b>${tr("Season Pass active")}</b><small>${tr("Every world, unlimited photos, no credit, open until 31 January.")}</small></div></div>`;
     } else {
       up.innerHTML = `
-        <p class="kicker">${gated ? 'Season Pass selected' : 'Free calendar'}</p>
-        <h3>${gated ? 'Ready to share their Christmas magic?' : 'Want to go all out?'}</h3>
+        <p class="kicker">${gated ? tr("Season Pass selected") : tr("Free calendar")}</p>
+        <h3>${gated ? tr("Ready to share their Christmas magic?") : tr("Want to go all out?")}</h3>
         <ul class="perks">
-          <li>✨ All seven Season Pass worlds, from Gingerbread Lane to Neon City</li>
-          <li>📸 Unlimited photos (${p} added; free sharing includes ${FREE_PHOTOS})</li>
-          <li>✨ Remove the “Made with Tiny Doors” credit</li>
-          <li>💛 One-time A$12.95 for this Christmas — no subscription</li>
+          <li>${tr("✨ All seven Season Pass worlds, from Gingerbread Lane to Neon City")}</li>
+          <li>${tr("📸 Unlimited photos (")}${p} ${tr("added; free sharing includes")} ${FREE_PHOTOS})</li>
+          <li>${tr("✨ Remove the “Made with Tiny Doors” credit")}</li>
+          <li>${tr("💛 One-time A$12.95 for this Christmas — no subscription")}</li>
         </ul>
-        <button type="button" class="btn primary" id="upBtn">${gated ? 'Unlock &amp; share · A$12.95' : 'Get the Season Pass'}</button>
-        ${gated ? '<button type="button" class="btn ghost" id="chooseFreeWorld">Choose a free world</button><p class="fine">Your messages and personal edits stay saved. Free sharing includes up to 3 photos; remove any extra photos before sharing.</p>' : ''}`;
-      $('upBtn').addEventListener('click', () => upsell('Unlock the Season Pass to share this calendar. Your edits are saved.'));
-      if (gated) $('chooseFreeWorld').addEventListener('click', () => { go('start'); toast('Choose Snowy village or Summer Christmas. Your personal edits stay saved.'); });
+        <button type="button" class="btn primary" id="upBtn">${gated ? tr("Unlock &amp; share · A$12.95") : tr("Get the Season Pass")}</button>
+        ${gated ? `<button type="button" class="btn ghost" id="chooseFreeWorld">${tr("Choose a free world")}</button><p class="fine">${tr("Your messages and personal edits stay saved. Free sharing includes up to 3 photos; remove any extra photos before sharing.")}</p>` : ''}`;
+      $('upBtn').addEventListener('click', () => upsell(tr("Unlock the Season Pass to share this calendar. Your edits are saved.")));
+      if (gated) $('chooseFreeWorld').addEventListener('click', () => { go('start'); toast(tr("Choose Snowy village or Summer Christmas. Your personal edits stay saved.")); });
     }
   }
 
@@ -770,19 +787,19 @@
       $('shareLink').select();
       try { document.execCommand('copy'); } catch (err) { /* ignore */ }
     }
-    $('copyBtn').textContent = 'Copied ✓';
+    $('copyBtn').textContent = tr("Copied ✓");
     A.Sound.init();
     A.Sound.pop(600, 1200, 0.15);
-    setTimeout(() => ($('copyBtn').textContent = 'Copy'), 1800);
+    setTimeout(() => ($('copyBtn').textContent = tr("Copy")), 1800);
   });
   $('nativeShare').addEventListener('click', async () => {
     if (needsPass() || !$('shareLink').value) return;
-    const data = { title: fill(A.THEMES[cal.theme].title), text: `${cal.from} made you an advent calendar 🎄 A new door opens every day in December.`, url: linkFor() };
+    const data = { title: fill(A.THEMES[cal.theme].title), text: tr('{from} made you an advent calendar 🎄 A new door opens every day in December.', { from: cal.from }), url: linkFor() };
     if (navigator.share) {
       try { await navigator.share(data); } catch (e) { /* cancelled */ }
     } else {
       $('copyBtn').click();
-      toast('Link copied — paste it into a message');
+      toast(tr("Link copied — paste it into a message"));
     }
   });
 
@@ -796,6 +813,6 @@
 
   // ---------------- Boot ----------------
   go(cal ? (['doors', 'share'].includes(params.get('step')) ? params.get('step') : 'doors') : 'start', true);
-  if (cal) $('saved').textContent = 'Saved ✓';
+  if (cal) $('saved').textContent = tr("Saved ✓");
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => step === 'doors' && layoutGrid());
 })();

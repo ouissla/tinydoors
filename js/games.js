@@ -3,6 +3,7 @@
    so reopening a door shows the same puzzle. */
 (function () {
   const A = (window.Advent = window.Advent || {});
+  const tr = A.I18n.t;
   const { el, esc } = A;
 
   const SYMBOLS = {
@@ -51,7 +52,7 @@
   }
   function win(ctx, node, msg) {
     node.classList.add('won');
-    const banner = el('div', 'game-win', `<span>🎉</span><b>You did it!</b><small>${esc(msg || '')}</small>`);
+    const banner = el('div', 'game-win', `<span>🎉</span><b>${tr("You did it!")}</b><small>${esc(msg || '')}</small>`);
     node.appendChild(banner);
     ctx.setPrimary(null);
     ctx.sound.fanfare();
@@ -60,7 +61,7 @@
     setTimeout(() => ctx.fx.burst(x, y - 60, { count: 80, power: 0.8 }), 350);
   }
   function shell(item, howTo) {
-    return el('div', 'game', `<h2 class="game-title">${esc(item.title || 'Mini game')}</h2><p class="game-how">${esc(howTo)}</p>`);
+    return el('div', 'game', `<h2 class="game-title">${esc(item.title || tr("Mini game"))}</h2><p class="game-how">${esc(howTo)}</p>`);
   }
 
   // ---------------- Sudoku (4×4 emoji or 6×6 numbers) ----------------
@@ -110,7 +111,7 @@
       else givens--;
     }
 
-    const node = shell(item, n === 4 ? 'Every row, column and box needs one of each.' : 'Fill in 1–6 so every row, column and box has each number once.');
+    const node = shell(item, n === 4 ? tr("Every row, column and box needs one of each.") : tr("Fill in 1–6 so every row, column and box has each number once."));
     const board = el('div', `sudoku s${n}`);
     board.style.setProperty('--n', n);
     const cells = [];
@@ -168,11 +169,11 @@
           if (r2 === rr || c2 === cc || sameBox) { if (!c.classList.contains('given')) c.classList.add('bad'); }
         });
       });
-      if (full && cells.every((c) => value(c) === solution[+c.dataset.r][+c.dataset.c])) win(ctx, node, n === 4 ? 'Sudoku superstar!' : 'Proper puzzle brain.');
+      if (full && cells.every((c) => value(c) === solution[+c.dataset.r][+c.dataset.c])) win(ctx, node, n === 4 ? tr("Sudoku superstar!") : tr("Proper puzzle brain."));
     }
     return {
       node,
-      label: 'Hint 💡',
+      label: tr("Hint 💡"),
       primary() {
         if (node.classList.contains('won')) return false;
         const open = cells.filter((c) => !c.classList.contains('given') && value(c) !== solution[+c.dataset.r][+c.dataset.c]);
@@ -188,7 +189,7 @@
   // ---------------- Word search ----------------
   function wordsearch(day, item, ctx) {
     const r = A.rng(day * 4111 + (item.words || []).join('').length);
-    const words = (item.words || []).map((w) => String(w).toUpperCase().replace(/[^A-Z]/g, '')).filter((w) => w.length >= 2 && w.length <= 10).slice(0, 8);
+    const words = (item.words || []).map((w) => A.I18n.letters(w).replace(/[^A-Z]/g, '')).filter((w) => w.length >= 2 && w.length <= 10).slice(0, 8);
     const longest = Math.max(...words.map((w) => w.length), 5);
     const n = Math.min(11, Math.max(8, longest + (words.length > 5 ? 2 : 1)));
     const g = Array.from({ length: n }, () => Array(n).fill(''));
@@ -211,7 +212,7 @@
     const AZ = 'ABCDEFGHIJKLMNOPRSTUWY';
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (!g[i][j]) g[i][j] = AZ[(r() * AZ.length) | 0];
 
-    const node = shell(item, 'Drag across a word (or tap its first and last letter).');
+    const node = shell(item, tr("Drag across a word (or tap its first and last letter)."));
     const board = el('div', 'wsearch');
     board.style.setProperty('--n', n);
     const cellEls = [];
@@ -254,7 +255,7 @@
       cells.forEach((p) => { const c = at(p.r, p.c); c.classList.add('found'); c.style.setProperty('--h', hue); });
       list.querySelector(`[data-i="${placed.indexOf(hit)}"]`).classList.add('done');
       good(ctx, at(cells[cells.length >> 1].r, cells[cells.length >> 1].c));
-      if (placed.every((p) => p.found)) win(ctx, node, `All ${placed.length} words found!`);
+      if (placed.every((p) => p.found)) win(ctx, node, `${tr("All")} ${placed.length} ${tr("words found!")}`);
       return true;
     }
     board.addEventListener('pointerdown', (e) => {
@@ -292,7 +293,7 @@
     });
     return {
       node,
-      label: 'Hint 💡',
+      label: tr("Hint 💡"),
       primary() {
         const p = placed.find((x) => !x.found);
         if (!p) return false;
@@ -311,9 +312,9 @@
     const r = A.rng(day * 3301);
     const sym = SYMBOLS[ctx.theme] || SYMBOLS.snow;
     const deck = shuffle([...sym, ...sym], r);
-    const node = shell(item, 'Flip two cards at a time and find all the pairs.');
+    const node = shell(item, tr("Flip two cards at a time and find all the pairs."));
     const board = el('div', 'memory');
-    const status = el('p', 'game-status', 'Moves: 0');
+    const status = el('p', 'game-status', tr("Moves: 0"));
     let first = null, lock = false, moves = 0, pairs = 0;
     const cards = deck.map((s) => {
       const b = el('button', 'mcard', `<span class="back"></span><span class="face">${s}</span>`);
@@ -330,13 +331,13 @@
       tick(ctx);
       if (!first) { first = b; return; }
       moves++;
-      status.textContent = `Moves: ${moves}`;
+      status.textContent = `${tr("Moves:")} ${moves}`;
       if (first.dataset.s === b.dataset.s) {
         first.classList.add('matched');
         b.classList.add('matched');
         good(ctx, b);
         first = null;
-        if (++pairs === deck.length / 2) win(ctx, node, `All pairs in ${moves} moves.`);
+        if (++pairs === deck.length / 2) win(ctx, node, `${tr("All pairs in")} ${moves} ${tr("moves.")}`);
       } else {
         lock = true;
         const a = first;
@@ -346,7 +347,7 @@
     }
     return {
       node,
-      label: 'Peek 👀',
+      label: tr("Peek 👀"),
       primary() {
         if (node.classList.contains('won') || lock) return false;
         lock = true;
@@ -389,8 +390,8 @@
     g.fillStyle = '#fff';
     g.strokeStyle = 'rgba(0,0,0,.35)';
     g.lineWidth = 8;
-    g.strokeText(`Day ${day}`, 300, 530);
-    g.fillText(`Day ${day}`, 300, 530);
+    g.strokeText(`${tr("Day")} ${day}`, 300, 530);
+    g.fillText(`${tr("Day")} ${day}`, 300, 530);
     return c.toDataURL('image/jpeg', 0.9);
   }
 
@@ -409,7 +410,7 @@
       prev = gap;
       gap = q;
     }
-    const node = shell(item, 'Tap a tile next to the gap to slide it. Rebuild the picture!');
+    const node = shell(item, tr("Tap a tile next to the gap to slide it. Rebuild the picture!"));
     const board = el('div', 'slide');
     board.style.setProperty('--n', N);
     const peek = el('div', 'slide-peek');
@@ -426,7 +427,7 @@
       return t;
     });
     board.appendChild(peek);
-    const status = el('p', 'game-status', 'Moves: 0');
+    const status = el('p', 'game-status', tr("Moves: 0"));
     node.append(board, status);
     let moves = 0;
     const layout = () => tiles.forEach((id, pos) => {
@@ -441,17 +442,17 @@
       if (!neighbours(g).includes(pos)) { ctx.sound.thunk(); return; }
       [tiles[pos], tiles[g]] = [tiles[g], tiles[pos]];
       moves++;
-      status.textContent = `Moves: ${moves}`;
+      status.textContent = `${tr("Moves:")} ${moves}`;
       layout();
       ctx.sound.pop(500, 700, 0.1);
       if (tiles.every((t, i) => t === i)) {
         board.classList.add('solved');
-        setTimeout(() => win(ctx, node, `Solved in ${moves} moves.`), 350);
+        setTimeout(() => win(ctx, node, `${tr("Solved in")} ${moves} ${tr("moves.")}`), 350);
       }
     }
     return {
       node,
-      label: 'Peek 👀',
+      label: tr("Peek 👀"),
       primary() {
         if (node.classList.contains('won')) return false;
         board.classList.add('peeking');
@@ -464,8 +465,8 @@
   // ---------------- Word scramble ----------------
   function scramble(day, item, ctx) {
     const r = A.rng(day * 6007);
-    const list = (item.words || []).map(([w, h]) => [String(w).toUpperCase().replace(/[^A-Z]/g, ''), h]).filter(([w]) => w.length >= 3);
-    const node = shell(item, 'Tap the letters in the right order.');
+    const list = (item.words || []).map(([w, h]) => [A.I18n.letters(w).replace(/[^A-Z]/g, ''), h]).filter(([w]) => w.length >= 3);
+    const node = shell(item, tr("Tap the letters in the right order."));
     const stage = el('div', 'scramble');
     const status = el('p', 'game-status');
     node.append(stage, status);
@@ -491,7 +492,7 @@
         t.addEventListener('click', () => placeTile(t));
         tEl.appendChild(t);
       });
-      status.textContent = `Word ${idx + 1} of ${list.length}`;
+      status.textContent = `${tr("Word")} ${idx + 1} ${tr("of")} ${list.length}`;
     }
     function placeTile(t) {
       if (t.classList.contains('used') || node.classList.contains('won')) return;
@@ -517,7 +518,7 @@
         good(ctx, box);
         setTimeout(() => {
           idx++;
-          if (idx >= list.length) win(ctx, node, `${list.length} words unscrambled!`);
+          if (idx >= list.length) win(ctx, node, `${list.length} ${tr("words unscrambled!")}`);
           else setup();
         }, 800);
       } else {
@@ -531,7 +532,7 @@
     if (list.length) setup();
     return {
       node,
-      label: 'Hint 💡',
+      label: tr("Hint 💡"),
       primary() {
         if (node.classList.contains('won')) return false;
         // clear anything after the first wrong letter, then place the next right one
@@ -551,10 +552,10 @@
 
   A.GAME_INFO = {
     sudoku: { icon: '🔢', name: 'Sudoku' },
-    wordsearch: { icon: '🔎', name: 'Word search' },
-    memory: { icon: '🃏', name: 'Memory match' },
-    slide: { icon: '🧩', name: 'Picture puzzle' },
-    scramble: { icon: '🔤', name: 'Word scramble' },
+    wordsearch: { icon: '🔎', name: tr("Word search") },
+    memory: { icon: '🃏', name: tr("Memory match") },
+    slide: { icon: '🧩', name: tr("Picture puzzle") },
+    scramble: { icon: '🔤', name: tr("Word scramble") },
   };
 
   A.Games = {

@@ -1,26 +1,27 @@
 /* Creator accounts. Supabase owns email delivery, sessions and token refresh. */
 (function () {
   const A = (window.Advent = window.Advent || {});
+  const tr = A.I18n.t;
   const $ = (id) => document.getElementById(id);
   const auth = A.Auth = {
     mode: 'prototype', client: null, user: null, config: null, error: null,
     async signIn(email) {
-      if (!this.client) throw new Error('Sign-in is not available yet.');
+      if (!this.client) throw new Error(tr("Sign-in is not available yet."));
       const { error } = await this.client.auth.signInWithOtp({
-        email, options: { emailRedirectTo: new URL('auth.html', this.config.appUrl + '/').href },
+        email, options: { emailRedirectTo: new URL('auth.html?lang=' + A.I18n.locale, this.config.appUrl + '/').href },
       });
       if (error) throw error;
     },
     async signOut() {
       const { error } = await this.client.auth.signOut({ scope: 'local' });
       if (error) throw error;
-      location.replace('editor.html?new');
+      location.replace(A.I18n.url('editor.html?new'));
     },
     async session() {
       await this.ready;
       const { data, error } = await this.client.auth.getSession();
       if (error) throw error;
-      if (!data.session) throw new Error('Please sign in to save your calendar.');
+      if (!data.session) throw new Error(tr("Please sign in to save your calendar."));
       return data.session;
     },
     async request(path, options = {}) {
@@ -29,7 +30,7 @@
       headers.set('Authorization', 'Bearer ' + session.access_token);
       const response = await fetch(path, { ...options, headers });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || 'Could not complete that request.');
+      if (!response.ok) throw new Error(body.error || tr("Could not complete that request."));
       return body;
     },
     prompt() {
@@ -44,7 +45,7 @@
     // Plain static-source previews retain the local prototype; an unhealthy Worker does not.
     if (response.status === 404) return;
     const config = await response.json();
-    if (!response.ok) throw new Error(config.error || 'Sign-in is temporarily unavailable. Please try again.');
+    if (!response.ok) throw new Error(config.error || tr("Sign-in is temporarily unavailable. Please try again."));
     auth.mode = config.mode;
     auth.config = config;
     if (config.mode !== 'cloud') return;
@@ -60,7 +61,7 @@
       auth.user = session?.user || null;
       // Reload on account changes so no previous owner's calendar remains on screen.
       if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && auth.user?.id !== previous)) {
-        if (document.body.classList.contains('editor') && !document.body.classList.contains('auth-callback')) location.replace('editor.html');
+        if (document.body.classList.contains('editor') && !document.body.classList.contains('auth-callback')) location.replace(A.I18n.url('editor.html'));
       }
     });
   })().catch((error) => { auth.error = error; throw error; });
@@ -83,34 +84,34 @@
     }).catch(() => {
       $('accountPanel').hidden = false;
       $('accountLoading').hidden = true;
-      message('We couldn’t load sign-in. Please refresh and try again.', true);
+      message(tr("We couldn’t load sign-in. Please refresh and try again."), true);
     });
     $('accountForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       if (Date.now() < resendAt) return;
       const button = $('sendMagicLink');
       button.disabled = true;
-      button.textContent = 'Sending…';
+      button.textContent = tr("Sending…");
       message('');
       try {
         await auth.signIn($('accountEmail').value.trim());
-        message('Check your email for your sign-in link. You can open it on any device.');
+        message(tr("Check your email for your sign-in link. You can open it on any device."));
         resendAt = Date.now() + 60000;
         const tick = () => {
           const seconds = Math.ceil((resendAt - Date.now()) / 1000);
           button.disabled = seconds > 0;
-          button.textContent = seconds > 0 ? `Send another link in ${seconds}s` : 'Send sign-in link';
+          button.textContent = seconds > 0 ? tr('Send another link in {seconds}s', { seconds }) : tr("Send sign-in link");
           if (seconds <= 0) clearInterval(countdown);
         };
         tick(); countdown = setInterval(tick, 1000);
       } catch (error) {
-        message(error.status === 429 ? 'Please wait a minute before requesting another link.' : 'We couldn’t send that link. Check your email address and try again.', true);
-        button.disabled = false; button.textContent = 'Send sign-in link';
+        message(error.status === 429 ? tr("Please wait a minute before requesting another link.") : tr("We couldn’t send that link. Check your email address and try again."), true);
+        button.disabled = false; button.textContent = tr("Send sign-in link");
       }
     });
     $('signOut').addEventListener('click', async () => {
       $('signOut').disabled = true;
-      try { await auth.signOut(); } catch { message('Couldn’t sign out. Please try again.', true); $('signOut').disabled = false; }
+      try { await auth.signOut(); } catch { message(tr("Couldn’t sign out. Please try again."), true); $('signOut').disabled = false; }
     });
   }
 })();

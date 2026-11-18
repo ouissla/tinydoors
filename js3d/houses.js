@@ -318,6 +318,7 @@ function shojiTexture() {
 export function makeHouse(theme, day, pal, iconEmoji, rng) {
   const style = STYLE_OF[theme] || 'cottage';
   const snow = style === 'cottage';
+  const village = theme === 'snow';
   const ginger = style === 'gingerbread';
   const gabled = snow || ginger || style === 'beachbox';
   const group = new THREE.Group();
@@ -330,10 +331,10 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
   const icingMat = mat('#fffafc', { roughness: 0.45 });
 
   if (gabled) {
-    const W = snow ? 2.2 : ginger ? 2.1 : 1.9;
-    const H = snow ? 1.85 : ginger ? 1.8 : 2.25;
-    const D = snow ? 1.9 : ginger ? 1.85 : 1.7;
-    const RH = snow ? 1.05 + rng() * 0.35 : ginger ? 1.0 + rng() * 0.3 : 0.85;
+    const W = village ? 2.0 : snow ? 2.2 : ginger ? 2.1 : 1.9;
+    const H = village ? 1.7 : snow ? 1.85 : ginger ? 1.8 : 2.25;
+    const D = village ? 1.75 : snow ? 1.9 : ginger ? 1.85 : 1.7;
+    const RH = village ? 0.9 : snow ? 1.05 + rng() * 0.35 : ginger ? 1.0 + rng() * 0.3 : 0.85;
     height = H + RH;
     fz = D / 2;
     doorW = style === 'beachbox' ? 0.8 : 0.82;
@@ -345,7 +346,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
     add(group, box(W, H, D), wallMat, 0, H / 2, 0);
     const trimMat = ginger ? icingMat : mat(snow ? new THREE.Color(pal.wall).multiplyScalar(0.6).getStyle() : '#ffffff');
     [-1, 1].forEach((sx) => [-1, 1].forEach((sz) => add(group, box(0.12, H, 0.12), trimMat, sx * (W / 2 - 0.02), H / 2, sz * (D / 2 - 0.02))));
-    if (snow) add(group, box(W + 0.14, 0.26, D + 0.14), mat('#7d8aa8'), 0, 0.13, 0);
+    if (snow) add(group, box(W + 0.14, 0.26, D + 0.14), mat(village ? '#756457' : '#7d8aa8'), 0, 0.13, 0);
     else if (ginger) add(group, box(W + 0.16, 0.24, D + 0.16), mat('#4a2a1a', { roughness: 0.4 }), 0, 0.12, 0);
     else add(group, box(W + 0.1, 0.18, D + 0.1), mat('#ffffff'), 0, 0.09, 0);
 
@@ -367,7 +368,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
       if (snow || ginger) {
         add(group, box(L * 0.97, 0.16, D + 0.38), ginger ? icingMat : snowMat, px + nx * 0.2, py + ny * 0.2, 0, 0, 0, -side * a);
         const ex = side * (W / 2 + 0.26), ey = H - 0.12;
-        for (let k = 0; k < 6; k++) {
+        for (let k = 0; k < (village ? 0 : 6); k++) {
           const z = -D / 2 - 0.1 + (k + 0.5) * ((D + 0.2) / 6);
           if (ginger) {
             // icing drips
@@ -381,7 +382,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
       } else {
         add(group, box(L, 0.08, 0.06), mat('#ffffff'), px + nx * 0.1, py + ny * 0.1, D / 2 + 0.22, 0, 0, -side * a);
       }
-      for (let k = 0; k <= 5; k++) {
+      for (let k = 0; !village && k <= 5; k++) {
         const t = k / 5;
         if (side === 1 && k === 5) continue; // apex shared
         lights.push(new THREE.Vector3(side * (W / 2 + 0.2) * (1 - t), H - 0.02 + RH * t + (snow ? -0.06 : -0.05), D / 2 + 0.24));
@@ -406,7 +407,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
 
     // Windows
     if (snow || ginger) {
-      const winMat = ginger ? mat('#ffd0e6', { emissive: '#ff9ccc', emissiveIntensity: 1.5 }) : mat('#ffd77a', { emissive: '#ffc65c', emissiveIntensity: 1.7 });
+      const winMat = ginger ? mat('#ffd0e6', { emissive: '#ff9ccc', emissiveIntensity: 1.5 }) : mat('#ffd77a', { emissive: '#ffc65c', emissiveIntensity: village ? 0.7 : 1.7 });
       const wf = ginger ? icingMat : mat('#3b2418');
       [-1, 1].forEach((s) => {
         const x = s * (W / 2 - 0.37), y = 1.22;
@@ -617,9 +618,11 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
     // second capsule stacked on top, shifted and turned a little
     const up = rng() < 0.5 ? -1 : 1;
     const H2 = 1.1;
-    add(group, box(W * 0.85, H2, D * 0.9), mat(pal.wall2, { metalness: 0.15, roughness: 0.7, emissive: pal.wall2, emissiveIntensity: 0.22 }), up * 0.15, H + 0.2 + H2 / 2, -0.1, 0, up * 0.08, 0);
-    const winM = mat('#ffffff', { emissive: pal.roof, emissiveIntensity: 1.6, transparent: true, opacity: 0.95 });
-    add(group, new THREE.PlaneGeometry(W * 0.62, 0.42), winM, up * 0.15, H + 0.2 + H2 * 0.55, D * 0.45 - 0.08);
+    const upper = new THREE.Group();
+    upper.position.set(up * 0.15, H + 0.2, -0.1); upper.rotation.y = up * 0.08; group.add(upper);
+    add(upper, box(W * 0.85, H2, D * 0.9), mat(pal.wall2, { metalness: 0.15, roughness: 0.7, emissive: pal.wall2, emissiveIntensity: 0.22 }), 0, H2 / 2, 0);
+    const winM = mat('#ffffff', { emissive: pal.roof, emissiveIntensity: 1.25, transparent: true, opacity: 0.95 });
+    add(upper, new THREE.PlaneGeometry(W * 0.62, 0.42), winM, 0, H2 * 0.55, D * 0.45 + 0.012);
     // neon trim along the front edges
     const trim = neon(pal.roof);
     // a full neon outline round the front, plus an under-glow strip so every house reads from afar
@@ -627,7 +630,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
     add(group, box(W + 0.08, 0.08, 0.08), trim, 0, 0.24, fz + 0.03);
     add(group, box(0.08, H, 0.08), trim, -W / 2, H / 2 + 0.2, fz + 0.03);
     add(group, box(0.08, H, 0.08), trim, W / 2, H / 2 + 0.2, fz + 0.03);
-    add(group, box(W * 0.85 + 0.06, 0.07, 0.07), trim, up * 0.15, H + 0.2 + H2, D * 0.45 - 0.06);
+    add(upper, box(W * 0.85 + 0.06, 0.07, 0.07), trim, 0, H2, D * 0.45 + 0.03);
     add(group, box(W + 0.3, 0.05, D + 0.3), neon(pal.roof), 0, 0.03, 0);
     // two lit windows either side of the door
     const lit = mat('#fff3d6', { emissive: '#ffd9a0', emissiveIntensity: 1.3 });
@@ -642,8 +645,10 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
     add(group, new THREE.CylinderGeometry(0.02, 0.02, 1.0, 5), mat('#8a93a8', { metalness: 0.6 }), -up * 0.6, H + H2 + 0.7, -0.3);
     add(group, new THREE.SphereGeometry(0.06, 8, 6), neon('#ff2b5a'), -up * 0.6, H + H2 + 1.22, -0.3);
     // awning over the door
-    add(group, box(doorW + 0.5, 0.06, 0.5), dark, 0, doorH + 0.5, fz + 0.25, 0.15, 0, 0);
-    add(group, box(doorW + 0.5, 0.04, 0.04), neon(pal.ink), 0, doorH + 0.45, fz + 0.5);
+    const awning = new THREE.Group(); awning.position.set(0, doorH + 0.5, fz + 0.25); awning.rotation.x = 0.15; group.add(awning);
+    add(awning, box(doorW + 0.5, 0.06, 0.5), dark, 0, 0, 0);
+    add(awning, box(doorW + 0.5, 0.04, 0.04), neon(pal.ink), 0, -0.03, 0.25);
+    mergeStatic(upper); mergeStatic(awning);
     height = H + 0.2 + H2 + 1.3;
     for (let k = 0; k <= 6; k++) lights.push(new THREE.Vector3(-W / 2 + (k * W) / 6, H + 0.26, fz + 0.06));
   } else {
@@ -697,7 +702,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
   door.position.set(doorW / 2, doorH / 2, 0);
   door.castShadow = true;
   pivot.add(door);
-  if (snow) {
+  if (snow && (!village || day % 4 === 0)) {
     const wreath = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.055, 6, 14), mat('#1f6b48'));
     wreath.position.set(doorW / 2, doorH * 0.78, 0.06);
     const bow = new THREE.Mesh(box(0.14, 0.07, 0.04), mat('#d6282c'));

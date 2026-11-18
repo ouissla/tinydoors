@@ -1,6 +1,7 @@
 /* Surprise card overlay that flies out of a point on screen (used by the 3D view). */
 (function () {
   const A = (window.Advent = window.Advent || {});
+  const tr = A.I18n.t;
   const $ = (id) => document.getElementById(id);
   let current = null;
 
@@ -21,14 +22,14 @@
       card.innerHTML = '';
       card.className = `card type-${item.type}`;
       const head = A.el('div', 'card-head', `
-        <span class="day-badge">Day ${day}</span>
+        <span class="day-badge">${tr("Day")} ${day}</span>
         <span class="kind" id="cardTitle">${A.KIND_LABEL[item.type]}</span>
-        <button class="close" type="button" aria-label="Close">×</button>`);
+        <button class="close" type="button" aria-label="${tr("Close")}">×</button>`);
       const body = A.el('div', 'card-body');
       const foot = A.el('div', 'card-foot');
       const primaryBtn = A.el('button', 'btn primary', '');
       primaryBtn.type = 'button';
-      const closeBtn = A.el('button', 'btn ghost', 'Back to the village');
+      const closeBtn = A.el('button', 'btn ghost', tr("Back to the village"));
       closeBtn.type = 'button';
       const ctx = {
         theme, to, from, photo, sound: A.Sound, fx: A.FX,

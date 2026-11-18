@@ -685,7 +685,7 @@ export function populate(theme, L, rng, root, { lite = false, treePos } = {}) {
   };
   // One walker per terrace, stopping at that row's doors (the dome porches stick out further in space).
   for (let r = 0; r < L.rows; r++) {
-    if (lite && r % 2) continue;
+    if (winter || (lite && r % 2)) continue;
     const R = L.R0 + r * L.dR;
     const stops = L.slots.filter((s) => s.r === r).map((s) => s.th);
     const Rw = R - (0.95 + L.dR / 2) / 2 - (theme === 'space' ? 0.35 : 0.08);
@@ -776,30 +776,12 @@ export function populate(theme, L, rng, root, { lite = false, treePos } = {}) {
     }
     return agents;
   }
-  const nPeng = lite ? 3 : winter ? 6 : 5;
+  const nPeng = winter ? (lite ? 1 : 2) : lite ? 3 : 5;
   for (let i = 0; i < nPeng; i++) {
     add(new Wanderer(makePenguin(winter ? 1 : 0.75), rng, { ...plaza, speed: winter ? 0.55 : 0.45, special: 'slide' }));
   }
 
-  if (winter) {
-    // An elf pulling a sled of presents around the square
-    const sled = makeSled();
-    root.add(sled);
-    add(new Wanderer(makeElf({ carry: null, rng }), rng, { ...plaza, speed: 0.9, sled, pauseMax: 2 }));
-    // Reindeer grazing by the big tree
-    [-1, 1].forEach((s, i) => {
-      const deer = makeReindeer();
-      deer.root.position.set(treePos.x + s * 6.5, treePos.y, treePos.z + 2.5);
-      deer.root.rotation.y = s * -0.9 + Math.PI * 0.08;
-      add(new Idler(deer, rng));
-    });
-    // A couple of penguins up by the tree too
-    if (!lite) {
-      for (let i = 0; i < 2; i++) {
-        add(new Wanderer(makePenguin(0.9), rng, { rMin: L.backR + 1.5, rMax: L.backR + 4, thMin: -0.35, thMax: 0.35, y: L.topY, speed: 0.4, special: 'slide' }));
-      }
-    }
-  } else {
+  if (!winter) {
     const nCrab = lite ? 2 : 5;
     for (let i = 0; i < nCrab; i++) {
       add(new Wanderer(makeCrab(), rng, { ...plaza, rMin: L.frontR - 6.8, rMax: L.frontR - 4, speed: 0.6, sideways: true, pauseMax: 2.5 }));

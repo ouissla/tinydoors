@@ -1650,3 +1650,9 @@ html.family .hut:focus .hut-body { transform: translateY(-5%) scale(1.08); }
     transition-delay: 0s !important;
   }
 }
+
+/* Language choice stays available on the welcome screen and in both village views. */
+.language-picker { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 150; }
+.language-select { max-width: 125px; min-height: 40px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.4); border-radius: 12px; background: #fff7ed; color: #26334a; font: 800 .85rem 'Nunito', sans-serif; cursor: pointer; }
+.language-select:focus-visible { outline: 3px solid #efb944; outline-offset: 3px; }
+.bgmode .language-picker { display: none; }

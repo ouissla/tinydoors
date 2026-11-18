@@ -4,12 +4,10 @@
 
   A.HUT_PALETTES = {
     snow: [
-      { wall: '#f3e3c3', wall2: '#e8d3ac', roof: '#7a2e2a', door: '#b23a32', ink: '#fff4dc' },
-      { wall: '#c8473d', wall2: '#b43a31', roof: '#24453a', door: '#f3e3c3', ink: '#7a2e2a' },
-      { wall: '#2f6b4f', wall2: '#275c43', roof: '#7a2e2a', door: '#e9b949', ink: '#3b2a12' },
-      { wall: '#e9b949', wall2: '#dba93a', roof: '#3b2f4a', door: '#2f6b4f', ink: '#fff4dc' },
-      { wall: '#3f5a8a', wall2: '#354e79', roof: '#8b3a2f', door: '#f0d6d0', ink: '#3f5a8a' },
-      { wall: '#f0d6d0', wall2: '#e6c4bc', roof: '#24453a', door: '#8a4b2a', ink: '#ffe9c2' },
+      { wall: '#b9906c', wall2: '#a17a59', roof: '#51443e', door: '#85463c', ink: '#fff4dc' },
+      { wall: '#a87959', wall2: '#916549', roof: '#414e47', door: '#405d4b', ink: '#fff4dc' },
+      { wall: '#d3b998', wall2: '#bfa384', roof: '#62544a', door: '#805044', ink: '#fff4dc' },
+      { wall: '#b79e83', wall2: '#9f876e', roof: '#4e5660', door: '#486355', ink: '#fff4dc' },
     ],
     summer: [
       { wall: '#ff6f91', wall2: '#ffe3ea', roof: '#e23d66', door: '#2ec4b6', ink: '#fff' },
@@ -28,12 +26,12 @@
       { wall: '#c27c45', wall2: '#a5652f', roof: '#e2483d', door: '#6fc9ff', ink: '#2a2140' },
     ],
     toys: [
-      { wall: '#e2483d', wall2: '#ffe3df', roof: '#3f7be0', door: '#ffd23f', ink: '#fff' },
-      { wall: '#3f7be0', wall2: '#e3edff', roof: '#ffd23f', door: '#e2483d', ink: '#fff' },
-      { wall: '#ffd23f', wall2: '#fff6d6', roof: '#2f9e5b', door: '#3f7be0', ink: '#fff' },
-      { wall: '#2f9e5b', wall2: '#e3f7ea', roof: '#ff8a2b', door: '#9b5de5', ink: '#fff' },
-      { wall: '#ff8a2b', wall2: '#fff0e3', roof: '#9b5de5', door: '#2f9e5b', ink: '#fff' },
-      { wall: '#9b5de5', wall2: '#f3e9ff', roof: '#e2483d', door: '#ffd23f', ink: '#fff' },
+      { wall: '#c85c53', wall2: '#f2d6bd', roof: '#315875', door: '#e8b85e', ink: '#fff4db' },
+      { wall: '#446c88', wall2: '#dce5dd', roof: '#dcb36c', door: '#ad4945', ink: '#fff4db' },
+      { wall: '#e1bb79', wall2: '#fff0ce', roof: '#56877d', door: '#315875', ink: '#fff4db' },
+      { wall: '#67998b', wall2: '#e2ecda', roof: '#c77555', door: '#735c80', ink: '#fff4db' },
+      { wall: '#ca8d62', wall2: '#f7dfbb', roof: '#6d6383', door: '#3b7069', ink: '#fff4db' },
+      { wall: '#887797', wall2: '#eee0dc', roof: '#b6514a', door: '#e2b66d', ink: '#fff4db' },
     ],
     space: [
       { wall: '#7af7ff', wall2: '#e8fdff', roof: '#5fb8ff', door: '#3d5bd9', ink: '#fff' },
