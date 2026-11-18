@@ -464,3 +464,138 @@ body.editor.sheet-open { overflow: hidden; }
 @keyframes sheetup { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes popup { from { transform: translateY(30px) scale(0.94); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+/* Reward setup: miniature architecture follows the selected 3D world.
+   Keep the shared door, photo, badge and keyboard behaviour intact. */
+.ed-grid .hut[data-world] .roof::after { pointer-events: none; }
+.ed-grid .hut:is([data-world='space'], [data-world='cyber'], [data-world='japan'], [data-world='toys']) .doorway { border-radius: 8% 8% 0 0; }
+.ed-grid .hut:is([data-world='space'], [data-world='cyber'], [data-world='japan'], [data-world='toys']) .door-front::before { border-radius: inherit; }
+.ed-grid .hut:where(:not([data-world='snow']):not([data-world='summer'])) .ground {
+  background: var(--wall2);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.45);
+}
+.ed-grid .hut:not([data-world='snow']):not([data-world='summer']) .facade::before,
+.ed-grid .hut:not([data-world='snow']):not([data-world='summer']) .facade::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Iced biscuits, candy buttons and piped frosting. */
+.ed-grid .hut[data-world='gingerbread'] .roof::before {
+  background: radial-gradient(circle, #fff8ee 0 18%, transparent 20%) 0 0 / 22% 48%, var(--roof);
+}
+.ed-grid .hut[data-world='gingerbread'] .roof::after {
+  background: #fff8ee;
+  clip-path: polygon(50% 0,100% 90%,100% 100%,91% 89%,82% 100%,73% 88%,64% 100%,55% 89%,46% 100%,37% 88%,28% 100%,19% 89%,10% 100%,0 100%,0 90%);
+}
+.ed-grid .hut[data-world='gingerbread'] .facade {
+  background: radial-gradient(circle, #e4ac6e 0 12%, transparent 14%) 0 0 / 16% 17%, var(--wall);
+  border: calc(var(--cw) * .025) solid #fff5e8;
+  border-radius: 5% 5% 9% 9%;
+}
+.ed-grid .hut[data-world='gingerbread'] .facade::before {
+  inset: 25% 5% 10%;
+  background: radial-gradient(circle at 5% 20%,var(--roof) 0 5%,transparent 6%),radial-gradient(circle at 95% 20%,var(--door) 0 5%,transparent 6%),radial-gradient(circle at 5% 75%,var(--door) 0 5%,transparent 6%),radial-gradient(circle at 95% 75%,var(--roof) 0 5%,transparent 6%);
+}
+.ed-grid .hut[data-world='gingerbread'] .doorway { outline: calc(var(--cw) * .025) solid #fff5e8; }
+.ed-grid .hut[data-world='gingerbread'] .ground { background: #fff5e8; }
+
+/* Chunky wooden toy castles with battlements and block seams. */
+.ed-grid .hut[data-world='toys'] .roof { top: 8%; height: 24%; left: -3%; right: -3%; }
+.ed-grid .hut[data-world='toys'] .roof::before {
+  clip-path: polygon(0 0,18% 0,18% 30%,32% 30%,32% 0,48% 0,48% 30%,62% 30%,62% 0,78% 0,78% 30%,84% 30%,84% 0,100% 0,100% 100%,0 100%);
+}
+.ed-grid .hut[data-world='toys'] .roof::after { background: var(--wall2); clip-path: inset(75% 0 0); }
+.ed-grid .hut[data-world='toys'] .facade {
+  top: 31%; border: calc(var(--cw) * .025) solid var(--roof);
+  background: repeating-linear-gradient(0deg,transparent 0 25%,rgba(0,0,0,.12) 25% 28%),var(--wall);
+}
+.ed-grid .hut[data-world='toys'] .facade::before {
+  inset: 27% 4% 10%; border-left: calc(var(--cw) * .065) solid var(--wall2); border-right: calc(var(--cw) * .065) solid var(--wall2);
+}
+.ed-grid .hut[data-world='toys'] .ground { border-radius: 12%; background: var(--roof); }
+
+/* Moon-base domes, portholes and silver airlock frames. */
+.ed-grid .hut[data-world='space'] .roof { top: 3%; height: 39%; left: -2%; right: -2%; }
+.ed-grid .hut[data-world='space'] .roof::before {
+  clip-path: none; border-radius: 100% 100% 8% 8% / 100% 100% 8% 8%;
+  background: radial-gradient(ellipse at 32% 32%,#ffffffb0,transparent 48%),var(--roof);
+  border: calc(var(--cw) * .025) solid #e9edf6;
+}
+.ed-grid .hut[data-world='space'] .roof::after {
+  inset: 58% 24% 17%; clip-path: none; border-radius: 999px; background: #233650;
+  box-shadow: inset 0 0 0 calc(var(--cw) * .02) var(--wall),0 1px 0 #ffffff80;
+}
+.ed-grid .hut[data-world='space'] .facade {
+  top: 39%; background: linear-gradient(90deg,#b0bacb,#edf2fa 30%,#d6dfed 70%,#9eaac0);
+  border-radius: 0 0 16% 16%; border-bottom: calc(var(--cw) * .05) solid #69758d;
+}
+.ed-grid .hut[data-world='space'] .facade::before {
+  inset: 25% 5% 25%; background: radial-gradient(circle at 6% 50%,var(--wall) 0 5%,#69758d 6% 9%,transparent 10%),radial-gradient(circle at 94% 50%,var(--wall) 0 5%,#69758d 6% 9%,transparent 10%);
+}
+.ed-grid .hut[data-world='space'] .doorway { left: 25%; right: 25%; height: 70%; outline: calc(var(--cw) * .035) solid #7f8ba3; }
+.ed-grid .hut[data-world='space'] .ground { background: #a5a9ba; height: 8%; }
+.ed-grid .hut[data-world='space'].open:not(.needs-photo):not(.has-photo) .inside { background: radial-gradient(circle,#e4fdff,var(--wall) 62%,#3d5a7d); }
+
+/* Red-and-green timber workshops with snowy gambrel roofs. */
+.ed-grid .hut[data-world='workshop'] .roof::before { clip-path: polygon(32% 0,68% 0,86% 42%,100% 100%,0 100%,14% 42%); }
+.ed-grid .hut[data-world='workshop'] .roof::after { background: #fff; clip-path: polygon(32% 0,68% 0,80% 29%,66% 24%,50% 30%,34% 24%,20% 29%); }
+.ed-grid .hut[data-world='workshop'] .facade {
+  background: repeating-linear-gradient(90deg,transparent 0 17%,#00000015 17% 20%),var(--wall);
+  border-left: calc(var(--cw) * .04) solid var(--wall2); border-right: calc(var(--cw) * .04) solid var(--wall2);
+}
+.ed-grid .hut[data-world='workshop'] .facade::before {
+  inset: 23% 4% 14%; background: linear-gradient(90deg,var(--roof) 0 9%,transparent 9% 91%,var(--roof) 91%);
+}
+.ed-grid .hut[data-world='workshop'] .ground { background: #f4f8ff; }
+
+/* Raised treehouses with shaggy thatch and timber stilts. */
+.ed-grid .hut[data-world='jungle'] .roof { left: -12%; right: -12%; }
+.ed-grid .hut[data-world='jungle'] .roof::before {
+  background: repeating-linear-gradient(75deg,#00000018 0 2px,transparent 2px 7px),var(--roof);
+  clip-path: polygon(50% 0,100% 88%,94% 100%,86% 91%,78% 100%,70% 91%,62% 100%,54% 91%,46% 100%,38% 91%,30% 100%,22% 91%,14% 100%,6% 91%,0 88%);
+}
+.ed-grid .hut[data-world='jungle'] .roof::after { inset: 4% 35% 60%; clip-path: none; border-radius: 100% 0; background: #478a4e; rotate: -20deg; }
+.ed-grid .hut[data-world='jungle'] .facade {
+  bottom: 10%; background: repeating-linear-gradient(0deg,transparent 0 18%,#78522b80 18% 21%),var(--wall);
+  border: calc(var(--cw) * .025) solid #76532e;
+}
+.ed-grid .hut[data-world='jungle'] .facade::after { left: 9%; right: 9%; top: 100%; height: 21%; border-left: calc(var(--cw) * .065) solid #76532e; border-right: calc(var(--cw) * .065) solid #76532e; }
+.ed-grid .hut[data-world='jungle'] .ground { height: 5%; bottom: 7%; border-radius: 5%; background: #76532e; }
+
+/* Pastel machiya: curved eaves, timber frames and split noren curtains. */
+.ed-grid .hut[data-world='japan'] .roof { top: 4%; height: 30%; left: -12%; right: -12%; }
+.ed-grid .hut[data-world='japan'] .roof::before { clip-path: polygon(50% 0,70% 43%,87% 67%,100% 57%,96% 88%,75% 100%,25% 100%,4% 88%,0 57%,13% 67%,30% 43%); }
+.ed-grid .hut[data-world='japan'] .roof::after { background: #ffffff90; clip-path: polygon(50% 0,78% 60%,70% 53%,50% 12%,30% 53%,22% 60%); }
+.ed-grid .hut[data-world='japan'] .facade {
+  top: 33%; background: linear-gradient(90deg,var(--wall2) 0 5%,transparent 5% 95%,var(--wall2) 95%),var(--wall);
+  border-top: calc(var(--cw) * .04) solid var(--wall2); border-bottom: calc(var(--cw) * .045) solid var(--wall2);
+}
+.ed-grid .hut[data-world='japan'] .facade::before {
+  top: 21%; left: 16%; right: 16%; height: 15%; z-index: 2;
+  background: linear-gradient(90deg,var(--noren) 0 48%,transparent 48% 52%,var(--noren) 52%); border-radius: 0 0 12% 12%;
+}
+.ed-grid .hut[data-world='japan'] .facade::after {
+  inset: 30% 4% 17%;
+  background: repeating-linear-gradient(0deg,transparent 0 19%,var(--wall2) 19% 23%) left / 12% 100% no-repeat, repeating-linear-gradient(0deg,transparent 0 19%,var(--wall2) 19% 23%) right / 12% 100% no-repeat;
+  border-left: calc(var(--cw) * .065) solid var(--wall2); border-right: calc(var(--cw) * .065) solid var(--wall2); z-index: 0;
+}
+.ed-grid .hut[data-world='japan'] .ground { height: 6%; background: #d8cbdc; }
+
+/* Stacked capsule apartments, holo signs and restrained neon edges. */
+.ed-grid .hut[data-world='cyber'] .roof { top: 5%; height: 29%; left: 12%; right: -2%; }
+.ed-grid .hut[data-world='cyber'] .roof::before {
+  clip-path: none; border-radius: 7% 7% 0 0; background: var(--wall2); border-top: calc(var(--cw) * .025) solid var(--roof);
+}
+.ed-grid .hut[data-world='cyber'] .roof::after { inset: 39% 17% 21%; clip-path: none; background: var(--roof); box-shadow: 0 0 5px color-mix(in srgb,var(--roof) 40%,transparent); }
+.ed-grid .hut[data-world='cyber'] .facade {
+  top: 33%; background: repeating-linear-gradient(0deg,transparent 0 23%,#00000020 23% 25%),var(--wall);
+  border: calc(var(--cw) * .018) solid var(--roof); border-radius: 3%; box-shadow: 0 0 5px color-mix(in srgb,var(--roof) 30%,transparent);
+}
+.ed-grid .hut[data-world='cyber'] .facade::before { left: -7%; top: 16%; width: 9%; height: 42%; background: repeating-linear-gradient(0deg,var(--roof) 0 15%,var(--door) 15% 23%); border: 2px solid var(--door); }
+.ed-grid .hut[data-world='cyber'] .doorway { outline: calc(var(--cw) * .02) solid var(--roof); }
+.ed-grid .hut[data-world='cyber'] .plaque { background: var(--door); color: var(--door-ink); border: 1px solid var(--roof); }
+.ed-grid .hut[data-world='cyber'] .ground { height: 5%; bottom: -2%; border-radius: 10%; background: var(--door); border-top: 2px solid var(--roof); }
+.ed-grid .hut[data-world='cyber'].open:not(.needs-photo):not(.has-photo) .inside { background: radial-gradient(circle,#e4efff,var(--wall2) 60%,var(--door)); }
+.ed-grid .hut:is([data-world='space'],[data-world='cyber']) .doorway::after { background: radial-gradient(ellipse at 50% 70%,color-mix(in srgb,var(--roof) 35%,transparent),transparent 70%); }

@@ -35,7 +35,7 @@
       emblem: '🍪',
       finaleIcon: '🍪',
       scratchHint: 'Wipe away the icing sugar',
-      scratch: 'icing', base: 'snow', sound: 'snow', premium: true,
+      scratch: 'icing', base: 'snow', sound: 'gingerbread', premium: true,
     },
     toys: {
       name: 'Toy Town',
@@ -45,7 +45,7 @@
       emblem: '🧸',
       finaleIcon: '🧸',
       scratchHint: 'Wipe away the snow',
-      scratch: 'frost', base: 'snow', sound: 'summer', premium: true,
+      scratch: 'frost', base: 'snow', sound: 'toys', premium: true,
     },
     space: {
       name: 'Space Christmas',
@@ -55,7 +55,7 @@
       emblem: '🚀',
       finaleIcon: '🚀',
       scratchHint: 'Brush away the stardust',
-      scratch: 'stardust', base: 'snow', sound: 'snow', premium: true,
+      scratch: 'stardust', base: 'snow', sound: 'space', premium: true,
     },
     workshop: {
       name: "Santa's Workshop",
@@ -65,7 +65,7 @@
       emblem: '🛠️',
       finaleIcon: '🎅',
       scratchHint: 'Wipe away the frost',
-      scratch: 'frost', base: 'snow', sound: 'snow', premium: true,
+      scratch: 'frost', base: 'snow', sound: 'workshop', premium: true,
     },
     jungle: {
       name: 'Treetop Jungle',
@@ -75,7 +75,7 @@
       emblem: '🦜',
       finaleIcon: '🦜',
       scratchHint: 'Brush away the leaves',
-      scratch: 'sand', base: 'summer', sound: 'summer', premium: true,
+      scratch: 'sand', base: 'summer', sound: 'jungle', premium: true,
     },
     japan: {
       name: 'Kawaii Sakura Town',
@@ -85,7 +85,7 @@
       emblem: '🌸',
       finaleIcon: '🌸',
       scratchHint: 'Wipe away the frost',
-      scratch: 'frost', base: 'snow', sound: 'snow', premium: true,
+      scratch: 'frost', base: 'snow', sound: 'japan', premium: true,
     },
     cyber: {
       name: 'Neon City',
@@ -95,7 +95,7 @@
       emblem: '🌃',
       finaleIcon: '🎆',
       scratchHint: 'Wipe away the rain',
-      scratch: 'stardust', base: 'snow', sound: 'snow', premium: true,
+      scratch: 'stardust', base: 'snow', sound: 'cyber', premium: true,
     },
   };
   A.THEME_ORDER = ['snow', 'summer', 'gingerbread', 'toys', 'space', 'workshop', 'jungle', 'japan', 'cyber'];

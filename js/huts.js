@@ -86,6 +86,7 @@
       b.type = 'button';
       b.className = 'hut';
       b.dataset.day = d;
+      b.dataset.world = theme;
       b.style.setProperty('--dy', ((r() - 0.5) * 8).toFixed(1) + '%');
       b.style.setProperty('--rot', ((r() - 0.5) * 3).toFixed(2) + 'deg');
       b.style.setProperty('--roof-h', (26 + r() * 12).toFixed(0) + '%');
@@ -141,6 +142,7 @@
       h.style.setProperty('--roof', p.roof);
       h.style.setProperty('--door', p.door);
       h.style.setProperty('--door-ink', p.ink);
+      h.style.setProperty('--noren', p.noren || p.roof);
     });
     return best;
   };
