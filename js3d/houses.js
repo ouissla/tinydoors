@@ -609,16 +609,16 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
     doorW = 0.8;
     doorH = 1.35;
     plaqueY = doorH + 0.22;
-    const neon = (c) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2.2), toneMapped: false });
-    const body = mat(pal.wall, { metalness: 0.25, roughness: 0.55, emissive: pal.wall, emissiveIntensity: 0.3 });
-    const dark = mat('#11121c', { metalness: 0.5, roughness: 0.4 });
+    const neon = (c) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(1.75), toneMapped: false });
+    const body = mat(pal.wall, { metalness: 0.15, roughness: 0.7, emissive: pal.wall, emissiveIntensity: 0.22 });
+    const dark = mat('#11121c', { metalness: 0.3, roughness: 0.6 });
     add(group, box(W + 0.2, 0.2, D + 0.2), dark, 0, 0.1, 0);
     add(group, box(W, H, D), body, 0, H / 2 + 0.2, 0);
     // second capsule stacked on top, shifted and turned a little
     const up = rng() < 0.5 ? -1 : 1;
     const H2 = 1.1;
-    add(group, box(W * 0.85, H2, D * 0.9), mat(pal.wall2, { metalness: 0.25, roughness: 0.55, emissive: pal.wall2, emissiveIntensity: 0.3 }), up * 0.15, H + 0.2 + H2 / 2, -0.1, 0, up * 0.08, 0);
-    const winM = mat('#ffffff', { emissive: pal.roof, emissiveIntensity: 2.0, transparent: true, opacity: 0.95 });
+    add(group, box(W * 0.85, H2, D * 0.9), mat(pal.wall2, { metalness: 0.15, roughness: 0.7, emissive: pal.wall2, emissiveIntensity: 0.22 }), up * 0.15, H + 0.2 + H2 / 2, -0.1, 0, up * 0.08, 0);
+    const winM = mat('#ffffff', { emissive: pal.roof, emissiveIntensity: 1.6, transparent: true, opacity: 0.95 });
     add(group, new THREE.PlaneGeometry(W * 0.62, 0.42), winM, up * 0.15, H + 0.2 + H2 * 0.55, D * 0.45 - 0.08);
     // neon trim along the front edges
     const trim = neon(pal.roof);
@@ -630,7 +630,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
     add(group, box(W * 0.85 + 0.06, 0.07, 0.07), trim, up * 0.15, H + 0.2 + H2, D * 0.45 - 0.06);
     add(group, box(W + 0.3, 0.05, D + 0.3), neon(pal.roof), 0, 0.03, 0);
     // two lit windows either side of the door
-    const lit = mat('#fff3d6', { emissive: '#ffd9a0', emissiveIntensity: 1.6 });
+    const lit = mat('#fff3d6', { emissive: '#ffd9a0', emissiveIntensity: 1.3 });
     [-1, 1].forEach((s) => add(group, new THREE.PlaneGeometry(0.34, 0.34), lit, s * (W / 2 - 0.3), 1.7, fz + 0.012));
     // vertical holo sign beside the door
     const sx = (rng() < 0.5 ? -1 : 1) * (W / 2 + 0.16);

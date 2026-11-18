@@ -252,35 +252,103 @@ function makeLightCycle(color) {
   g.userData.wheels = wheels;
   return g;
 }
-// Light car: a low glossy wedge with a tinted canopy, neon edges and glowing wheels. Faces +z.
+// Light car: sculpted coupe with a sloping glass cabin. Faces +z.
 function makeLightCar(color) {
   const g = new THREE.Group();
-  const bodyGeo = new THREE.BoxGeometry(1.5, 0.45, 3.0, 1, 1, 2);
-  const bp = bodyGeo.attributes.position;
-  for (let i = 0; i < bp.count; i++) if (bp.getZ(i) > 1 && bp.getY(i) > 0) bp.setY(i, bp.getY(i) - 0.2); // sloped nose
-  bodyGeo.computeVertexNormals();
-  const body = new THREE.Mesh(bodyGeo, glossBlack());
-  body.position.y = 0.55;
-  g.add(body);
-  const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.62, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#1a2a3a', metalness: 0.9, roughness: 0.05, emissive: color, emissiveIntensity: 0.15 }));
-  canopy.scale.set(0.95, 0.7, 1.7);
-  canopy.position.set(0, 0.76, -0.2);
-  g.add(canopy);
-  [-1, 1].forEach((s) => {
-    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 3.0), neonMat(color));
-    edge.position.set(s * 0.77, 0.6, 0);
-    g.add(edge);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 1.6), neonMat(color, 1.6));
-    top.position.set(s * 0.45, 0.8, -0.6);
-    g.add(top);
+  const paint = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.32), metalness: 0.45, roughness: 0.38, emissive: color, emissiveIntensity: 0.045 });
+  const graphite = new THREE.MeshStandardMaterial({ color: '#202633', metalness: 0.35, roughness: 0.5 });
+  const glass = new THREE.MeshStandardMaterial({ color: '#253e52', metalness: 0.35, roughness: 0.23, emissive: '#30576d', emissiveIntensity: 0.16 });
+  const accent = neonMat(color, 1.4);
+  const headlight = neonMat('#d7f2ff', 1.8);
+  const taillight = neonMat('#ff365b', 1.5);
+  const add = (geo, material, x, y, z) => {
+    const m = new THREE.Mesh(geo, material);
+    m.position.set(x, y, z);
+    g.add(m);
+    return m;
+  };
+  // Six-sided cross sections give the shoulders a bevel and taper both ends.
+  const shell = (sections, material) => {
+    const vertices = [], indices = [];
+    sections.forEach(([z, w, bottom, top, roofW]) => {
+      [[-w, bottom], [w, bottom], [w, top - 0.06], [roofW, top], [-roofW, top], [-w, top - 0.06]].forEach(([x, y]) => vertices.push(x, y, z));
+    });
+    for (let k = 0; k < sections.length - 1; k++) {
+      for (let i = 0; i < 6; i++) {
+        const a = k * 6 + i, b = k * 6 + (i + 1) % 6;
+        indices.push(a, b, a + 6, b, b + 6, a + 6);
+      }
+    }
+    const last = (sections.length - 1) * 6;
+    for (let i = 1; i < 5; i++) indices.push(0, i + 1, i, last, last + i, last + i + 1);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    const surface = geo.toNonIndexed();
+    geo.dispose();
+    return add(surface, material, 0, 0, 0);
+  };
+  shell([[-1.62, 0.64, 0.34, 0.62, 0.56], [-1.05, 0.82, 0.3, 0.77, 0.7], [0.85, 0.8, 0.3, 0.65, 0.68], [1.65, 0.66, 0.36, 0.49, 0.58]], paint);
+  shell([[-1.04, 0.58, 0.67, 0.75, 0.5], [-0.58, 0.57, 0.7, 1.15, 0.43], [0.18, 0.55, 0.65, 1.15, 0.42], [0.87, 0.57, 0.59, 0.68, 0.5]], glass);
+  add(new THREE.BoxGeometry(0.85, 0.045, 0.77), paint, 0, 1.15, -0.2);
+  // Rocker panels, window pillars, mirrors and split lamps read at village scale.
+  [-1, 1].forEach((side) => {
+    add(new THREE.BoxGeometry(0.07, 0.13, 2.65), graphite, side * 0.76, 0.34, 0);
+    add(new THREE.BoxGeometry(0.035, 0.035, 2.48), accent, side * 0.8, 0.43, 0);
+    const pillar = add(new THREE.BoxGeometry(0.045, 0.4, 0.06), paint, side * 0.54, 0.9, -0.22);
+    pillar.rotation.z = side * 0.26;
+    add(new THREE.BoxGeometry(0.19, 0.09, 0.22), paint, side * 0.7, 0.79, 0.42);
+    add(new THREE.BoxGeometry(0.13, 0.025, 0.045), graphite, side * 0.805, 0.64, -0.35);
+    add(new THREE.BoxGeometry(0.38, 0.065, 0.06), headlight, side * 0.43, 0.46, 1.65);
+    add(new THREE.BoxGeometry(0.42, 0.065, 0.06), taillight, side * 0.37, 0.56, -1.64);
+    // Dark wheel arches frame each tyre rather than letting it disappear into the body.
+    [-1, 1].forEach((end) => {
+      const arch = add(new THREE.TorusGeometry(0.355, 0.065, 5, 16, Math.PI), graphite, side * 0.81, 0.34, end * 1.03);
+      arch.rotation.y = Math.PI / 2;
+    });
   });
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.05, 0.05), neonMat('#ffffff', 2.4));
-  nose.position.set(0, 0.48, 1.52);
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.05), neonMat(color, 2.6));
-  tail.position.set(0, 0.62, -1.52);
-  g.add(nose, tail);
+  add(new THREE.BoxGeometry(0.67, 0.09, 0.06), graphite, 0, 0.36, 1.66);
+  add(new THREE.BoxGeometry(1.12, 0.11, 0.08), graphite, 0, 0.38, -1.64);
+  for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.84, 0.025, 0.045), graphite, 0, 0.735 - k * 0.015, -1.15 - k * 0.11);
+
+  // Batch the fixed body details by material; keep wheels separate for animation.
+  const batches = new Map();
+  g.children.slice().forEach((m) => {
+    m.updateMatrix();
+    const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    geo.deleteAttribute('uv'); // Untextured shells and primitives share the same attributes.
+    geo.applyMatrix4(m.matrix);
+    if (!batches.has(m.material)) batches.set(m.material, []);
+    batches.get(m.material).push(geo);
+    m.geometry.dispose();
+    g.remove(m);
+  });
+  batches.forEach((geos, material) => {
+    g.add(new THREE.Mesh(mergeGeometries(geos), material));
+    geos.forEach((geo) => geo.dispose());
+  });
   const wheels = [];
-  [-1, 1].forEach((sx) => [-1, 1].forEach((sz) => wheels.push(glowWheel(g, 0.32, 0.25, color, sx * 0.72, 0.32, sz * 1.0))));
+  const rubber = new THREE.MeshStandardMaterial({ color: '#090c12', roughness: 0.92, metalness: 0 });
+  const alloy = new THREE.MeshStandardMaterial({ color: '#8997ad', metalness: 0.65, roughness: 0.32 });
+  [-1, 1].forEach((side) => [-1, 1].forEach((end) => {
+    const wheel = new THREE.Group();
+    const tyre = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.24, 20), rubber);
+    tyre.rotation.z = Math.PI / 2;
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.225, 0.025, 12), alloy);
+    rim.rotation.z = Math.PI / 2;
+    rim.position.x = side * 0.13;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.022, 5, 20), accent);
+    ring.rotation.y = Math.PI / 2;
+    ring.position.x = side * 0.148;
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.035, 8), graphite);
+    hub.rotation.z = Math.PI / 2;
+    hub.position.x = side * 0.15;
+    wheel.add(tyre, rim, ring, hub);
+    wheel.position.set(side * 0.8, 0.32, end * 1.03);
+    g.add(wheel);
+    wheels.push(wheel);
+  }));
   g.userData.wheels = wheels;
   return g;
 }
