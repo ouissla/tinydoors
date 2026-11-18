@@ -4,7 +4,8 @@
   const $ = (id) => document.getElementById(id);
   const esc = A.esc;
   const params = new URLSearchParams(location.search);
-  const LAST = 'littledoors:last';
+  let LAST = 'littledoors:last';
+  let shareToken = null;
   const FREE_PHOTOS = 3;
 
   let cal = null;
@@ -61,17 +62,27 @@
     A.Sound.theme = A.THEMES[t].sound || look;
     A.FX.setTheme(look);
     A.Scene.build(look, $('scene'), $('foreground'));
-    document.querySelectorAll('[data-theme-pick]').forEach((b) => b.classList.toggle('on', b.dataset.themePick === t));
+    document.querySelectorAll('[data-theme-pick]').forEach((b) => {
+      const selected = b.dataset.themePick === t;
+      b.classList.toggle('on', selected);
+      b.setAttribute('aria-pressed', String(selected));
+    });
   }
 
   // ---------------- Saving ----------------
-  let saveT;
+  let saveT, saveQueue = Promise.resolve();
+  function persist() {
+    const snapshot = structuredClone(cal);
+    const task = saveQueue.catch(() => {}).then(() => A.DB.saveCalendar(snapshot));
+    saveQueue = task;
+    return task;
+  }
   function save() {
     $('saved').textContent = 'Saving…';
     clearTimeout(saveT);
     saveT = setTimeout(async () => {
       try {
-        await A.DB.saveCalendar(cal);
+        await persist();
         A.store.set(LAST, cal.id);
         $('saved').textContent = 'Saved ✓';
       } catch (e) {
@@ -97,23 +108,63 @@
   }
 
   // ---------------- Load ----------------
+  try { await A.DBReady; }
+  catch { return; } // The account panel shows the retry message; never silently save locally.
+  if (A.DB.isCloud) {
+    document.querySelectorAll('.proto-note').forEach((node) => { node.textContent = 'Your link is read-only. Recipients do not need to sign in.'; });
+    $('buyBtn').textContent = 'Season Pass coming soon';
+    $('buyBtn').disabled = true;
+    $('goDoors').nextElementSibling.textContent = 'Save your calendar to your account. Recipients open their link without signing in.';
+    $('buyBtn').nextElementSibling.textContent = 'Online checkout is not available yet.';
+    if (A.Auth.user) {
+      LAST += ':' + A.Auth.user.id;
+      try {
+        const calendars = await A.DB.listCalendars();
+        $('accountCalendars').replaceChildren();
+        calendars.forEach((item) => {
+          const link = document.createElement('a');
+          link.href = 'editor.html?c=' + encodeURIComponent(item.id) + '&step=doors';
+          link.textContent = (item.to || 'Your calendar') + ' · ' + (A.THEMES[item.theme]?.name || 'Calendar');
+          $('accountCalendars').append(link);
+        });
+        if (!calendars.length) $('accountCalendars').textContent = 'Your first calendar starts below.';
+      } catch { $('accountCalendars').textContent = 'Couldn’t load your calendars. Refresh to try again.'; }
+    }
+  }
   const wanted = params.has('new') ? null : params.get('c') || A.store.get(LAST, null);
-  if (wanted) cal = await A.DB.getCalendar(wanted);
+  if (wanted) {
+    try { cal = await A.DB.getCalendar(wanted); }
+    catch {
+      $('saved').textContent = 'Couldn’t load';
+      $('accountMessage').textContent = 'Couldn’t load that calendar. Please refresh to try again.';
+      $('accountMessage').setAttribute('role', 'alert');
+      return;
+    }
+  }
   if (cal) {
     await Promise.all(cal.days.map(async (d) => {
-      if (d.photoId && !photoURL[d.photoId]) photoURL[d.photoId] = await A.DB.getPhotoURL(d.photoId);
+      if (d.photoId && !photoURL[d.photoId]) {
+        try { photoURL[d.photoId] = await A.DB.getPhotoURL(d.photoId); }
+        catch { $('accountMessage').textContent = 'Some photos couldn’t load. Refresh to try again.'; }
+      }
     }));
     setTheme(cal.theme);
     $('fTo').value = cal.to;
     $('fFrom').value = cal.from;
   } else {
-    setTheme(params.get('theme') === 'summer' ? 'summer' : 'snow');
+    setTheme(params.get('theme') || 'snow');
   }
 
   // ---------------- Steps ----------------
+  let layoutAnimation = null;
   function go(next, instant) {
     if (next !== 'start' && !cal) next = 'start';
+    const main = $('editorMain');
+    const animateLayout = !instant && !A.reducedMotion && step !== next && matchMedia('(min-width: 960px)').matches;
+    if (layoutAnimation) { layoutAnimation.cancel(); layoutAnimation = null; }
+    const before = animateLayout ? main.getBoundingClientRect() : null;
     step = next;
+    document.body.dataset.editorStep = next;
     ['start', 'doors', 'share'].forEach((s) => ($('s-' + s).hidden = s !== next));
     document.querySelectorAll('#steps li').forEach((li) => {
       li.classList.toggle('on', li.dataset.step === next);
@@ -128,7 +179,15 @@
     }
     if (next === 'doors') renderDoors(!instant);
     if (next === 'share') renderShare();
-    window.scrollTo({ top: 0, behavior: instant ? 'auto' : 'smooth' });
+    window.scrollTo({ top: 0, behavior: instant || animateLayout || A.reducedMotion ? 'auto' : 'smooth' });
+    if (animateLayout && typeof main.animate === 'function') {
+      // Animate visual geometry after laying out the final grid, so house sizes stay correct.
+      const after = main.getBoundingClientRect();
+      layoutAnimation = main.animate([
+        { transform: `translateX(${before.left - after.left}px) scaleX(${before.width / after.width})`, transformOrigin: 'top left', opacity: 0.78 },
+        { transform: 'translateX(0) scaleX(1)', transformOrigin: 'top left', opacity: 1 },
+      ], { duration: 520, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    }
   }
   document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   $('backBtn').addEventListener('click', () => go(step === 'share' ? 'doors' : 'start'));
@@ -143,6 +202,7 @@
   const hasPass = () => pendingPass || (cal && cal.plan === 'season');
 
   $('goDoors').addEventListener('click', () => {
+    if (A.DB.isCloud && !A.Auth.user) { A.Auth.prompt(); return; }
     if (A.THEMES[theme].premium && !hasPass()) {
       upsell(`${A.THEMES[theme].name} is part of the Season Pass.`);
       return;
@@ -221,7 +281,7 @@
 
   function layoutGrid() {
     if (!huts.length) return;
-    const w = Math.min($('s-doors').clientWidth, 940) - 8;
+    const w = Math.min(grid.clientWidth, 940) - 32; // Room for roofs and badges inside the panel.
     A.layoutHuts(grid, huts, cal.theme, w, 99999, w < 560 ? [4] : [6]);
   }
   window.addEventListener('resize', () => step === 'doors' && layoutGrid());
@@ -425,19 +485,24 @@
 
   async function setDay(d, next, opts = {}) {
     const old = cal.days[d - 1];
+    cal.days[d - 1] = next;
+    if (A.DB.isCloud) {
+      clearTimeout(saveT);
+      $('saved').textContent = 'Saving…';
+      try { await persist(); $('saved').textContent = 'Saved ✓'; A.store.set(LAST, cal.id); }
+      catch (error) { cal.days[d - 1] = old; $('saved').textContent = 'Couldn’t save'; throw error; }
+    } else save();
     if (old.photoId && old.photoId !== next.photoId) {
-      A.DB.deletePhoto(old.photoId);
+      A.DB.deletePhoto(old.photoId).catch(() => {}); // Cleanup follows a durable calendar update.
       if (photoURL[old.photoId]) URL.revokeObjectURL(photoURL[old.photoId]);
       delete photoURL[old.photoId];
     }
-    cal.days[d - 1] = next;
-    save();
     decorate(d);
     renderHelpers();
     if (opts.celebrate && huts[d - 1]) celebrate(huts[d - 1].querySelector('.doorway'), 60);
   }
 
-  $('shBody').addEventListener('click', async (e) => {
+  async function onSheetClick(e) {
     const presetBtn = e.target.closest('[data-preset]');
     if (presetBtn) {
       const p = presets()[+presetBtn.dataset.preset];
@@ -447,9 +512,11 @@
       return;
     }
     const act = e.target.closest('[data-act]');
-    if (act) handle(act.dataset.act);
-  });
-  $('sheet').querySelectorAll('.sheet-backdrop, .sheet-head [data-act]').forEach((b) => b.addEventListener('click', () => handle(b.dataset.act)));
+    if (act) await handle(act.dataset.act);
+  }
+  const sheetError = () => toast('Couldn’t save that change. Please try again.');
+  $('shBody').addEventListener('click', (e) => onSheetClick(e).catch(sheetError));
+  $('sheet').querySelectorAll('.sheet-backdrop, .sheet-head [data-act]').forEach((b) => b.addEventListener('click', () => handle(b.dataset.act).catch(sheetError)));
 
   let photoTarget = null;
   async function handle(act) {
@@ -535,7 +602,7 @@
       celebrate(huts[d - 1].querySelector('.doorway'), 70);
       toast(`Photo added to day ${d} 📸`);
     } catch (err) {
-      toast('That photo couldn’t be read — try another');
+      toast('Couldn’t add that photo. Check your connection and try again.');
     }
   }
   $('camIn').addEventListener('change', onPhotoPicked);
@@ -573,6 +640,7 @@
   }
   $('upsell').querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => ($('upsell').hidden = true)));
   $('buyBtn').addEventListener('click', () => {
+    if (A.DB.isCloud) return; // Real entitlements are written only by the payment server.
     if (cal) {
       cal.plan = 'season';
       save();
@@ -591,10 +659,12 @@
 
   // Calendars open in the 3D world by default (it falls back to 2D on devices without WebGL).
   function linkFor(extra = '', page = '3d.html') {
-    return new URL(`${page}?c=${cal.id}${extra}`, location.href).href;
+    if (A.DB.isCloud && !extra.includes('preview') && !shareToken) return '';
+    const share = A.DB.isCloud && !extra.includes('preview') ? '&s=' + shareToken : '';
+    return new URL(`${page}?c=${cal.id}${share}${extra}`, location.href).href;
   }
 
-  function renderShare() {
+  async function renderShare() {
     $('shareEmblem').textContent = A.THEMES[cal.theme].emblem;
     $('shareTitle').textContent = `Ready for ${cal.to}!`;
     const n = personalCount(), p = photoCount();
@@ -603,6 +673,24 @@
     $('previewBtn').textContent = `👀 Preview as ${cal.to}`;
     $('preview2dBtn').href = linkFor('&preview', 'index.html');
     $('shareLink').value = linkFor();
+    if (A.DB.isCloud) {
+      $('copyBtn').disabled = true;
+      $('nativeShare').disabled = true;
+      $('shareLink').placeholder = 'Preparing your private link…';
+      try {
+        clearTimeout(saveT);
+        await persist();
+        shareToken = await A.DB.shareCalendar(cal.id);
+        $('shareLink').value = linkFor();
+        $('copyBtn').disabled = false;
+        $('nativeShare').disabled = false;
+        $('saved').textContent = 'Saved ✓';
+      } catch {
+        $('shareLink').value = '';
+        $('shareLink').placeholder = 'Couldn’t prepare the link. Go back and try again.';
+        $('saved').textContent = 'Couldn’t share';
+      }
+    }
     const tz = $('tz');
     const zones = ZONES.includes(cal.tz) ? ZONES : [cal.tz, ...ZONES];
     tz.innerHTML = zones.map((z) => `<option value="${esc(z)}"${z === cal.tz ? ' selected' : ''}>${esc(z.replace(/_/g, ' ').replace('/', ' — '))}</option>`).join('');
@@ -615,9 +703,9 @@
         <p class="kicker">Free calendar</p>
         <h3>Want to go all out?</h3>
         <ul class="perks">
-          <li>🍪🧸🚀 Gingerbread Lane, Toy Town and Space Christmas</li>
+          <li>✨ All seven Season Pass worlds, from Gingerbread Lane to Neon City</li>
           <li>📸 Unlimited photos (you’ve used ${p} of ${FREE_PHOTOS})</li>
-          <li>✨ Remove the “Made with Little Doors” credit</li>
+          <li>✨ Remove the “Made with Tiny Doors” credit</li>
           <li>💛 One-time A$12.95 for this Christmas — no subscription</li>
         </ul>
         <button type="button" class="btn primary" id="upBtn">Get the Season Pass</button>`;

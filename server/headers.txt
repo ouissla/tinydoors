@@ -1,0 +1,17 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=()
+  Content-Security-Policy: frame-ancestors 'self'; object-src 'none'; base-uri 'self'
+
+/*.html
+  Cache-Control: no-cache
+
+/js/*
+  Cache-Control: no-cache
+
+/js3d/*
+  Cache-Control: no-cache
+
+/css/*
+  Cache-Control: no-cache

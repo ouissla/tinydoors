@@ -25,7 +25,8 @@ if (bgMode) {
 let cal = null;
 const photoURLs = {};
 if (cid) {
-  cal = await A.DB.getCalendar(cid);
+  try { await A.DBReady; cal = await A.DB.getCalendar(cid); }
+  catch { location.replace('index.html' + location.search); throw new Error('Calendar service unavailable'); }
   if (!cal) {
     location.replace('index.html' + location.search); // the 2D view explains "not found"
     throw new Error('calendar not found');
@@ -709,9 +710,9 @@ function frame() {
   });
   if (cam.mode === 'bg') {
     // a slow, gentle sweep back and forth across the village
-    const yaw = A.reducedMotion ? 0 : Math.sin(t * 0.045) * 0.42;
+    const yaw = A.reducedMotion ? 0 : Math.sin(t * 0.045) * 0.22;
     const off = home.pos.clone().sub(home.target).applyAxisAngle(UP, yaw);
-    off.multiplyScalar(0.92 + Math.sin(t * 0.03) * 0.05);
+    off.multiplyScalar(1.08 + Math.sin(t * 0.03) * 0.025);
     camera.position.copy(home.target).add(off);
     camera.lookAt(home.target);
   } else if (cam.mode === 'intro') {

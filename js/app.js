@@ -15,12 +15,19 @@
   let cal = null;
   const photoURLs = {};
   if (cid) {
-    cal = await A.DB.getCalendar(cid);
+    try { await A.DBReady; cal = await A.DB.getCalendar(cid); }
+    catch {
+      document.body.classList.add('entered');
+      document.getElementById('title').textContent = 'Couldn’t open this calendar';
+      document.getElementById('sub').textContent = 'Please refresh to try again.';
+      document.getElementById('splash').classList.add('gone');
+      return;
+    }
     if (!cal) {
       document.body.classList.add('entered');
       $('splash').innerHTML = `<div class="splash-inner"><div class="splash-emblem">🔍</div>
         <h2 class="splash-title" style="font-size:2.2rem">We couldn’t find<br>this calendar</h2>
-        <p class="splash-note" style="max-width:340px;margin:0 auto 18px">In this prototype, calendars are saved on the device that made them. Open the link on that device, or make a new one.</p>
+        <p class="splash-note" style="max-width:340px;margin:0 auto 18px">${A.DB.isCloud ? 'This link may have expired or been removed. Ask the person who made it for a fresh link.' : 'In this prototype, calendars are saved on the device that made them. Open the link on that device, or make a new one.'}</p>
         <a class="btn primary" href="editor.html">Make a calendar ✨</a></div>`;
       A.Scene.build('snow', $('scene'), $('foreground'));
       return;

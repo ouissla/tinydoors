@@ -1,4 +1,6 @@
-# Little Doors — advent village prototype
+# Tiny Doors — advent village prototype
+
+Cloudflare deployment is prepared with `npm run build`, `npm run dev`, and `npm run deploy:preview`. See [the launch guide](docs/LAUNCH.md) for Supabase/Stripe environment placeholders, the database migration, and the remaining work before a paid launch. `.env` is local and ignored by Git; `.env.example` is the shareable template.
 
 A clickable prototype of the recipient experience, in two themes:
 
@@ -59,11 +61,16 @@ Same URL flags as 2D: `3d.html?theme=summer`, `?c=<id>`, `?preview`, `?unlock`, 
 
 ## Premium worlds (Season Pass)
 
-Three extra 3D worlds alongside Snowy and Summer, each with its own houses, light-tree, scenery, characters, colours, 24 surprises, game symbols and scratch-off effect:
+Seven extra 3D worlds alongside Snowy and Summer, each with its own houses, light-tree, scenery, characters, colours, 24 surprises, game symbols and scratch-off effect:
 
 - 🍪 **Gingerbread Lane** — iced gingerbread houses with gumdrops and candy windows, a tree of stacked star cookies, lollipop lamps, candy forest, ice-cream mountains; gingerbread people and elves; icing-sugar photo reveal
 - 🧸 **Toy Town** — wooden toy houses (pyramid roofs, castles, towers), a block tree, a toy train looping the square, building blocks, giant alphabet-block hills, a hot-air balloon; marching toy soldiers (some drumming) and wind-up penguins
 - 🚀 **Space Christmas** — moon-base domes with airlock doors, a spinning neon ring tree, Earth and a ringed planet, a rocket on its pad, craters, a satellite dish, UFOs; bouncing astronaut elves and robot reindeer; stardust photo reveal
+
+- 🛠️ **Santa’s Workshop** — snowy timber workshops and a magical toy factory
+- 🌿 **Treetop Jungle** — raised treehouses, leafy canopies and waterfalls
+- 🌸 **Kawaii Sakura Town** — pastel shops, cherry blossoms and lanterns
+- 🌃 **Neon City** — capsule apartments, flying cars and a glowing skyline
 
 Preview: `3d.html?theme=gingerbread` / `toys` / `space`. In the editor they're marked **✨ Season Pass**; choosing one opens the (mock) upgrade. Without WebGL, the 2D view shows them over the snowy backdrop with their own colours and content.
 
@@ -75,7 +82,7 @@ Shake the phone (or press **Space** / **N** in 3D, **S** in 2D) for a blizzard: 
 
 The editor's background is the chosen world itself, live in 3D (`3d.html?theme=<world>&bg`: no UI or sound, no shadows, fewer characters, 30 fps, a slow camera sweep). Picking another world crossfades to it silently. Without WebGL (or from `file://`) the 2D scene is used instead.
 
-1. **Who + world**: names, then pick Snowy or Summer. "Fill my 24 doors" creates a complete calendar from that theme's preset pack.
+1. **Who + world**: names, then choose from two free worlds or the seven-world Season Pass collection. "Fill my 24 doors" creates a complete calendar from that theme's preset pack.
 2. **Doors**: the village with every door open. Tap a door to:
    - take a photo (opens the camera on phones) or choose one
    - write a note (day 24 becomes the Christmas Eve letter with fireworks)
@@ -89,7 +96,7 @@ Free calendars get 3 photos; the 4th opens a mock **Season Pass** (A$12.95 one-t
 
 Recipient links (`3d.html?c=<id>`, or `index.html?c=<id>` for 2D) open on real December dates in the chosen timezone: before 1 December every door is locked, and missed doors stay open to catch up.
 
-**Prototype limitation:** calendars and photos are saved in this browser's IndexedDB (`js/db.js`), so a link only opens on the device that made it. Swapping `js/db.js` for Supabase (tables + private photo bucket + signed URLs) is the next backend step; the rest of the app uses only its five functions.
+**Storage modes:** the default prototype saves calendars/photos in IndexedDB (`js/db.js`), so its links only work on the creating browser. With `APP_MODE=cloud` and Supabase configured, `js/auth.js` and `js/cloud-db.js` add email magic-link sign-in, account-specific calendars and private photo storage. The Worker creates hashed read-only recipient links without requiring recipient accounts. Apply the migration and verify your project using [the launch guide](docs/LAUNCH.md).
 
 ## Files
 
@@ -112,4 +119,4 @@ Recipient links (`3d.html?c=<id>`, or `index.html?c=<id>` for 2D) open on real D
 - `js/audio.js` — synthesised sounds
 - `css/styles.css` — everything visual
 
-Not included yet: a server (so links work on other devices), real payments, or server-side unlocking.
+Remaining before a paid release: configure and verify the live Supabase/Auth project, implement Stripe Checkout and webhook fulfillment, and add server-side date filtering if future surprises must stay private from recipients inspecting responses.

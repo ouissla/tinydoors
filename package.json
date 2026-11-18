@@ -1,0 +1,22 @@
+{
+  "name": "tinydoors",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "dev": "npm run build && wrangler dev",
+    "check": "node tools/check.mjs && node --test tests/*.test.mjs",
+    "check:env": "node tools/check-env.mjs",
+    "deploy:preview": "npm run check && npm run build && wrangler deploy",
+    "deploy:dry-run": "npm run build && wrangler deploy --dry-run --outdir /tmp/tinydoors-worker"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.119.0",
+    "esbuild": "0.28.2",
+    "wrangler": "4.164.0"
+  }
+}
