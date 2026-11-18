@@ -113,6 +113,7 @@
     },
 
     seedAmbient() {
+      if (this.noAmbient) { this.ambient = []; return; }
       const area = this.w * this.h;
       const n = this.theme === 'snow'
         ? Math.min(170, Math.round(area / 8000))

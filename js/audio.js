@@ -35,6 +35,7 @@
     strike(freq, t, vol, partials, dur) {
       const c = this.ctx;
       partials.forEach(([ratio, amp]) => {
+        if (freq * ratio > 18000) return; // inaudible, and above some devices' range
         const o = c.createOscillator();
         const g = c.createGain();
         o.type = 'sine';

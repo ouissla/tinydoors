@@ -38,6 +38,20 @@ The ⚙️ button opens prototype controls: theme, pretend date, names, **your o
 - 📺 Family mode: fullscreen, bigger text, arrow keys / TV remote to move, Enter to open, Space to reveal, Esc to close
 - Respects reduced-motion settings
 
+## 3D worlds (`3d.html`)
+
+A full Three.js version of both worlds, alongside the 2D one (the **3D** / **2D** buttons switch between them, keeping the same calendar and opened doors).
+
+- **Snowy:** a terraced village of 24 lit cottages under the northern lights, a big tree on top, snowfall, mountains, a moonlit sleigh and a snowman
+- **Summer:** 24 striped beach boxes on sandy terraces above an animated ocean with foam, a palm in fairy lights wearing a Santa hat, a surfing Santa and drifting clouds
+- The tree (or palm) has **24 lights, one per opened door**
+- Tap a door: the camera flies in, the door swings open on its hinge, light spills out, the surprise pops out, confetti, then the same surprise cards as 2D
+- Drag to look around, tilt the phone or move the mouse for parallax, arrow keys / Enter in family (TV) mode
+- Layout adapts to the screen: 3 rows of 8 on landscape/TV, 4×6 on tablets, 6 rows of 4 on phones
+- Everything is built in code (no 3D model files); Three.js 0.160 loads from jsDelivr, so `3d.html` needs a web server (not `file://`) and an internet connection
+
+Same URL flags as 2D: `3d.html?theme=summer`, `?c=<id>`, `?preview`, `?unlock`, `?day=12`, `?skip`.
+
 ## The editor (`editor.html`)
 
 1. **Who + world**: names, then pick Snowy or Summer. "Fill my 24 doors" creates a complete calendar from that theme's preset pack.
@@ -64,6 +78,10 @@ Recipient links (`index.html?c=<id>`) open on real December dates in the chosen 
 - `js/editor.js` + `css/editor.css` — the creator editor
 - `js/db.js` — calendar + photo storage (swap this for the real backend)
 - `js/huts.js` — door/hut markup and colours shared by viewer and editor
+- `js3d/main.js` — 3D renderer, camera framing, tap-to-open sequence, HUD, keyboard
+- `js3d/worlds.js` — the snowy and summer 3D worlds (terraces, tree/palm lights, sky, ocean, weather)
+- `js3d/houses.js` — 3D cottages / beach boxes with hinged numbered doors
+- `js/cards.js` — surprise card overlay used by the 3D view
 - `js/fx.js` — snow, glints and confetti (canvas)
 - `js/audio.js` — synthesised sounds
 - `css/styles.css` — everything visual

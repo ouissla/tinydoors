@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en" data-theme="snow">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Little Doors — 3D Village</title>
+  <meta name="theme-color" content="#0b1638">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..900,0..100,0..1;1,9..144,400..900,0..100,0..1&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/world3d.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="w3d">
+  <canvas id="gl" aria-label="3D advent village. Use the arrow keys to choose a door and Enter to open it."></canvas>
+
+  <header class="top hud" id="top">
+    <p class="eyebrow" id="eyebrow"></p>
+    <h1 id="title"></h1>
+    <p class="sub" id="sub"></p>
+  </header>
+
+  <p class="hint3d" id="hint3d">Drag to look around · tap a door</p>
+  <div class="loading3d" id="loading3d"><span></span>Building your village…</div>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <canvas id="ambient" aria-hidden="true" hidden></canvas>
+
+  <div id="overlay" hidden>
+    <div class="backdrop"></div>
+    <div class="card-wrap">
+      <article class="card" id="card" role="dialog" aria-modal="true" aria-labelledby="cardTitle"></article>
+    </div>
+  </div>
+
+  <div id="splash">
+    <div class="splash-inner">
+      <div class="splash-emblem" id="splashEmblem"></div>
+      <p class="splash-eyebrow" id="splashEyebrow"></p>
+      <h2 class="splash-title" id="splashTitle"></h2>
+      <button class="btn primary big" id="splashGo" type="button" disabled>Open it ✨</button>
+      <p class="splash-note">Best with sound on 🔊</p>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="tool" id="btnTheme" type="button" aria-label="Switch theme"></button>
+    <button class="tool" id="btnSound" type="button" aria-label="Sound on">🔊</button>
+    <button class="tool" id="btnFamily" type="button" aria-label="Family TV mode">📺</button>
+    <a class="tool tool-text" id="btn2d" href="index.html" aria-label="Switch to the 2D view">2D</a>
+  </div>
+
+  <button class="credit" id="credit" type="button">✨ <span class="long">Made with <b>Little Doors</b> — </span>make one for someone</button>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div class="kbd-hint" id="kbdHint">← → ↑ ↓ move · <b>Enter</b> open · <b>Space</b> reveal · <b>Esc</b> close</div>
+
+  <script src="js/util.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/huts.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/reveal.js"></script>
+  <script src="js/cards.js"></script>
+  <script type="module" src="js3d/main.js"></script>
+</body>
+</html>

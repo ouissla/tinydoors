@@ -497,6 +497,13 @@
   });
 
   $('credit').addEventListener('click', () => { location.href = 'editor.html?new'; });
+  // Same calendar, same flags, in the 3D world (theme follows the current one in demo mode)
+  $('btn3d').addEventListener('click', (e) => {
+    e.preventDefault();
+    const q = new URLSearchParams(location.search);
+    if (!cal) q.set('theme', state.theme);
+    location.href = '3d.html?' + q.toString();
+  });
   $('overlay').querySelector('.backdrop').addEventListener('click', closeCard);
   $('overlay').querySelector('.card-wrap').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeCard(); });
 

@@ -527,6 +527,7 @@
     $('shareSummary').innerHTML = `24 doors · <b>${n}</b> made by you · <b>${p}</b> photo${p === 1 ? '' : 's'}<br>The first door opens on <b>1 December</b>.`;
     $('previewBtn').href = linkFor('&preview');
     $('previewBtn').textContent = `👀 Preview as ${cal.to}`;
+    $('preview3dBtn').href = new URL(`3d.html?c=${cal.id}&preview`, location.href).href;
     $('shareLink').value = linkFor();
     const tz = $('tz');
     const zones = ZONES.includes(cal.tz) ? ZONES : [cal.tz, ...ZONES];
