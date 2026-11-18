@@ -44,8 +44,7 @@ test('world chooser includes two free and seven premium illustrated options', as
   const cards = [...html.matchAll(/<button[^>]+data-theme-pick="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)];
   assert.deepEqual(cards.map((card) => card[1]).sort(), ['snow','summer','gingerbread','toys','space','workshop','jungle','japan','cyber'].sort());
   for (const card of cards) assert.match(card[2], /<svg/);
-  const freeSection = html.split('aria-labelledby="freeWorldsTitle"')[1].split('</section>')[0];
-  const paidSection = html.split('aria-labelledby="seasonWorldsTitle"')[1].split('</section>')[0];
-  assert.equal([...freeSection.matchAll(/data-theme-pick=/g)].length, 2);
-  assert.equal([...paidSection.matchAll(/data-theme-pick=/g)].length, 7);
+  assert.equal(cards.filter((card) => /class="world-access free-access">Free</.test(card[2])).length, 2);
+  assert.equal(cards.filter((card) => /class="world-access paid-access">Season Pass</.test(card[2])).length, 7);
+  assert.match(html, /id="selectedWorld" aria-live="polite"/);
 });

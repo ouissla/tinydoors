@@ -66,6 +66,9 @@
       const selected = b.dataset.themePick === t;
       b.classList.toggle('on', selected);
       b.setAttribute('aria-pressed', String(selected));
+      if (selected) {
+        $('selectedWorld').textContent = `${A.THEMES[t].name} — ${b.dataset.description}`;
+      }
     });
   }
 
