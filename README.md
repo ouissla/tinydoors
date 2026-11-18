@@ -29,9 +29,10 @@ The ⚙️ button opens prototype controls: theme, pretend date, names, **your o
 
 ## What's in it
 
-- 24 doors with a 3D swing-open, light spill, particle burst, creak and chime sounds
+- 24 doors: four knocks (the door jolts and "knock!" pops up in time with `assets/sounds/door-knock.mp3`), then the door swings open with a "magic whoosh" (`door-whoosh.mp3`, synthesised from scratch by `tools/make-whoosh.py`), light spill and a particle burst (no bell). See `assets/sounds/CREDITS.md`
 - Surprise formats: photo (wipe frost/sand), letter in an envelope, riddle, cracker joke, activity/recipe ("We did it!" stamp), voucher (stamped), Christmas Eve finale with fireworks
-- 24 preset surprises per theme (`js/content.js`)
+- 24 preset surprises per theme (`js/content.js`), plus an extra library for the editor
+- **Mini games** (`js/games.js`): festive 4×4 emoji sudoku and 6×6 number sudoku, word search (drag or tap first/last letter), memory match, sliding picture puzzle, and word scramble. Each is seeded by the day (same puzzle every time), has a Hint / Peek button (Space on a TV) and ends with a celebration. Four are in each default pack (days 8, 14, 18, 20)
 - Locked future doors rattle and say how many sleeps are left
 - A garland gains one lit bulb per opened door
 - Phone tilt moves the scene (parallax); shaking the phone makes a flurry
@@ -46,7 +47,7 @@ A full Three.js version of both worlds, alongside the 2D one (the **3D** / **2D*
 - **Summer:** 24 striped beach boxes on sandy terraces above an animated ocean with foam, a palm in fairy lights wearing a Santa hat, a surfing Santa and drifting clouds
 - The tree (or palm) has **24 lights, one per opened door**
 - Tap a door: the camera flies in, the door swings open on its hinge, light spills out, the surprise pops out, confetti, then the same surprise cards as 2D
-- **Explore freely:** drag to orbit, scroll / pinch to zoom right up to the houses, right-drag / two-finger drag to pan; 🏠 (or `H`) flies back to the whole village. Limits keep you from getting lost or going under the ground.
+- **Explore freely:** drag to orbit, scroll / pinch to zoom right up to the houses, right-drag / two-finger drag to pan, or **W A S D** to walk around and **Q / E** to turn (faster when zoomed out, slower up close); 🏠 (or `H`) flies back to the whole village. Limits keep you from getting lost or going under the ground. Drag directions are set by `DRAG_DIR_X` / `DRAG_DIR_Y` in `js3d/main.js`.
 - **Characters with routines:** in winter, elves walk their terrace and stop at doors to knock, wave or deliver presents; penguins waddle and belly-slide in the square; an elf pulls a sled of gifts; reindeer graze by the tree. In summer, elves in board shorts carry surfboards and beach balls; little penguins, crabs scuttling sideways, a hopping kangaroo, circling seagulls. **Tap any of them** for a reaction.
 - **Detail:** fairy lights along every roof (twinkling), chimney smoke, wreaths, icicles, framed windows, lamp posts / tiki torches, presents under the tree, candy canes, beach umbrellas, towels, a sandcastle, surfboards, an esky; stone and timber terrace walls, rolling snow hills
 - Arrow keys / Enter in family (TV) mode
@@ -56,20 +57,37 @@ A full Three.js version of both worlds, alongside the 2D one (the **3D** / **2D*
 
 Same URL flags as 2D: `3d.html?theme=summer`, `?c=<id>`, `?preview`, `?unlock`, `?day=12`, `?skip`.
 
+## Premium worlds (Season Pass)
+
+Three extra 3D worlds alongside Snowy and Summer, each with its own houses, light-tree, scenery, characters, colours, 24 surprises, game symbols and scratch-off effect:
+
+- 🍪 **Gingerbread Lane** — iced gingerbread houses with gumdrops and candy windows, a tree of stacked star cookies, lollipop lamps, candy forest, ice-cream mountains; gingerbread people and elves; icing-sugar photo reveal
+- 🧸 **Toy Town** — wooden toy houses (pyramid roofs, castles, towers), a block tree, a toy train looping the square, building blocks, giant alphabet-block hills, a hot-air balloon; marching toy soldiers (some drumming) and wind-up penguins
+- 🚀 **Space Christmas** — moon-base domes with airlock doors, a spinning neon ring tree, Earth and a ringed planet, a rocket on its pad, craters, a satellite dish, UFOs; bouncing astronaut elves and robot reindeer; stardust photo reveal
+
+Preview: `3d.html?theme=gingerbread` / `toys` / `space`. In the editor they're marked **✨ Season Pass**; choosing one opens the (mock) upgrade. Without WebGL, the 2D view shows them over the snowy backdrop with their own colours and content.
+
+## Shake to make it snow
+
+Shake the phone (or press **Space** / **N** in 3D, **S** in 2D) for a blizzard: in 3D, thousands of extra flakes and a gust of wind for ~8 seconds, in every world; in 2D, a big flurry. Works in an ordinary mobile browser — no app or PWA needed — but needs **HTTPS** (or `localhost`). iPhones ask permission once, from the first tap. To test on a phone, serve over HTTPS (e.g. a Netlify/Vercel deploy or a tunnel); plain `http://192.168…` won't get motion events.
+
 ## The editor (`editor.html`)
+
+The editor's background is the chosen world itself, live in 3D (`3d.html?theme=<world>&bg`: no UI or sound, no shadows, fewer characters, 30 fps, a slow camera sweep). Picking another world crossfades to it silently. Without WebGL (or from `file://`) the 2D scene is used instead.
 
 1. **Who + world**: names, then pick Snowy or Summer. "Fill my 24 doors" creates a complete calendar from that theme's preset pack.
 2. **Doors**: the village with every door open. Tap a door to:
    - take a photo (opens the camera on phones) or choose one
    - write a note (day 24 becomes the Christmas Eve letter with fireworks)
    - make a voucher
-   - swap in any of ~36 ready-made surprises
+   - add a **mini game** (🎮 button, or the Games filter) — word searches can use your own words, e.g. family names
+   - swap in any of ~45 ready-made surprises
    Suggestion chips nudge the next personal touch, "Add several photos at once" spreads photos across the doors, and a meter counts personal touches.
-3. **Share**: preview as the recipient (every door unlocked), copy or send the link, choose the timezone doors open in.
+3. **Share**: preview as the recipient (every door unlocked), copy or send the link, choose the timezone doors open in. Links and the main preview open the **3D** world (`3d.html?c=<id>`); there's also a 2D preview, and `3d.html` falls back to the 2D view on devices without WebGL.
 
 Free calendars get 3 photos; the 4th opens a mock **Season Pass** (A$12.95 one-time, no payment taken) that unlocks unlimited photos and removes the credit.
 
-Recipient links (`index.html?c=<id>`) open on real December dates in the chosen timezone: before 1 December every door is locked, and missed doors stay open to catch up.
+Recipient links (`3d.html?c=<id>`, or `index.html?c=<id>` for 2D) open on real December dates in the chosen timezone: before 1 December every door is locked, and missed doors stay open to catch up.
 
 **Prototype limitation:** calendars and photos are saved in this browser's IndexedDB (`js/db.js`), so a link only opens on the device that made it. Swapping `js/db.js` for Supabase (tables + private photo bucket + signed URLs) is the next backend step; the rest of the app uses only its five functions.
 
@@ -79,11 +97,13 @@ Recipient links (`index.html?c=<id>`) open on real December dates in the chosen 
 - `js/content.js` — the preset surprises for both themes
 - `js/reveal.js` — the surprise card formats and their interactions
 - `js/app.js` — village grid, door opening, cards, tilt, keyboard, controls
+- `js/games.js` — the mini games
 - `js/editor.js` + `css/editor.css` — the creator editor
 - `js/db.js` — calendar + photo storage (swap this for the real backend)
 - `js/huts.js` — door/hut markup and colours shared by viewer and editor
 - `js3d/main.js` — 3D renderer, camera framing, tap-to-open sequence, HUD, keyboard
-- `js3d/worlds.js` — the snowy and summer 3D worlds (terraces, tree/palm lights, sky, ocean, weather)
+- `js3d/worlds.js` — world builder, styles per world, snowfall/blizzard, snowy and summer scenery
+- `js3d/worlds-extra.js` — Gingerbread Lane, Toy Town and Space Christmas: textures, trees, scenery
 - `js3d/houses.js` — 3D cottages / beach boxes with hinged numbered doors (static parts merged)
 - `js3d/characters.js` — elves, penguins, reindeer, crabs, kangaroo, seagulls and their behaviours
 - `js3d/props.js` — roof fairy lights, chimney smoke, lamps / torches, presents, beach props

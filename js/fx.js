@@ -6,6 +6,13 @@
   const PALETTES = {
     snow: ['#ffd36b', '#ffffff', '#ff6b5e', '#a8e4ff', '#86e3ad', '#ffe9a8'],
     summer: ['#ff6f91', '#ffd23f', '#2ec4b6', '#9b5de5', '#00bbf9', '#ffffff', '#ff9f1c'],
+    gingerbread: ['#ff8ad8', '#ffffff', '#7cf29a', '#ffd23f', '#c98d55', '#ff4f81'],
+    toys: ['#e2483d', '#3f7be0', '#ffd23f', '#2f9e5b', '#ffffff', '#ff8a2b'],
+    space: ['#7af7ff', '#c77dff', '#ffffff', '#ffd23f', '#ff6fd8'],
+    workshop: ['#c8372d', '#ffffff', '#2e6a4f', '#f2b84b', '#a8e4ff'],
+    jungle: ['#ffb347', '#7cf29a', '#ff6f4a', '#ffe08a', '#2ec4b6', '#ffffff'],
+    japan: ['#ff9ec4', '#ffffff', '#ffd36b', '#9fd8f5', '#b6a4f0', '#8fdcc0'],
+    cyber: ['#ff2bd6', '#00e5ff', '#a6ff00', '#ffffff', '#7c4dff'],
   };
 
   function sprite(size, draw) {
@@ -233,7 +240,12 @@
 
     pickKind() {
       const r = Math.random();
-      if (this.theme === 'snow') {
+      if (this.theme === 'space') {
+        if (r < 0.45) return { kind: 'star' };
+        if (r < 0.8) return { kind: 'spark' };
+        return { kind: 'circle' };
+      }
+      if (this.theme !== 'summer') {
         if (r < 0.32) return { kind: 'img', img: flake };
         if (r < 0.55) return { kind: 'star' };
         if (r < 0.72) return { kind: 'spark' };
@@ -250,7 +262,7 @@
     burst(x, y, opts = {}) {
       const count = Math.round((opts.count || 90) * (A.reducedMotion ? 0.3 : 1));
       const power = opts.power || 1;
-      const pal = PALETTES[this.theme];
+      const pal = PALETTES[this.theme] || PALETTES.snow;
       for (let i = 0; i < count; i++) {
         const ang = opts.angle != null
           ? opts.angle + (Math.random() - 0.5) * (opts.spread || 1.4)
@@ -287,9 +299,10 @@
     },
 
     // A big flurry from the top of the screen — used for "shake your phone".
-    flurry() {
-      for (let i = 0; i < 70; i++) {
-        const k = this.theme === 'snow' ? { kind: 'img', img: flake } : this.pickKind();
+    flurry(count = 170) {
+      // Shake the phone: a proper snow flurry, whatever the world
+      for (let i = 0; i < count; i++) {
+        const k = { kind: 'img', img: flake };
         this.parts.push({
           x: Math.random() * this.w,
           y: -20 - Math.random() * 120,
@@ -302,8 +315,8 @@
           max: 3 + Math.random() * 1.5,
           drag: 0.99,
           g: 0.08,
-          color: PALETTES[this.theme][i % PALETTES[this.theme].length],
-          delay: Math.random() * 0.6,
+          color: (PALETTES[this.theme] || PALETTES.snow)[i % (PALETTES[this.theme] || PALETTES.snow).length],
+          delay: Math.random() * 1.4,
           ...k,
         });
       }

@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0b1638">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..900,0..100,0..1;1,9..144,400..900,0..100,0..1&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Bagel+Fat+One&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/editor.css">
 </head>
@@ -15,6 +15,7 @@
   <div id="scene" aria-hidden="true"></div>
   <canvas id="ambient" aria-hidden="true"></canvas>
   <div id="foreground" aria-hidden="true"></div>
+  <div id="bg3d" aria-hidden="true"></div>
 
   <header class="ed-top">
     <a class="logo" href="editor.html?new"><span>🚪</span> Little Doors</a>
@@ -69,7 +70,58 @@
             <b>Summer Christmas</b>
             <small>Beach boxes, sunshine and sand to brush off photos</small>
           </button>
+          <button type="button" class="theme-card premium" data-theme-pick="gingerbread">
+            <span class="pass-badge">✨ Season Pass</span>
+            <svg viewBox="0 0 240 120" aria-hidden="true">
+              <defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1652"/><stop offset="1" stop-color="#e994b8"/></linearGradient></defs>
+              <rect width="240" height="120" fill="url(#mg)"/>
+              <circle cx="40" cy="26" r="11" fill="#ffe3f1"/>
+              <path d="M0,94 Q60,80 120,90 T240,86 V120 H0Z" fill="#fff3f8"/>
+              <g transform="translate(60,100)"><rect x="-17" y="-24" width="34" height="26" fill="#b8743d"/><path d="M-21,-22 L0,-42 L21,-22Z" fill="#ff6fa3"/><path d="M-21,-22 L0,-42 L21,-22 L16,-24 L0,-37 L-16,-24Z" fill="#fff"/><rect x="-6" y="-12" width="12" height="14" fill="#2f9e5b"/><circle cx="0" cy="-44" r="3" fill="#7cf29a"/></g>
+              <g transform="translate(130,98)"><rect x="-19" y="-27" width="38" height="29" fill="#c07a42"/><path d="M-23,-25 L0,-47 L23,-25Z" fill="#5fd4b0"/><path d="M-23,-25 L0,-47 L23,-25 L18,-27 L0,-42 L-18,-27Z" fill="#fff"/><rect x="-6" y="-13" width="12" height="15" fill="#e2283a"/></g>
+              <g transform="translate(196,100)"><rect x="2" y="-38" width="3" height="38" fill="#fff"/><circle cx="3.5" cy="-42" r="10" fill="#ff4f81"/><circle cx="3.5" cy="-42" r="5" fill="#fff"/></g>
+            </svg>
+            <b>Gingerbread Lane</b>
+            <small>Iced cookie houses, a tree of star cookies, lollipops</small>
+          </button>
+          <button type="button" class="theme-card premium" data-theme-pick="toys">
+            <span class="pass-badge">✨ Season Pass</span>
+            <svg viewBox="0 0 240 120" aria-hidden="true">
+              <defs><linearGradient id="mt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8fe0"/><stop offset="1" stop-color="#e3f3ff"/></linearGradient></defs>
+              <rect width="240" height="120" fill="url(#mt)"/>
+              <rect x="170" y="30" width="34" height="34" fill="#ffd23f"/><text x="187" y="56" font-size="24" font-weight="900" text-anchor="middle" fill="#e2483d" font-family="sans-serif">A</text>
+              <path d="M0,96 H240 V120 H0Z" fill="#f4f7ff"/>
+              <g transform="translate(55,100)"><rect x="-16" y="-26" width="32" height="28" fill="#e2483d"/><path d="M-20,-26 L0,-46 L20,-26Z" fill="#3f7be0"/><circle cx="0" cy="-12" r="5" fill="#ffd23f"/></g>
+              <g transform="translate(115,100)"><rect x="-17" y="-28" width="34" height="30" fill="#3f7be0"/><rect x="-19" y="-33" width="9" height="7" fill="#ffd23f"/><rect x="-4" y="-33" width="9" height="7" fill="#ffd23f"/><rect x="10" y="-33" width="9" height="7" fill="#ffd23f"/><rect x="-5" y="-14" width="10" height="16" fill="#ffd23f"/></g>
+              <g transform="translate(175,106)"><rect x="-22" y="-10" width="16" height="10" fill="#e2483d"/><rect x="-4" y="-10" width="12" height="10" fill="#ffd23f"/><rect x="10" y="-10" width="12" height="10" fill="#2f9e5b"/><circle cx="-18" cy="2" r="3" fill="#2a2f3a"/><circle cx="-10" cy="2" r="3" fill="#2a2f3a"/></g>
+            </svg>
+            <b>Toy Town</b>
+            <small>Wooden houses, a toy train, marching soldiers</small>
+          </button>
+          <button type="button" class="theme-card premium" data-theme-pick="space">
+            <span class="pass-badge">✨ Season Pass</span>
+            <svg viewBox="0 0 240 120" aria-hidden="true">
+              <rect width="240" height="120" fill="#0d0626"/>
+              <circle cx="36" cy="34" r="16" fill="#1d5fd1"/><path d="M28,28 q8,-6 14,4 q-8,6 -14,-4" fill="#3fae5a"/>
+              <circle cx="80" cy="18" r="1.4" fill="#fff"/><circle cx="150" cy="30" r="1.2" fill="#fff"/><circle cx="210" cy="16" r="1.6" fill="#fff"/><circle cx="120" cy="12" r="1" fill="#fff"/>
+              <path d="M0,92 Q60,84 120,90 T240,88 V120 H0Z" fill="#9a9aa8"/>
+              <g transform="translate(70,96)"><rect x="-16" y="-14" width="32" height="16" fill="#e9edf6"/><path d="M-16,-14 A16,16 0 0 1 16,-14Z" fill="#5fb8ff"/><rect x="-5" y="-10" width="10" height="12" fill="#3d5bd9"/></g>
+              <g transform="translate(130,98)"><rect x="-16" y="-14" width="32" height="16" fill="#e9edf6"/><path d="M-16,-14 A16,16 0 0 1 16,-14Z" fill="#ff8ad8"/><rect x="-5" y="-10" width="10" height="12" fill="#9b5de5"/></g>
+              <g transform="translate(196,96)"><path d="M-6,0 V-34 Q0,-48 6,-34 V0Z" fill="#f2f4fa"/><path d="M-6,-34 Q0,-48 6,-34Z" fill="#e2483d"/><path d="M-6,0 l-6,6 v-12Z M6,0 l6,6 v-12Z" fill="#e2483d"/></g>
+            </svg>
+            <b>Space Christmas</b>
+            <small>Moon-base domes, a neon tree, Earth in the sky</small>
+          </button>
         </div>
+        <p class="world-previews">Peek at the Season Pass worlds:
+          <a href="3d.html?theme=gingerbread" target="_blank" rel="noopener">Gingerbread Lane</a> ·
+          <a href="3d.html?theme=toys" target="_blank" rel="noopener">Toy Town</a> ·
+          <a href="3d.html?theme=space" target="_blank" rel="noopener">Space Christmas</a> ·
+          <a href="3d.html?theme=workshop" target="_blank" rel="noopener">Santa's Workshop</a> ·
+          <a href="3d.html?theme=jungle" target="_blank" rel="noopener">Treetop Jungle</a> ·
+          <a href="3d.html?theme=japan" target="_blank" rel="noopener">Kawaii Sakura Town</a> ·
+          <a href="3d.html?theme=cyber" target="_blank" rel="noopener">Neon City</a>
+        </p>
         <button type="button" class="btn primary big" id="goDoors">Fill my 24 doors ✨</button>
         <p class="fine">Free to make and preview. No sign-up, no subscription.</p>
       </div>
@@ -96,7 +148,7 @@
         <h2 class="ed-h2" id="shareTitle"></h2>
         <p class="lede" id="shareSummary"></p>
         <a class="btn primary big" id="previewBtn" href="#">👀 Preview it as they’ll see it</a>
-        <a class="btn ghost" id="preview3dBtn" href="#">🧊 Preview in 3D</a>
+        <a class="btn ghost" id="preview2dBtn" href="#">Preview the 2D version</a>
         <p class="label">Their private link</p>
         <div class="linkbox">
           <input id="shareLink" type="text" readonly aria-label="Calendar link">
@@ -139,6 +191,7 @@
       <h2 class="ed-h2" id="upTitle">Make it unforgettable</h2>
       <p class="lede" id="upWhy">You’ve used your 3 free photos.</p>
       <ul class="perks">
+        <li>🍪🧸🚀 <b>Three extra worlds</b>: Gingerbread Lane, Toy Town, Space Christmas</li>
         <li>📸 <b>Unlimited photos</b> behind any door</li>
         <li>✨ No “Made with Little Doors” credit</li>
         <li>🎄 Keep it open until 31 January</li>
@@ -159,6 +212,7 @@
 
   <script src="js/util.js"></script>
   <script src="js/content.js"></script>
+  <script src="js/games.js"></script>
   <script src="js/db.js"></script>
   <script src="js/huts.js"></script>
   <script src="js/audio.js"></script>

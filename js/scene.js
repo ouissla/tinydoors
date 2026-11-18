@@ -308,6 +308,7 @@
 
   // Illustrated stand-in photos, so the frost/sand reveal has something to show before you add your own.
   A.placeholderPhoto = function (theme, day) {
+    theme = A.baseOf ? A.baseOf(theme) : theme;
     const hue = (day * 47) % 360;
     const svg = theme === 'snow'
       ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000">

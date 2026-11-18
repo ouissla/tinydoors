@@ -87,3 +87,8 @@ body.previewing .hud { top: 46px; }
 
 /* the splash in 3D sits over the live, slowly drifting scene */
 .w3d #splash { backdrop-filter: blur(4px); }
+
+/* Background mode (editor backdrop): just the world */
+body.bgmode .hud, body.bgmode .toolbar, body.bgmode #splash, body.bgmode .credit, body.bgmode .hint3d,
+body.bgmode .loading3d, body.bgmode #toast, body.bgmode .kbd-hint, body.bgmode .preview-bar { display: none !important; }
+body.bgmode #gl { pointer-events: none; cursor: default; }

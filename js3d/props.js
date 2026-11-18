@@ -39,8 +39,69 @@ function mesh(geo, material, x, y, z) {
   return m;
 }
 
+// A toy train looping round an oval track in the square.
+function buildTrain(root, L, updaters) {
+  const cz = -(L.frontR - 4.3), rx = Math.min(7, L.frontR * Math.sin(L.spread) * 0.55), rz = 2.1;
+  const pts = [];
+  for (let i = 0; i < 64; i++) {
+    const a = (i / 64) * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.cos(a) * rx, 0.12, cz + Math.sin(a) * rz));
+  }
+  const curve = new THREE.CatmullRomCurve3(pts, true);
+  [-0.22, 0.22].forEach((o) => {
+    const rail = new THREE.CatmullRomCurve3(pts.map((p, i) => {
+      const n = pts[(i + 1) % 64].clone().sub(pts[(i + 63) % 64]).normalize();
+      return p.clone().add(new THREE.Vector3(-n.z, 0, n.x).multiplyScalar(o));
+    }), true);
+    root.add(mesh(new THREE.TubeGeometry(rail, 128, 0.04, 5, true), mat('#8a93a8', { metalness: 0.6, roughness: 0.3 }), 0, 0, 0));
+  });
+  for (let i = 0; i < 40; i++) {
+    const t = i / 40;
+    const p = curve.getPointAt(t), d = curve.getTangentAt(t);
+    const sl = mesh(new THREE.BoxGeometry(0.62, 0.06, 0.14), mat('#8a5a3b'), p.x, 0.05, p.z);
+    sl.rotation.y = Math.atan2(d.x, d.z) + Math.PI / 2;
+    root.add(sl);
+  }
+  const cars = [];
+  const engine = new THREE.Group();
+  engine.add(mesh(new THREE.BoxGeometry(0.6, 0.35, 1.1), mat('#e2483d', { roughness: 0.4 }), 0, 0.35, 0));
+  const boiler = mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.7, 14), mat('#2a2f3a', { roughness: 0.4 }), 0, 0.68, 0.18);
+  boiler.rotation.x = Math.PI / 2;
+  engine.add(boiler);
+  engine.add(mesh(new THREE.BoxGeometry(0.55, 0.5, 0.4), mat('#3f7be0', { roughness: 0.4 }), 0, 0.8, -0.32));
+  engine.add(mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.3, 10), mat('#2a2f3a'), 0, 1.0, 0.42));
+  engine.add(mesh(new THREE.SphereGeometry(0.07, 8, 6), mat('#fff3c4', { emissive: '#ffd36b', emissiveIntensity: 2.5 }), 0, 0.6, 0.58));
+  cars.push(engine);
+  ['#ffd23f', '#2f9e5b', '#9b5de5'].forEach((c, i) => {
+    const car = new THREE.Group();
+    car.add(mesh(new THREE.BoxGeometry(0.58, 0.3, 0.85), mat(c, { roughness: 0.45 }), 0, 0.32, 0));
+    car.add(mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), mat(['#e2483d', '#3f7be0', '#ff8ad8'][i], { roughness: 0.5 }), 0, 0.62, 0.1));
+    car.add(mesh(new THREE.BoxGeometry(0.36, 0.05, 0.05), mat('#ffffff'), 0, 0.78, 0.1));
+    cars.push(car);
+  });
+  cars.forEach((c) => {
+    [-0.28, 0.28].forEach((x) => [-0.3, 0.3].forEach((z) => {
+      const w = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 12), mat('#2a2f3a'), x, 0.14, z);
+      w.rotation.z = Math.PI / 2;
+      c.add(w);
+    }));
+    root.add(c);
+  });
+  const len = curve.getLength();
+  updaters.push((t) => {
+    cars.forEach((c, i) => {
+      const u = (((t * 1.4) - i * 1.0) / len % 1 + 1) % 1;
+      const p = curve.getPointAt(u), d = curve.getTangentAt(u);
+      c.position.set(p.x, 0.05 + Math.abs(Math.sin(t * 12 + i)) * 0.02, p.z);
+      c.rotation.y = Math.atan2(d.x, d.z);
+    });
+  });
+}
+
 export function buildProps(theme, L, rng, root, houses, treePos) {
   const snow = theme === 'snow';
+  const summer = theme === 'summer';
+  const wintry = !summer; // presents under the tree etc.
   const updaters = [];
 
   // ---- Fairy lights along every roof (one instanced draw call) ----
@@ -103,7 +164,38 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
     for (let i = 0; i < row.length - 1; i += 2) {
       const th = (row[i].th + row[i + 1].th) / 2;
       const [x, z] = polar(R, th);
-      if (snow) {
+      if (theme === 'gingerbread') {
+        // lollipop lamps
+        root.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.7, 6), mat('#ffffff', { map: caneTex, flatShading: false }), x, y + 0.85, z));
+        const pop = mesh(new THREE.SphereGeometry(0.24, 14, 10), mat(['#ff6fa3', '#7cf29a', '#ffd23f', '#c77dff'][i % 4], { emissive: ['#ff6fa3', '#7cf29a', '#ffd23f', '#c77dff'][i % 4], emissiveIntensity: 1.6, flatShading: false }), x, y + 1.9, z);
+        root.add(pop);
+      } else if (theme === 'toys') {
+        root.add(mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.7, 8), mat(['#e2483d', '#3f7be0', '#2f9e5b'][i % 3], { roughness: 0.45 }), x, y + 0.85, z));
+        root.add(mesh(new THREE.SphereGeometry(0.2, 12, 10), mat('#fff3c4', { emissive: '#ffd36b', emissiveIntensity: 2.2, flatShading: false }), x, y + 1.85, z));
+        root.add(mesh(new THREE.ConeGeometry(0.16, 0.2, 10), mat('#ffd23f', { roughness: 0.4 }), x, y + 2.1, z));
+      } else if (theme === 'space' || theme === 'cyber') {
+        root.add(mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.6, 6), mat('#8a93a8', { metalness: 0.5, roughness: 0.4 }), x, y + 0.8, z));
+        const bar = mesh(new THREE.CapsuleGeometry(0.06, 0.45, 3, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(theme === 'cyber' ? ['#ff2bd6', '#00e5ff', '#a6ff00'][i % 3] : i % 2 ? '#7af7ff' : '#ff6fd8').multiplyScalar(2.2), toneMapped: false }), x, y + 1.85, z);
+        bar.castShadow = false;
+        root.add(bar);
+      } else if (theme === 'workshop') {
+        // candy-striped lamp posts
+        root.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.8, 8), mat('#ffffff', { map: caneTex, flatShading: false }), x, y + 0.9, z));
+        root.add(mesh(new THREE.SphereGeometry(0.22, 12, 10), mat('#fff3c4', { emissive: '#ffcf6b', emissiveIntensity: 2.4, flatShading: false }), x, y + 1.95, z));
+        root.add(mesh(new THREE.ConeGeometry(0.2, 0.22, 8), mat('#2e6a4f'), x, y + 2.2, z));
+        root.add(mesh(new THREE.SphereGeometry(0.06, 6, 4), mat('#ffd23f'), x, y + 2.35, z));
+      } else if (theme === 'japan') {
+        // stone lanterns (toro) with a warm glow and snow on the cap
+        const stone = mat('#9a9ea8');
+        root.add(mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.16, 6), stone, x, y + 0.08, z));
+        root.add(mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.8, 6), stone, x, y + 0.56, z));
+        root.add(mesh(new THREE.BoxGeometry(0.38, 0.06, 0.38), stone, x, y + 0.99, z));
+        root.add(mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), mat('#ffe0ee', { emissive: ['#ff9ec4', '#ffd36b', '#8fdcc0'][i % 3], emissiveIntensity: 2.2 }), x, y + 1.16, z));
+        const roofT = mesh(new THREE.ConeGeometry(0.36, 0.26, 6), stone, x, y + 1.43, z);
+        root.add(roofT);
+        root.add(mesh(new THREE.ConeGeometry(0.2, 0.14, 6), mat('#f4f8ff', { roughness: 1 }), x, y + 1.52, z));
+        root.add(mesh(new THREE.SphereGeometry(0.06, 6, 4), stone, x, y + 1.6, z));
+      } else if (snow) {
         root.add(mesh(new THREE.CylinderGeometry(0.05, 0.07, 1.7, 6), mat('#2a2f3a', { metalness: 0.4, roughness: 0.5 }), x, y + 0.85, z));
         root.add(mesh(new THREE.BoxGeometry(0.24, 0.3, 0.24), mat('#ffe3a0', { emissive: '#ffbe5c', emissiveIntensity: 2.6 }), x, y + 1.85, z));
         const cap = mesh(new THREE.ConeGeometry(0.22, 0.2, 4), mat('#2a2f3a', { metalness: 0.4, roughness: 0.5 }), x, y + 2.1, z);
@@ -128,7 +220,7 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
     }));
   }
 
-  if (snow) {
+  if (wintry) {
     // ---- Presents piled at the foot of the big tree ----
     const COLORS = ['#e2483d', '#2f9e5b', '#3f5a8a', '#e9b949', '#9b5de5', '#ffffff', '#ff8ad8'];
     for (let i = 0; i < 14; i++) {
@@ -152,12 +244,36 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
     ]);
     const caneGeo = new THREE.TubeGeometry(curve, 24, 0.09, 8);
     const caneMat = mat('#ffffff', { map: caneTex, flatShading: false, roughness: 0.4 });
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < (snow || theme === 'workshop' ? 6 : theme === 'gingerbread' ? 10 : 0); i++) {
       const th = (i < 3 ? -1 : 1) * (L.spread + 0.05 + (i % 3) * 0.12);
-      const [x, z] = polar(L.frontR - 1.6 - (i % 3) * 1.3, th);
+      const [x, z] = polar(L.frontR - 1.6 - (i % 5) * 1.3, i < 6 ? th : th * 0.55);
       const c = mesh(caneGeo, caneMat, x, 0, z);
       c.rotation.y = rng() * 6;
+      if (theme === 'gingerbread') c.scale.setScalar(1.4);
       root.add(c);
+    }
+    if (theme === 'gingerbread') {
+      // gumdrops dotted around the square
+      const gum = ['#ff4f81', '#7cf29a', '#ffd23f', '#6fc9ff', '#c77dff'];
+      for (let i = 0; i < 16; i++) {
+        const [x, z] = polar(L.frontR - 1.2 - rng() * 6.5, (rng() - 0.5) * 2 * (L.spread + 0.25));
+        const gd = mesh(new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(gum[i % 5], { roughness: 0.3, flatShading: false }), x, 0, z);
+        gd.scale.y = 1.4;
+        root.add(gd);
+      }
+    }
+    if (theme === 'toys') buildTrain(root, L, updaters);
+    if (theme === 'toys') {
+      // stacks of building blocks at the corners of the square
+      const cols = ['#e2483d', '#3f7be0', '#ffd23f', '#2f9e5b', '#ff8a2b'];
+      [-1, 1].forEach((side) => {
+        const [x, z] = polar(L.frontR - 3, side * (L.spread + 0.15));
+        for (let k = 0; k < 5; k++) {
+          const b = mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), mat(cols[(k + (side > 0 ? 2 : 0)) % 5], { roughness: 0.5 }), x + (k % 2) * 0.75 - 0.35, 0.35 + Math.floor(k / 2) * 0.7, z);
+          b.rotation.y = rng() * 0.4;
+          root.add(b);
+        }
+      });
     }
   } else {
     // ---- Beach: umbrellas, towels, a sandcastle, surfboards, an esky ----

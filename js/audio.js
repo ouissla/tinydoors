@@ -25,6 +25,55 @@
       this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this.loadSamples();
+    },
+
+    // ---- Recorded sounds (fall back to synthesised ones if they can't load, e.g. from file://) ----
+    SAMPLES: { knock: 'assets/sounds/door-knock.mp3', open: 'assets/sounds/door-whoosh.mp3' },
+    // When each knock lands in door-knock.mp3, so the door can jolt in time.
+    KNOCK_TIMES: [0.02, 0.235, 0.455, 0.68],
+    KNOCK_LENGTH: 0.85,
+    buffers: {},
+    loadSamples() {
+      Object.entries(this.SAMPLES).forEach(([name, url]) => {
+        fetch(url)
+          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status)))
+          .then((b) => new Promise((res, rej) => this.ctx.decodeAudioData(b, res, rej)))
+          .then((buf) => { this.buffers[name] = buf; })
+          .catch(() => { /* synthesised fallback */ });
+      });
+    },
+    sample(name, vol = 0.9) {
+      const buf = this.buffers[name];
+      if (!buf || !this.ok()) return false;
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      const g = this.ctx.createGain();
+      g.gain.value = vol;
+      src.connect(g).connect(this.master);
+      src.start();
+      return true;
+    },
+
+    knock() {
+      if (!this.ok() || this.sample('knock', 1.0)) return;
+      const t = this.ctx.currentTime + 0.01;
+      this.KNOCK_TIMES.forEach((k) => {
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.frequency.setValueAtTime(190, t + k);
+        o.frequency.exponentialRampToValueAtTime(70, t + k + 0.08);
+        g.gain.setValueAtTime(0.5, t + k);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + k + 0.12);
+        o.connect(g).connect(this.master);
+        o.start(t + k);
+        o.stop(t + k + 0.15);
+      });
+    },
+
+    doorOpen() {
+      if (!this.ok()) return;
+      if (!this.sample('open', 0.9)) this.creak();
     },
 
     ok() {

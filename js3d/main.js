@@ -16,6 +16,12 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 // ---------------- Calendar data (same rules as the 2D view) ----------------
 const cid = params.get('c');
 const preview = params.has('preview');
+// Background mode: the editor shows a world drifting behind its panels (no UI, no sound, lighter rendering).
+const bgMode = params.has('bg');
+if (bgMode) {
+  A.forceLite = true;
+  document.body.classList.add('bgmode');
+}
 let cal = null;
 const photoURLs = {};
 if (cid) {
@@ -41,7 +47,8 @@ function partsIn(tz) {
 }
 
 const saved = A.store.get(KEY3D, {});
-const theme = cal ? cal.theme : params.get('theme') === 'summer' ? 'summer' : params.get('theme') === 'snow' ? 'snow' : saved.theme || 'snow';
+const qTheme = params.get('theme');
+const theme = cal && A.THEMES[cal.theme] ? cal.theme : A.THEMES[qTheme] ? qTheme : A.THEMES[saved.theme] ? saved.theme : 'snow';
 const state = {
   to: cal ? cal.to : params.get('to') || 'Emma',
   from: cal ? cal.from : params.get('from') || 'Grandma',
@@ -51,7 +58,7 @@ const state = {
   focus: 1,
 };
 const openKey = cal ? `littledoors:open:${cal.id}` : null;
-let opened = new Set(cal ? (preview ? [] : A.store.get(openKey, [])) : (saved.opened && saved.opened[theme]) || []);
+let opened = new Set(bgMode ? [] : cal ? (preview ? [] : A.store.get(openKey, [])) : (saved.opened && saved.opened[theme]) || []);
 
 let sleepsUntil;
 if (cal) {
@@ -83,8 +90,9 @@ function save() {
 
 // ---------------- Page chrome ----------------
 document.documentElement.dataset.theme = theme;
-document.querySelector('meta[name=theme-color]').content = theme === 'snow' ? '#0b1638' : '#ff9a8b';
-A.Sound.theme = theme;
+document.documentElement.dataset.base = A.baseOf(theme);
+document.querySelector('meta[name=theme-color]').content = { snow: '#0b1638', summer: '#ff9a8b', gingerbread: '#2a1236', toys: '#3f8fe0', space: '#05031a', workshop: '#0b1730', jungle: '#123b3a', japan: '#7d84e0', cyber: '#05020f' }[theme];
+A.Sound.theme = A.THEMES[theme].sound || 'snow';
 A.Sound.enabled = state.sound;
 A.FX.noAmbient = true;
 A.FX.init($('ambient'), $('fx'));
@@ -99,7 +107,9 @@ if (cal) {
   if (cal.plan === 'season') $('credit').hidden = true;
   document.title = fill(T.title) + ' — 3D';
 } else {
-  $('btnTheme').textContent = theme === 'snow' ? '☀️' : '❄️';
+  const nextTheme = A.THEME_ORDER[(A.THEME_ORDER.indexOf(theme) + 1) % A.THEME_ORDER.length];
+  $('btnTheme').textContent = A.THEMES[nextTheme].emblem;
+  $('btnTheme').setAttribute('aria-label', `Switch to ${A.THEMES[nextTheme].name}`);
 }
 if (preview) {
   document.body.appendChild(A.el('div', 'preview-bar', `<span>👀 Preview — this is what <b>${A.esc(state.to)}</b> will see</span><a href="editor.html?c=${encodeURIComponent(cal.id)}&step=share">✏️ Back to editing</a>`));
@@ -130,18 +140,25 @@ function refreshHUD() {
 
 // ---------------- Renderer ----------------
 const canvas = $('gl');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
+// No WebGL (old phone, locked-down browser)? Show the same calendar in 2D instead of a blank page.
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  location.replace('index.html' + location.search);
+  throw e;
+}
+renderer.setPixelRatio(bgMode ? 1 : Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = theme === 'snow' ? 1.05 : 1.0;
-renderer.shadowMap.enabled = true;
+renderer.toneMappingExposure = { snow: 1.05, summer: 1.0, gingerbread: 1.05, toys: 1.0, space: 1.1, workshop: 1.05, jungle: 1.0, japan: 1.05, cyber: 1.0 }[theme];
+renderer.shadowMap.enabled = !bgMode;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 1000);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), theme === 'snow' ? 0.7 : 0.45, 0.55, theme === 'snow' ? 0.97 : 0.97);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), { snow: 0.7, summer: 0.45, gingerbread: 0.6, toys: 0.35, space: 0.6, workshop: 0.7, jungle: 0.55, japan: 0.45, cyber: 0.8 }[theme], 0.55, 0.97);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -206,7 +223,8 @@ const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.screenSpacePanning = false; // pan across the ground, not up into the sky
-controls.rotateSpeed = 0.55;
+controls.enableRotate = false; // rotation is ours (see "Drag to look around"), so the direction can be chosen
+controls.rotateSpeed = 0.4;
 controls.zoomSpeed = 1.0;
 controls.panSpeed = 0.9;
 controls.zoomToCursor = true;
@@ -219,8 +237,8 @@ controls.minDistance = 2.5;
 controls.enabled = false;
 
 // Keep the look-at point over the village so nobody gets lost.
-controls.addEventListener('change', () => {
-  if (!world || cam.mode !== 'free') return;
+function keepOverVillage() {
+  if (!world) return;
   const L = world.layout, t = controls.target;
   const bx = L.backR * Math.sin(L.spread) + 8;
   const c = new THREE.Vector3(A.clamp(t.x, -bx, bx), A.clamp(t.y, -1, L.topY + 10), A.clamp(t.z, -(L.backR + 14), -(L.frontR - 14)));
@@ -229,7 +247,8 @@ controls.addEventListener('change', () => {
     t.add(d);
     camera.position.add(d);
   }
-});
+}
+controls.addEventListener('change', () => { if (cam.mode === 'free') keepOverVillage(); });
 
 // Find the distance (and a vertical nudge) that fits the whole village between the title and toolbar.
 function fitCamera() {
@@ -281,6 +300,7 @@ const easeIO = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2
 const easeBack = (k) => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
 
 function flyCam(toPos, toTarget, dur) {
+  spin.theta = spin.phi = 0;
   controls.enabled = false;
   cam.mode = 'fly';
   const fp = camera.position.clone(), ft = controls.target.clone();
@@ -361,12 +381,13 @@ async function openDay(d) {
     return;
   }
 
-  A.Sound.creak();
-  const fly = flyTo(h, 1050);
+  await flyTo(h, 950); // arrive first, so you see (and hear) the knock
+  await knockOn(h);
+  A.Sound.doorOpen();
   h.group.userData.anim = true;
   tween(300, (e, k) => { const s = Math.sin(k * Math.PI); h.group.scale.set(1 + s * 0.06, 1 - s * 0.07, 1 + s * 0.06); }, (k) => k)
     .then(() => { h.group.scale.setScalar(1); h.group.userData.anim = false; });
-  await A.wait(A.reducedMotion ? 0 : 380);
+  await A.wait(A.reducedMotion ? 0 : 100); // swing with the rush of the whoosh
 
   const door = h.group.localToWorld(h.doorLocal.clone());
   const ry = h.group.rotation.y;
@@ -378,7 +399,6 @@ async function openDay(d) {
 
   const sp = screenOf(h);
   A.FX.burst(sp.x, sp.y, { count: 120, power: 1.05 });
-  A.Sound.chime();
   opened.add(d);
   save();
   world.tree.setLit(d - 1, true);
@@ -387,10 +407,22 @@ async function openDay(d) {
   placeMarkers();
   refreshHUD();
 
-  await fly;
-  await A.wait(A.reducedMotion ? 0 : 380);
+  await A.wait(A.reducedMotion ? 0 : 520);
   busy = false;
   showCard(d);
+}
+
+// Knock knock: the door jolts in time with each knock in the sound.
+async function knockOn(h) {
+  A.Sound.init();
+  A.Sound.knock();
+  A.Sound.KNOCK_TIMES.forEach((t, i) => setTimeout(() => {
+    if (!A.reducedMotion) tween(170, (e, k) => { h.pivot.rotation.y = Math.sin(k * Math.PI) * 0.07; }, (k) => k);
+    const sp = screenOf(h);
+    A.popText(sp.x + (i % 2 ? 46 : -46), sp.y - 70 - i * 6, 'knock!');
+  }, t * 1000));
+  await A.wait(A.Sound.KNOCK_LENGTH * 1000 + 120);
+  h.pivot.rotation.y = 0;
 }
 
 function showCard(d) {
@@ -438,12 +470,70 @@ function pick(clientX, clientY) {
 
 let down = null;
 let pointers = 0;
+// ---- Shake the phone (or press S) to make it snow ----
+let snowedOnce = false;
+function letItSnow() {
+  if (!world) return;
+  world.letItSnow(1);
+  A.Sound.init();
+  A.Sound.whoosh(1.4, 2600, 500, 0.1);
+  A.Sound.sparkle(8);
+  if (!snowedOnce) { snowedOnce = true; toast('❄️ Let it snow!'); }
+}
+A.Motion.onShake(letItSnow);
+let motionAsked = false;
+function askMotion() {
+  if (motionAsked) return;
+  motionAsked = true;
+  A.Motion.request(); // iPhone shows its permission prompt from this tap
+}
+
 canvas.addEventListener('pointerdown', (e) => {
+  askMotion();
   pointers++;
-  down = pointers > 1 ? null : { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, id: e.pointerId };
+  spin.theta = spin.phi = 0; // grabbing stops any glide
+  down = pointers > 1 ? null : { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: false, id: e.pointerId, rotate: e.pointerType !== 'mouse' || e.button === 0 };
 });
+
+// ---- Drag to look around ----
+// Dragging right swings the view the other way round the village (scene moves left).
+const DRAG_DIR_X = 1;
+const DRAG_DIR_Y = -1; // inverted: dragging up tilts the view the other way
+const spin = { theta: 0, phi: 0 };
+const sph = new THREE.Spherical();
+function orbitBy(dTheta, dPhi) {
+  const off = camera.position.clone().sub(controls.target);
+  sph.setFromVector3(off);
+  sph.theta = A.clamp(sph.theta + dTheta, controls.minAzimuthAngle, controls.maxAzimuthAngle);
+  sph.phi = A.clamp(sph.phi + dPhi, controls.minPolarAngle, controls.maxPolarAngle);
+  sph.makeSafe();
+  off.setFromSpherical(sph);
+  camera.position.copy(controls.target).add(off);
+  camera.lookAt(controls.target);
+}
+function dragRotate(e) {
+  if (!down || !down.rotate || e.pointerId !== down.id || pointers > 1 || cam.mode !== 'free') return;
+  const k = (2 * Math.PI * controls.rotateSpeed) / H;
+  const dTheta = (e.clientX - down.lx) * k * DRAG_DIR_X;
+  const dPhi = -(e.clientY - down.ly) * k * DRAG_DIR_Y;
+  down.lx = e.clientX;
+  down.ly = e.clientY;
+  if (!down.moved) return;
+  orbitBy(dTheta, dPhi);
+  spin.theta = dTheta;
+  spin.phi = dPhi;
+}
+// A little glide after letting go, like the old controls had.
+function glide() {
+  if (down && down.rotate && down.moved) return;
+  if (Math.abs(spin.theta) + Math.abs(spin.phi) < 1e-4) return;
+  orbitBy(spin.theta, spin.phi);
+  spin.theta *= 0.9;
+  spin.phi *= 0.9;
+}
 window.addEventListener('pointermove', (e) => {
   if (down && e.pointerId === down.id && (Math.abs(e.clientX - down.x) > 6 || Math.abs(e.clientY - down.y) > 6)) down.moved = true;
+  dragRotate(e);
   if (e.pointerType === 'mouse' && !pointers && cam.mode === 'free') {
     const p = pick(e.clientX, e.clientY);
     hovered = p.house || null;
@@ -467,6 +557,36 @@ const endPointer = (e) => {
 window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', (e) => { pointers = Math.max(0, pointers - 1); if (down && e.pointerId === down.id) down = null; });
 
+// ---- WASD to walk around, Q / E to turn ----
+const WASD = new Set(['w', 'a', 's', 'd', 'q', 'e']);
+const held = new Set();
+document.addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
+window.addEventListener('blur', () => held.clear());
+const fwd = new THREE.Vector3(), right = new THREE.Vector3(), step = new THREE.Vector3();
+function walk(dt) {
+  if (!held.size || cam.mode !== 'free' || A.Cards.isOpen()) return;
+  const dist = camera.position.distanceTo(controls.target);
+  const speed = A.clamp(dist * 0.7, 3, 26); // slower when zoomed in close
+  camera.getWorldDirection(fwd);
+  fwd.y = 0;
+  if (fwd.lengthSq() < 1e-6) return;
+  fwd.normalize();
+  right.set(-fwd.z, 0, fwd.x);
+  step.set(0, 0, 0);
+  if (held.has('w')) step.add(fwd);
+  if (held.has('s')) step.sub(fwd);
+  if (held.has('d')) step.add(right);
+  if (held.has('a')) step.sub(right);
+  if (step.lengthSq() > 0) {
+    step.normalize().multiplyScalar(speed * dt);
+    camera.position.add(step);
+    controls.target.add(step);
+    keepOverVillage();
+  }
+  const turn = (held.has('e') ? 1 : 0) - (held.has('q') ? 1 : 0);
+  if (turn) orbitBy(turn * 1.3 * dt, 0);
+}
+
 document.addEventListener('keydown', (e) => {
   if (!$('splash').classList.contains('gone')) {
     if ((e.key === 'Enter' || e.key === ' ') && !$('splashGo').disabled) { e.preventDefault(); $('splashGo').click(); }
@@ -486,6 +606,12 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'Enter') {
     e.preventDefault();
     openDay(state.focus);
+  } else if (e.key === ' ' || e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    letItSnow();
+  } else if (WASD.has(e.key.toLowerCase())) {
+    held.add(e.key.toLowerCase());
+    e.preventDefault();
   } else if (e.key === 'h' || e.key === 'Home') {
     goHome();
   }
@@ -503,7 +629,7 @@ $('btnSound').addEventListener('click', () => {
 });
 $('btnTheme').addEventListener('click', () => {
   const url = new URL(location.href);
-  url.searchParams.set('theme', theme === 'snow' ? 'summer' : 'snow');
+  url.searchParams.set('theme', A.THEME_ORDER[(A.THEME_ORDER.indexOf(theme) + 1) % A.THEME_ORDER.length]);
   url.searchParams.set('skip', '');
   location.href = url.toString();
 });
@@ -555,7 +681,14 @@ window.addEventListener('resize', resize);
 
 // ---------------- Loop ----------------
 const clock = new THREE.Clock();
+let lastBgFrame = 0, bgReady = false;
 function frame() {
+  if (bgMode) {
+    // 30 fps is plenty for a backdrop, and kinder to phone batteries
+    const now = performance.now();
+    if (now - lastBgFrame < 32) { requestAnimationFrame(frame); return; }
+    lastBgFrame = now;
+  }
   const dt = Math.min(0.05, clock.getDelta());
   const t = clock.elapsedTime;
   runTweens();
@@ -574,27 +707,47 @@ function frame() {
     const s = A.lerp(h.group.scale.x, target, 0.15);
     if (Math.abs(s - h.group.scale.x) > 0.0005) h.group.scale.setScalar(s);
   });
-  if (cam.mode === 'intro') {
+  if (cam.mode === 'bg') {
+    // a slow, gentle sweep back and forth across the village
+    const yaw = A.reducedMotion ? 0 : Math.sin(t * 0.045) * 0.42;
+    const off = home.pos.clone().sub(home.target).applyAxisAngle(UP, yaw);
+    off.multiplyScalar(0.92 + Math.sin(t * 0.03) * 0.05);
+    camera.position.copy(home.target).add(off);
+    camera.lookAt(home.target);
+  } else if (cam.mode === 'intro') {
     // slow drift behind the splash screen
     cam.spin += dt * 0.05;
     const off = camera.position.clone().sub(controls.target).applyAxisAngle(UP, dt * 0.05 * Math.cos(cam.spin));
     camera.position.copy(controls.target).add(off);
     camera.lookAt(controls.target);
   } else if (cam.mode === 'free') {
+    glide();
+    walk(dt);
     controls.update();
     // Fade the title away once you've zoomed in to explore
     document.body.classList.toggle('zoomed', camera.position.distanceTo(controls.target) < home.dist * 0.6);
   }
   composer.render(dt);
+  if (bgMode && !bgReady) {
+    bgReady = true;
+    try { window.parent.postMessage({ littleDoorsBg: 'ready', theme }, location.origin); } catch (e) { /* not embedded */ }
+  }
   requestAnimationFrame(frame);
 }
 
 // ---------------- Boot ----------------
 refreshHUD();
 await (document.fonts ? Promise.race([document.fonts.ready, A.wait(2500)]) : Promise.resolve());
-try { await document.fonts.load('900 100px Fraunces'); } catch (e) { /* fallback font is fine */ }
+try { await document.fonts.load('100px "Bagel Fat One"'); } catch (e) { /* fallback font is fine */ }
 resize();
-if (params.has('skip')) {
+if (bgMode) {
+  camera.position.copy(home.pos);
+  controls.target.copy(home.target);
+  camera.lookAt(home.target);
+  cam.mode = 'bg';
+  $('splash').classList.add('gone');
+  document.body.classList.add('entered');
+} else if (params.has('skip')) {
   camera.position.copy(home.pos);
   controls.target.copy(home.target);
   camera.lookAt(home.target);
@@ -613,6 +766,8 @@ $('splashGo').disabled = false;
 requestAnimationFrame(frame);
 
 function intro() {
+  askMotion();
+  if (!coarse) $('hint3d').textContent = 'Drag or use W A S D to move · scroll to zoom · Space for snow · tap a door';
   A.Sound.enabled = state.sound;
   A.Sound.init();
   A.Sound.whoosh(1.2, 200, 3000, 0.22);
@@ -630,6 +785,10 @@ function intro() {
   flyCam(home.pos.clone(), home.target.clone(), 2600).then(enableFree);
   setTimeout(() => $('hint3d').classList.add('show'), 2800);
   setTimeout(() => $('hint3d').classList.remove('show'), 9000);
+  if (coarse && A.Motion.available()) {
+    setTimeout(() => { $('hint3d').textContent = 'Shake your phone to make it snow ❄️'; $('hint3d').classList.add('show'); }, 9600);
+    setTimeout(() => $('hint3d').classList.remove('show'), 14000);
+  }
 }
 $('splashGo').addEventListener('click', intro);
 

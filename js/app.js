@@ -187,15 +187,15 @@
     }
 
     busy = true;
+    await knockOn(hut);
     hut.classList.add('opening');
-    A.Sound.creak();
-    await A.wait(A.reducedMotion ? 0 : 260);
+    A.Sound.doorOpen();
+    await A.wait(A.reducedMotion ? 0 : 80); // swing with the rush of the whoosh
     hut.classList.add('open');
     hut.classList.remove('today', 'ready');
     await A.wait(A.reducedMotion ? 50 : 330);
     const door = hut.querySelector('.doorway').getBoundingClientRect();
     A.FX.burst(door.left + door.width / 2, door.top + door.height / 2, { count: 110, power: 1.05 });
-    A.Sound.chime();
 
     state.opened[state.theme] = [...op, d];
     save();
@@ -208,6 +208,21 @@
     hut.classList.remove('opening');
     busy = false;
     showCard(d);
+  }
+
+  // Knock knock: the door jolts in time with each knock in the sound.
+  async function knockOn(hut) {
+    A.Sound.init();
+    A.Sound.knock();
+    const r = hut.querySelector('.doorway').getBoundingClientRect();
+    A.Sound.KNOCK_TIMES.forEach((t, i) => setTimeout(() => {
+      hut.classList.remove('knock');
+      void hut.offsetWidth;
+      hut.classList.add('knock');
+      A.popText(r.left + r.width * (0.3 + (i % 2) * 0.4), r.top + r.height * 0.25, 'knock!');
+    }, t * 1000));
+    await A.wait(A.Sound.KNOCK_LENGTH * 1000 + 120);
+    hut.classList.remove('knock');
   }
 
   // ---------------- Cards ----------------
@@ -322,11 +337,14 @@
   function applyTheme(theme) {
     state.theme = theme;
     if (!state.opened[theme]) state.opened[theme] = [];
+    // Premium worlds reuse a base 2D scene (snowy or summer); colours and content are their own.
+    const look = A.baseOf(theme);
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name=theme-color]').content = theme === 'snow' ? '#0b1638' : '#ff9a8b';
-    A.Sound.theme = theme;
-    A.FX.setTheme(theme);
-    A.Scene.build(theme, $('scene'), $('foreground'));
+    document.documentElement.dataset.base = look;
+    document.querySelector('meta[name=theme-color]').content = look === 'snow' ? '#0b1638' : '#ff9a8b';
+    A.Sound.theme = A.THEMES[theme].sound || look;
+    A.FX.setTheme(look);
+    A.Scene.build(look, $('scene'), $('foreground'));
     const T = A.THEMES[theme];
     $('splashEmblem').textContent = T.emblem;
     $('splashEyebrow').textContent = `${state.to}, ${state.from} made you something`;
@@ -361,24 +379,21 @@
     requestAnimationFrame(tiltLoop);
   }
 
-  let lastShake = 0;
+  function letItSnow() {
+    A.FX.flurry();
+    A.Sound.init();
+    A.Sound.sparkle(8);
+  }
+  A.Motion.onShake(letItSnow);
+
   function enableMotion() {
+    // Tilt for parallax, shake for snow. Both permissions have to be asked from this tap on iPhone.
+    A.Motion.request();
     const listen = () => {
       window.addEventListener('deviceorientation', (e) => {
         if (e.gamma == null) return;
         tilt.tx = A.clamp(e.gamma / 25, -1, 1) * -1;
         tilt.ty = A.clamp((e.beta - 45) / 25, -1, 1) * -1;
-      });
-      window.addEventListener('devicemotion', (e) => {
-        const a = e.acceleration;
-        if (!a || a.x == null) return;
-        const mag = Math.hypot(a.x, a.y, a.z);
-        const t = performance.now();
-        if (mag > 18 && t - lastShake > 1500) {
-          lastShake = t;
-          A.FX.flurry();
-          A.Sound.sparkle(8);
-        }
       });
     };
     try {
@@ -405,6 +420,7 @@
       return;
     }
     if (e.target.closest && e.target.closest('#panel')) return;
+    if (e.key === 's' || e.key === 'S') { letItSnow(); return; }
     const moves = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: state.cols, ArrowUp: -state.cols };
     if (moves[e.key]) {
       e.preventDefault();

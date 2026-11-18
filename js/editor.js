@@ -20,13 +20,47 @@
 
   // ---------------- Theme / background ----------------
   A.FX.init($('ambient'), $('fx'));
+  // ---- Live 3D backdrop: the chosen world drifting behind the editor ----
+  const webgl = (() => {
+    try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; }
+  })();
+  let bgTheme = null;
+  function setBackdrop(t) {
+    if (!webgl || location.protocol === 'file:' || t === bgTheme) return;
+    bgTheme = t;
+    const box = $('bg3d');
+    const f = document.createElement('iframe');
+    f.tabIndex = -1;
+    f.setAttribute('aria-hidden', 'true');
+    f.title = '';
+    f.src = `3d.html?theme=${encodeURIComponent(t)}&bg`;
+    f._show = () => {
+      if (bgTheme !== t) { f.remove(); return; } // picked another world meanwhile
+      if (f.classList.contains('on')) return;
+      f.classList.add('on');
+      document.body.classList.add('has3d');
+      setTimeout(() => box.querySelectorAll('iframe').forEach((o) => { if (o !== f) o.remove(); }), 1000);
+    };
+    box.appendChild(f);
+    setTimeout(() => f.isConnected && f._show(), 8000); // in case "ready" never arrives
+  }
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || e.data.littleDoorsBg !== 'ready') return;
+    const f = [...$('bg3d').querySelectorAll('iframe')].find((x) => x.contentWindow === e.source);
+    if (f) f._show();
+  });
+
   function setTheme(t) {
+    if (!A.THEMES[t]) t = 'snow';
+    setBackdrop(t);
     theme = t;
+    const look = A.baseOf(t); // premium worlds borrow a base 2D backdrop here; their own colours still apply
     document.documentElement.dataset.theme = t;
-    document.querySelector('meta[name=theme-color]').content = t === 'snow' ? '#0b1638' : '#ff9a8b';
-    A.Sound.theme = t;
-    A.FX.setTheme(t);
-    A.Scene.build(t, $('scene'), $('foreground'));
+    document.documentElement.dataset.base = look;
+    document.querySelector('meta[name=theme-color]').content = look === 'snow' ? '#0b1638' : '#ff9a8b';
+    A.Sound.theme = A.THEMES[t].sound || look;
+    A.FX.setTheme(look);
+    A.Scene.build(look, $('scene'), $('foreground'));
     document.querySelectorAll('[data-theme-pick]').forEach((b) => b.classList.toggle('on', b.dataset.themePick === t));
   }
 
@@ -102,14 +136,17 @@
 
   // ---------------- 1. Who + theme ----------------
   document.querySelectorAll('.theme-card').forEach((b) =>
-    b.addEventListener('click', () => {
-      A.Sound.init();
-      A.Sound.whoosh(0.5, 300, 2200, 0.12);
-      setTheme(b.dataset.themePick);
-    })
+    b.addEventListener('click', () => setTheme(b.dataset.themePick))
   );
 
+  let pendingPass = false; // Season Pass bought before the calendar exists
+  const hasPass = () => pendingPass || (cal && cal.plan === 'season');
+
   $('goDoors').addEventListener('click', () => {
+    if (A.THEMES[theme].premium && !hasPass()) {
+      upsell(`${A.THEMES[theme].name} is part of the Season Pass.`);
+      return;
+    }
     const to = $('fTo').value.trim();
     const from = $('fFrom').value.trim();
     if (!to) {
@@ -129,7 +166,7 @@
         from: from || 'Someone who loves you',
         year: now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear(),
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Australia/Sydney',
-        plan: 'free',
+        plan: pendingPass ? 'season' : 'free',
         createdAt: Date.now(),
         days: clone(A.CONTENT[theme]),
       };
@@ -222,6 +259,11 @@
       case 'riddle': case 'joke': return { title: fill(day.q), text: A.KIND_LABEL[day.type] };
       case 'activity': return { title: fill(day.title), text: fill(day.body).slice(0, 110) };
       case 'voucher': return { title: fill(day.title), text: 'Voucher · ' + fill(day.body).slice(0, 80) };
+      case 'game': {
+        const name = (A.GAME_INFO[day.game] || {}).name || 'Mini game';
+        const extra = day.game === 'wordsearch' && day.words ? ' · ' + day.words.join(', ') : day.game === 'sudoku' ? (day.size === 6 ? ' · 6×6, numbers' : ' · 4×4, pictures') : '';
+        return { title: fill(day.title || name), text: name + extra };
+      }
     }
     return { title: 'A surprise', text: '' };
   }
@@ -274,7 +316,9 @@
           <button type="button" data-act="library"><span>🖼️</span><b>Choose a photo</b></button>
           <button type="button" data-act="note"><span>💌</span><b>${isEve ? 'Write the letter' : 'Write a note'}</b></button>
           <button type="button" data-act="voucher"><span>🎟️</span><b>Make a voucher</b></button>
+          <button type="button" class="wide" data-act="games"><span>🎮</span><b>Add a mini game</b><small>Sudoku, word search, memory…</small></button>
         </div>
+        ${day.type === 'game' && day.game === 'wordsearch' ? '<button type="button" class="pick-preset" data-act="words">✏️ Use your own words in this word search <span>→</span></button>' : ''}
         <button type="button" class="pick-preset" data-act="presets">✨ Or pick a different surprise <span>${presets().length} ideas →</span></button>
         <div class="sheet-foot">
           ${day.personal ? '<button type="button" class="link" data-act="reset">Reset to the original</button>' : '<span></span>'}
@@ -333,15 +377,26 @@
       const sync = () => ($('vPrevT').textContent = $('vTitle').value ? ($('vTitle').value.match(/^one\b/i) ? '' : 'One ') + $('vTitle').value : 'One…');
       $('vTitle').addEventListener('input', sync);
       body.querySelectorAll('[data-idea]').forEach((b) => b.addEventListener('click', () => { $('vTitle').value = b.dataset.idea.toLowerCase(); sync(); }));
+    } else if (sheetMode === 'words') {
+      const cur = day.type === 'game' && day.game === 'wordsearch' ? day : { title: '', words: [] };
+      body.innerHTML = `
+        <label class="field">Title
+          <input type="text" id="wsTitle" maxlength="40" value="${esc(fill(cur.title || 'Find the hidden words'))}">
+        </label>
+        <label class="field">Words to hide <small>(3–8 words, 2–10 letters each — names work brilliantly)</small>
+          <textarea id="wsWords" rows="3" maxlength="120" placeholder="MIA, DAD, BEACH, PAVLOVA">${esc((cur.words || []).join(', '))}</textarea>
+        </label>
+        <p class="hint" id="wsHint">Letters only; spaces and punctuation are ignored.</p>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">← Back</button><button type="button" class="btn primary" data-act="saveWords">Save word search</button></div>`;
     } else if (sheetMode === 'presets') {
-      const cats = ['All', 'Activities', 'Puzzles', 'Jokes', 'Vouchers', 'Notes'];
+      const cats = ['All', 'Games', 'Activities', 'Puzzles', 'Jokes', 'Vouchers', 'Notes'];
       const list = presets().filter((p) => presetFilter === 'All' || p.cat === presetFilter);
       body.innerHTML = `
         <div class="filter">${cats.map((c) => `<button type="button" class="chip${c === presetFilter ? ' on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
         <div class="preset-list">${list.map((p) => `
           <button type="button" class="preset" data-preset="${p.i}">
             <span class="pe">${A.iconFor(p.item, cal.theme)}</span>
-            <span class="pt"><b>${esc(fill(p.title))}</b><small>${esc(A.KIND_LABEL[p.item.type])}${p.item.chips ? ' · ' + esc(p.item.chips.join(' · ')) : ''}</small></span>
+            <span class="pt"><b>${esc(fill(p.title))}</b><small>${p.item.type === 'game' ? esc(summary(p.item).text) : esc(A.KIND_LABEL[p.item.type])}${p.item.chips ? ' · ' + esc(p.item.chips.join(' · ')) : ''}</small></span>
           </button>`).join('')}</div>
         <div class="sheet-foot"><button type="button" class="link" data-act="home">← Back</button><span></span></div>`;
       body.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { presetFilter = b.dataset.cat; renderSheet(); }));
@@ -352,11 +407,11 @@
   let presetCache = null;
   function presets() {
     if (presetCache && presetCache.theme === cal.theme) return presetCache.list;
-    const CAT = { activity: 'Activities', riddle: 'Puzzles', joke: 'Jokes', voucher: 'Vouchers', message: 'Notes' };
+    const CAT = { game: 'Games', activity: 'Activities', riddle: 'Puzzles', joke: 'Jokes', voucher: 'Vouchers', message: 'Notes' };
     const seen = new Set();
     const list = [];
     [cal.theme, cal.theme === 'snow' ? 'summer' : 'snow'].forEach((t) =>
-      A.CONTENT[t].forEach((item) => {
+      [...A.CONTENT[t], ...((A.EXTRA && A.EXTRA[t]) || [])].forEach((item) => {
         if (!CAT[item.type]) return;
         const title = item.title || item.q || item.text.split('\n')[0];
         if (seen.has(title)) return;
@@ -404,7 +459,21 @@
     switch (act) {
       case 'done': closeSheet(); break;
       case 'home': sheetMode = 'home'; renderSheet(); break;
-      case 'note': case 'voucher': case 'presets': sheetMode = act; renderSheet(); break;
+      case 'note': case 'voucher': case 'presets': case 'words': sheetMode = act; renderSheet(); break;
+      case 'games': sheetMode = 'presets'; presetFilter = 'Games'; renderSheet(); break;
+      case 'saveWords': {
+        const words = [...new Set($('wsWords').value.toUpperCase().split(/[^A-Z]+/).filter((w) => w.length >= 2 && w.length <= 10))].slice(0, 8);
+        if (words.length < 3) {
+          $('wsHint').textContent = 'Add at least 3 words (2–10 letters each).';
+          $('wsHint').style.color = '#d22f4a';
+          $('wsWords').focus();
+          return;
+        }
+        await setDay(d, { type: 'game', game: 'wordsearch', title: $('wsTitle').value.trim() || 'Find the hidden words', words, personal: true }, { celebrate: true });
+        closeSheet();
+        toast('Word search saved 🔎');
+        break;
+      }
       case 'camera': case 'library':
         if (!canAddPhoto(d)) return upsell();
         photoTarget = d;
@@ -504,20 +573,25 @@
   }
   $('upsell').querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => ($('upsell').hidden = true)));
   $('buyBtn').addEventListener('click', () => {
-    cal.plan = 'season';
-    save();
+    if (cal) {
+      cal.plan = 'season';
+      save();
+    } else {
+      pendingPass = true;
+    }
     celebrate($('buyBtn'), 140);
     A.Sound.fanfare();
     $('upsell').hidden = true;
-    toast('Season Pass unlocked — add as many photos as you like 🎉');
+    toast('Season Pass unlocked — every world and unlimited photos 🎉');
     if (step === 'share') renderShare();
   });
 
   // ---------------- 3. Share ----------------
   const ZONES = ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Adelaide', 'Australia/Perth', 'Australia/Hobart', 'Australia/Darwin', 'Pacific/Auckland', 'Europe/London', 'Europe/Paris', 'America/New_York', 'America/Chicago', 'America/Los_Angeles'];
 
-  function linkFor(extra = '') {
-    return new URL(`index.html?c=${cal.id}${extra}`, location.href).href;
+  // Calendars open in the 3D world by default (it falls back to 2D on devices without WebGL).
+  function linkFor(extra = '', page = '3d.html') {
+    return new URL(`${page}?c=${cal.id}${extra}`, location.href).href;
   }
 
   function renderShare() {
@@ -527,7 +601,7 @@
     $('shareSummary').innerHTML = `24 doors · <b>${n}</b> made by you · <b>${p}</b> photo${p === 1 ? '' : 's'}<br>The first door opens on <b>1 December</b>.`;
     $('previewBtn').href = linkFor('&preview');
     $('previewBtn').textContent = `👀 Preview as ${cal.to}`;
-    $('preview3dBtn').href = new URL(`3d.html?c=${cal.id}&preview`, location.href).href;
+    $('preview2dBtn').href = linkFor('&preview', 'index.html');
     $('shareLink').value = linkFor();
     const tz = $('tz');
     const zones = ZONES.includes(cal.tz) ? ZONES : [cal.tz, ...ZONES];
@@ -535,12 +609,13 @@
 
     const up = $('upgradeCard');
     if (cal.plan === 'season') {
-      up.innerHTML = `<div class="paid"><span>🎉</span><div><b>Season Pass active</b><small>Unlimited photos, no credit, open until 31 January.</small></div></div>`;
+      up.innerHTML = `<div class="paid"><span>🎉</span><div><b>Season Pass active</b><small>Every world, unlimited photos, no credit, open until 31 January.</small></div></div>`;
     } else {
       up.innerHTML = `
         <p class="kicker">Free calendar</p>
         <h3>Want to go all out?</h3>
         <ul class="perks">
+          <li>🍪🧸🚀 Gingerbread Lane, Toy Town and Space Christmas</li>
           <li>📸 Unlimited photos (you’ve used ${p} of ${FREE_PHOTOS})</li>
           <li>✨ Remove the “Made with Little Doors” credit</li>
           <li>💛 One-time A$12.95 for this Christmas — no subscription</li>

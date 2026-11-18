@@ -32,9 +32,28 @@
       canvas.width = w; canvas.height = h;
       g = canvas.getContext('2d', { willReadFrequently: true });
       const r = A.rng(day * 99);
-      if (ctx.theme === 'snow') {
+      const look = (A.THEMES[ctx.theme] && A.THEMES[ctx.theme].scratch) || 'frost';
+      if (look === 'stardust') {
+        // deep-space dust with twinkling stars
         const gr = g.createLinearGradient(0, 0, w, h);
-        gr.addColorStop(0, '#f4f9ff'); gr.addColorStop(0.5, '#d5e6fb'); gr.addColorStop(1, '#eef5ff');
+        gr.addColorStop(0, '#1a0f3d'); gr.addColorStop(0.5, '#2b1a5a'); gr.addColorStop(1, '#0d0626');
+        g.fillStyle = gr; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 2600; i++) {
+          g.fillStyle = ['#c77dff', '#7af7ff', '#ffffff', '#ff6fd8'][(r() * 4) | 0];
+          g.globalAlpha = 0.15 + r() * 0.6;
+          g.fillRect(r() * w, r() * h, 1.6, 1.6);
+        }
+        g.globalAlpha = 1;
+        for (let i = 0; i < 30; i++) {
+          const x = r() * w, y = r() * h, s = 2 + r() * 4;
+          g.fillStyle = '#ffffff';
+          g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s * 0.3, y); g.lineTo(x, y + s); g.lineTo(x - s * 0.3, y); g.fill();
+        }
+      } else if (look === 'frost' || look === 'icing') {
+        const icing = look === 'icing';
+        const gr = g.createLinearGradient(0, 0, w, h);
+        if (icing) { gr.addColorStop(0, '#fff7fb'); gr.addColorStop(0.5, '#ffe3ef'); gr.addColorStop(1, '#fff2f8'); }
+        else { gr.addColorStop(0, '#f4f9ff'); gr.addColorStop(0.5, '#d5e6fb'); gr.addColorStop(1, '#eef5ff'); }
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
         for (let i = 0; i < 1600; i++) {
           g.fillStyle = `rgba(255,255,255,${0.3 + r() * 0.7})`;
@@ -50,6 +69,16 @@
             a += (r() - 0.5) * 0.8;
           }
           g.stroke();
+        }
+        if (icing) {
+          for (let i = 0; i < 120; i++) {
+            g.save();
+            g.translate(r() * w, r() * h);
+            g.rotate(r() * 6.28);
+            g.fillStyle = ['#ff6fa3', '#7cf29a', '#ffd23f', '#6fc9ff', '#c77dff'][(r() * 5) | 0];
+            g.fillRect(-4, -1.2, 8, 2.4);
+            g.restore();
+          }
         }
       } else {
         const gr = g.createLinearGradient(0, 0, 0, h);
@@ -275,7 +304,8 @@
     };
   }
 
-  const R = { photo, message, riddle: qa, joke: qa, activity, voucher, finale };
+  const game = (day, item, ctx) => A.Games.render(day, item, ctx);
+  const R = { photo, message, riddle: qa, joke: qa, activity, voucher, finale, game };
 
   A.Reveal = {
     render(day, item, ctx) {

@@ -44,6 +44,60 @@
     return n;
   };
 
+  // Shake detection. Works in any mobile browser over HTTPS (or localhost) — no app or PWA needed.
+  // iPhones ask permission once, and only from a tap, so call request() inside a click handler.
+  A.Motion = {
+    handlers: [],
+    listening: false,
+    available: () => 'DeviceMotionEvent' in window && window.isSecureContext,
+    request() {
+      try {
+        if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function') {
+          return DeviceMotionEvent.requestPermission()
+            .then((p) => { if (p === 'granted') A.Motion.listen(); return p; })
+            .catch(() => 'denied');
+        }
+      } catch (e) { return Promise.resolve('denied'); }
+      A.Motion.listen();
+      return Promise.resolve('granted');
+    },
+    listen() {
+      if (A.Motion.listening) return;
+      A.Motion.listening = true;
+      let last = null, hits = [], lastShake = 0;
+      window.addEventListener('devicemotion', (e) => {
+        const a = e.accelerationIncludingGravity || e.acceleration;
+        if (!a || a.x == null) return;
+        if (last) {
+          const jolt = Math.abs(a.x - last.x) + Math.abs(a.y - last.y) + Math.abs(a.z - last.z);
+          const now = performance.now();
+          if (jolt > 22) {
+            hits = hits.filter((t) => now - t < 700);
+            hits.push(now);
+            // a few sharp jolts close together = a shake (not just picking the phone up)
+            if (hits.length >= 3 && now - lastShake > 1200) {
+              lastShake = now;
+              hits = [];
+              A.Motion.handlers.forEach((h) => h());
+            }
+          }
+        }
+        last = { x: a.x, y: a.y, z: a.z };
+      });
+    },
+    onShake(fn) { A.Motion.handlers.push(fn); },
+  };
+
+  // A little word that pops up and floats away (e.g. "knock!").
+  A.popText = function (x, y, text) {
+    const n = A.el('span', 'pop-text', A.esc(text));
+    n.style.left = x + 'px';
+    n.style.top = y + 'px';
+    n.style.setProperty('--tilt', (Math.random() * 16 - 8).toFixed(1) + 'deg');
+    document.body.appendChild(n);
+    setTimeout(() => n.remove(), 900);
+  };
+
   A.esc = (s) =>
     String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 })();
