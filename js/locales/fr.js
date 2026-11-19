@@ -304,6 +304,7 @@
   "Sending…": "Envoi…",
   "Check your email for your sign-in link. You can open it on any device.": "Consultez vos e-mails pour retrouver votre lien de connexion. Vous pouvez l’ouvrir sur n’importe quel appareil.",
   "Please wait a minute before requesting another link.": "Patientez une minute avant de demander un nouveau lien.",
+  "Sign-in emails are temporarily limited. Please try again later.": "L’envoi des e-mails de connexion est temporairement limité. Réessayez plus tard.",
   "We couldn’t send that link. Check your email address and try again.": "Impossible d’envoyer ce lien. Vérifiez votre adresse e-mail et réessayez.",
   "Couldn’t sign out. Please try again.": "Impossible de vous déconnecter. Veuillez réessayer.",
   "Wipe it all away": "Tout effacer",

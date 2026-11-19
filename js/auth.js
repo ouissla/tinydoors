@@ -69,10 +69,21 @@
   auth.ready.catch(() => {});
 
   if ($('accountPanel')) {
-    let resendAt = 0, countdown;
+    let resendAt = 0, countdown, sending = false;
     const message = (text, isError = false) => {
       $('accountMessage').textContent = text;
       $('accountMessage').setAttribute('role', isError ? 'alert' : 'status');
+    };
+    const cooldown = () => {
+      resendAt = Date.now() + 60000;
+      clearInterval(countdown);
+      const tick = () => {
+        const seconds = Math.max(0, Math.ceil((resendAt - Date.now()) / 1000));
+        $('sendMagicLink').disabled = seconds > 0;
+        $('sendMagicLink').textContent = seconds > 0 ? tr('Send another link in {seconds}s', { seconds }) : tr("Send sign-in link");
+        if (seconds <= 0) clearInterval(countdown);
+      };
+      tick(); countdown = setInterval(tick, 1000);
     };
     auth.ready.then(() => {
       $('accountPanel').hidden = auth.mode !== 'cloud' || !!auth.user;
@@ -102,7 +113,8 @@
     });
     $('accountForm').addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (Date.now() < resendAt) return;
+      if (sending || Date.now() < resendAt) return;
+      sending = true;
       const button = $('sendMagicLink');
       button.disabled = true;
       button.textContent = tr("Sending…");
@@ -110,17 +122,17 @@
       try {
         await auth.signIn($('accountEmail').value.trim());
         message(tr("Check your email for your sign-in link. You can open it on any device."));
-        resendAt = Date.now() + 60000;
-        const tick = () => {
-          const seconds = Math.ceil((resendAt - Date.now()) / 1000);
-          button.disabled = seconds > 0;
-          button.textContent = seconds > 0 ? tr('Send another link in {seconds}s', { seconds }) : tr("Send sign-in link");
-          if (seconds <= 0) clearInterval(countdown);
-        };
-        tick(); countdown = setInterval(tick, 1000);
+        cooldown();
       } catch (error) {
-        message(error.status === 429 ? tr("Please wait a minute before requesting another link.") : tr("We couldn’t send that link. Check your email address and try again."), true);
-        button.disabled = false; button.textContent = tr("Send sign-in link");
+        if (error.status === 429) {
+          message(tr("Sign-in emails are temporarily limited. Please try again later."), true);
+          cooldown();
+        } else {
+          message(tr("We couldn’t send that link. Check your email address and try again."), true);
+          button.disabled = false; button.textContent = tr("Send sign-in link");
+        }
+      } finally {
+        sending = false;
       }
     });
     $('signOut').addEventListener('click', async () => {

@@ -205,6 +205,25 @@ body.editor.sheet-open { overflow: hidden; }
 @media (max-width: 560px) {
   .panel.doors-panel { padding: 22px 12px; }
 }
+
+/* Keep account and language controls together; give the steps their own centred row. */
+@media (max-width: 600px) {
+  .ed-top { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 8px; }
+  .ed-top .logo { grid-row: 1; grid-column: 1; font-size: 1rem; }
+  .ed-top .language-select { grid-row: 1; grid-column: 2; width: 100px; max-width: 100px; margin: 0; }
+  .ed-top .profile { grid-row: 1; grid-column: 3; margin: 0; order: initial; }
+  .ed-top .profile-label { display: none; }
+  .ed-top .profile-pill { min-height: 40px; gap: 5px; padding-right: 8px; }
+  .ed-top .ed-steps { grid-row: 2; grid-column: 1 / -1; justify-self: center; margin: 0; }
+  .ed-top .ed-steps button { min-width: 40px; min-height: 36px; }
+  .ed-top .saved { grid-row: 2; grid-column: 3; align-self: center; }
+  .ed-top .saved:empty { display: none; }
+  .ed-top .profile-menu { position: absolute; top: calc(100% + 12px); right: 0; margin-top: 0; width: min(340px, calc(100vw - 40px)); max-height: calc(100dvh - 80px); }
+}
+@media (max-width: 360px) {
+  .ed-top .logo { font-size: .95rem; }
+  .ed-top .language-select { width: 90px; padding-left: 8px; padding-right: 8px; }
+}
 .meter { max-width: 420px; margin: 0 auto 14px; font-weight: 800; font-size: 0.9rem; }
 .meter .bar { height: 10px; margin-top: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .meter .bar i {
@@ -623,6 +642,7 @@ body.editor.sheet-open { overflow: hidden; }
 .selected-world { min-height: 2.7em; margin: 10px 0 0; font-size: .8rem; line-height: 1.35; color: var(--muted); }
 .world-picker-footer { position: sticky; bottom: 0; padding: 12px 0 0; background: #fffcf5; border-top: 1px solid var(--line); }
 .world-picker-footer .btn { width: 100%; }
+.world-picker-footer .world-preview-button { margin-bottom: 8px; }
 .world-picker-footer .fine { margin-top: 7px; font-size: .7rem; }
 @media (max-width: 560px) {
   .world-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

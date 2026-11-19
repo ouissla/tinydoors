@@ -48,7 +48,7 @@ test('world chooser includes two free and seven premium illustrated options', as
     else {
       assert.match(card[2], /<img[^>]+class="world-thumbnail"/);
       const path = card[2].match(/src="([^"]+)"/)[1];
-      const image = await readFile(new URL('..' + path, import.meta.url));
+      const image = await readFile(new URL('../' + path.replace(/^\//, ''), import.meta.url));
       assert.deepEqual([...image.subarray(0,2)], [255,216]);
     }
   }
