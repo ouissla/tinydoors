@@ -31,7 +31,7 @@ parquetTex.userData.shared = true;
 export function buildToyPlayground(c, fx) {
   const { root, L, std } = c;
   const colors = Object.values(C);
-  const lacquer = (color) => std({ color, roughness: 0.32, metalness: 0.08, flatShading: false });
+  const lacquer = (color) => std({ color, roughness: 0.9, metalness: 0, flatShading: false });
   const mats = Object.fromEntries(Object.entries(C).map(([k, v]) => [k, lacquer(v)]));
   const add = (parent, geo, material, x = 0, y = 0, z = 0) => {
     const m = new THREE.Mesh(geo, material); m.position.set(x, y, z);

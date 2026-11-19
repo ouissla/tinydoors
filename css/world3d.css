@@ -1,5 +1,19 @@
 /* 3D view: full-screen WebGL canvas with the HTML HUD on top. */
 body.w3d { overflow: hidden; height: 100dvh; }
+[data-theme='gingerbread'] body.w3d {
+  --ink: #613c42;
+  --ink-soft: #79535a;
+  --accent: #975568;
+  --title-shadow: 0 2px 0 #fff0dc;
+  --chip-bg: #fff2e4c9;
+}
+[data-theme='jungle'] body.w3d {
+  --ink: #40532e;
+  --ink-soft: #506239;
+  --accent: #6a6137;
+  --title-shadow: 0 2px 0 #fff0ca;
+  --chip-bg: #fff3d4c9;
+}
 #gl {
   position: fixed;
   inset: 0;

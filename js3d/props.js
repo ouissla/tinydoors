@@ -1,6 +1,7 @@
 /* Set dressing: roof fairy lights, chimney smoke, lamps / tiki torches, presents, candy canes,
    beach umbrellas, towels, a sandcastle, surfboards. */
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mat, canvasTexture } from './houses.js';
 
 const A = window.Advent;
@@ -41,6 +42,7 @@ function mesh(geo, material, x, y, z) {
 
 // A toy train looping round an oval track in the square.
 function buildTrain(root, L, updaters, tappables) {
+  const rounded = (w,h,d) => new RoundedBoxGeometry(w,h,d,2,Math.min(w,h,d)*0.16);
   const cz = -(L.frontR - 4.3), rx = Math.min(7, L.frontR * Math.sin(L.spread) * 0.55), rz = 2.1;
   const pts = [];
   for (let i = 0; i < 64; i++) {
@@ -58,30 +60,30 @@ function buildTrain(root, L, updaters, tappables) {
   for (let i = 0; i < 40; i++) {
     const t = i / 40;
     const p = curve.getPointAt(t), d = curve.getTangentAt(t);
-    const sl = mesh(new THREE.BoxGeometry(0.62, 0.06, 0.14), mat('#8a5a3b'), p.x, 0.05, p.z);
+    const sl = mesh(rounded(0.62, 0.06, 0.14), mat('#8a5a3b'), p.x, 0.05, p.z);
     sl.rotation.y = Math.atan2(d.x, d.z) + Math.PI / 2;
     root.add(sl);
   }
   const cars = [];
   const engine = new THREE.Group();
-  engine.add(mesh(new THREE.BoxGeometry(0.6, 0.35, 1.1), mat('#e2483d', { roughness: 0.4 }), 0, 0.35, 0));
-  const boiler = mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.7, 14), mat('#2a2f3a', { roughness: 0.4 }), 0, 0.68, 0.18);
+  engine.add(mesh(rounded(0.6, 0.35, 1.1), mat('#e2483d', { roughness: 0.9 }), 0, 0.35, 0));
+  const boiler = mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.7, 14), mat('#e3bc7f', { roughness: 0.9 }), 0, 0.68, 0.18);
   boiler.rotation.x = Math.PI / 2;
   engine.add(boiler);
-  engine.add(mesh(new THREE.BoxGeometry(0.55, 0.5, 0.4), mat('#3f7be0', { roughness: 0.4 }), 0, 0.8, -0.32));
-  engine.add(mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.3, 10), mat('#2a2f3a'), 0, 1.0, 0.42));
+  engine.add(mesh(rounded(0.55, 0.5, 0.4), mat('#3f7be0', { roughness: 0.9 }), 0, 0.8, -0.32));
+  engine.add(mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.3, 10), mat('#e3bc7f'), 0, 1.0, 0.42));
   engine.add(mesh(new THREE.SphereGeometry(0.07, 8, 6), mat('#fff3c4', { emissive: '#ffd36b', emissiveIntensity: 2.5 }), 0, 0.6, 0.58));
   cars.push(engine);
   ['#ffd23f', '#2f9e5b', '#9b5de5'].forEach((c, i) => {
     const car = new THREE.Group();
-    car.add(mesh(new THREE.BoxGeometry(0.58, 0.3, 0.85), mat(c, { roughness: 0.45 }), 0, 0.32, 0));
-    car.add(mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), mat(['#e2483d', '#3f7be0', '#ff8ad8'][i], { roughness: 0.5 }), 0, 0.62, 0.1));
-    car.add(mesh(new THREE.BoxGeometry(0.36, 0.05, 0.05), mat('#ffffff'), 0, 0.78, 0.1));
+    car.add(mesh(rounded(0.58, 0.3, 0.85), mat(c, { roughness: 0.95 }), 0, 0.32, 0));
+    car.add(mesh(rounded(0.34, 0.3, 0.34), mat(['#e2483d', '#3f7be0', '#ff8ad8'][i], { roughness: 0.5 }), 0, 0.62, 0.1));
+    car.add(mesh(rounded(0.36, 0.05, 0.05), mat('#ffffff'), 0, 0.78, 0.1));
     cars.push(car);
   });
   cars.forEach((c) => {
     [-0.28, 0.28].forEach((x) => [-0.3, 0.3].forEach((z) => {
-      const w = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 12), mat('#2a2f3a'), x, 0.14, z);
+      const w = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 12), mat('#e3bc7f'), x, 0.14, z);
       w.rotation.z = Math.PI / 2;
       c.add(w);
     }));
@@ -281,10 +283,10 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
     }
     if (theme === 'gingerbread') {
       // gumdrops dotted around the square
-      const gum = ['#ff4f81', '#7cf29a', '#ffd23f', '#6fc9ff', '#c77dff'];
+      const gum = ['#e98ba7', '#82bea7', '#eac568', '#94becb', '#bc9dc5'];
       for (let i = 0; i < 16; i++) {
         const [x, z] = polar(L.frontR - 1.2 - rng() * 6.5, (rng() - 0.5) * 2 * (L.spread + 0.25));
-        const gd = mesh(new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(gum[i % 5], { roughness: 0.3, flatShading: false }), x, 0, z);
+        const gd = mesh(new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(gum[i % 5], { roughness: 0.94, flatShading: false }), x, 0, z);
         gd.scale.y = 1.4;
         root.add(gd);
       }

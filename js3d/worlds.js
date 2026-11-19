@@ -2,6 +2,7 @@
    at the top carries one light per opened door. */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { makeHouse, canvasTexture, surfaceMaterial } from './houses.js';
 import { buildProps } from './props.js';
 import { parquetTex } from './toy-town.js';
@@ -323,7 +324,7 @@ function makeLightTree(theme, rng) {
     const p = surface(f, a);
     const c = new THREE.Color(BULB[i % BULB.length]);
     const dim = c.clone().multiplyScalar(0.32);
-    const mat = new THREE.MeshStandardMaterial({ color: dim, roughness: 0.25, metalness: 0.5, emissive: c, emissiveIntensity: 0.05 });
+    const mat = new THREE.MeshStandardMaterial({ color: dim, roughness: theme === 'space' ? 0.9 : 0.25, metalness: theme === 'space' ? 0 : 0.5, emissive: c, emissiveIntensity: 0.05 });
     const b = new THREE.Mesh(new THREE.SphereGeometry(theme === 'snow' ? 0.23 : 0.28, 10, 8), mat);
     b.position.copy(p);
     b.userData.color = c;
@@ -450,13 +451,13 @@ function makeSleigh() {
 const STYLES = {
   snow: { sky: ['#080f26', '#1b2c49', '#71849b'], hemi: ['#7f9cff', '#1b2340', 0.85], sun: ['#c6d6ff', 1.1, [30, 50, 40]], cap: 'snow', wall: 'timber', plateau: '#eef4ff', snow: { base: 850, color: '#ffffff', size: 0.32, speed: 1 } },
   summer: { sky: ['#ff6fa3', '#ffa58a', '#ffd9a8'], hemi: ['#ffe0ea', '#ffb070', 1.1], sun: ['#ffd8a8', 2.2, [-35, 50, 55]], cap: 'sand', wall: 'timber', plateau: '#a9d27a', snow: { base: 0, color: '#ffffff', size: 0.32, speed: 1 } },
-  gingerbread: { sky: ['#1a0b33', '#5b2a72', '#e994b8'], hemi: ['#ffd0ea', '#40203a', 1.0], sun: ['#ffe6cc', 1.25, [25, 50, 40]], cap: 'icing', wall: 'biscuit', plateau: '#fff3f8', snow: { base: 1300, color: '#fff6fb', size: 0.3, speed: 0.9 } },
-  toys: { sky: ['#3f8fe0', '#8cc8ff', '#e3f3ff'], hemi: ['#ffffff', '#8fa8c8', 1.05], sun: ['#fff2dc', 1.9, [-30, 55, 45]], cap: 'parquet', wall: 'timber', plateau: '#dfbb88', snow: { base: 700, color: '#ffffff', size: 0.3, speed: 0.9 } },
+  gingerbread: { sky: ['#ee9dac', '#f8b8b9', '#ffe0ca'], hemi: ['#fff4e6', '#ba8997', 1.65], sun: ['#ffe3b3', 2.3, [-30, 45, 30]], cap: 'icing', wall: 'biscuit', plateau: '#ffe0e7', snow: { base: 180, color: '#fff6eb', size: 0.17, speed: 0.35 } },
+  toys: { sky: ['#e9ac9e', '#f5cbb0', '#ffe4bf'], hemi: ['#fff1dc', '#ad8968', 1.5], sun: ['#ffe4b6', 1.9, [-30, 55, 45]], cap: 'parquet', wall: 'timber', plateau: '#dfbb88', snow: { base: 70, color: '#fff0cf', size: 0.14, speed: 0.25 } },
   workshop: { sky: ['#071229', '#16305a', '#3f6a96'], hemi: ['#9fb6ff', '#1b2340', 0.85], sun: ['#c6d6ff', 1.15, [30, 50, 40]], cap: 'snow', wall: 'stone', plateau: '#eef4ff', snow: { base: 2000, color: '#ffffff', size: 0.32, speed: 1 } },
-  jungle: { sky: ['#0f3b3a', '#3f7d62', '#f2c46d'], hemi: ['#fff0c8', '#1d4a30', 1.05], sun: ['#ffd28a', 1.9, [-35, 45, 40]], cap: 'moss', wall: 'rock', plateau: '#3f8a4e', snow: { base: 380, color: '#fff09a', size: 0.22, speed: 0.12, glow: true } },
+  jungle: { sky: ['#6d9263', '#b8bd7b', '#f5d79b'], hemi: ['#fff1cb', '#52623b', 1.5], sun: ['#ffe0a3', 2.1, [-35, 45, 40]], cap: 'moss', wall: 'rock', plateau: '#3f8a4e', snow: { base: 380, color: '#fff09a', size: 0.22, speed: 0.12, glow: true } },
   japan: { sky: ['#6f7be0', '#c3a3ec', '#ffcadc'], hemi: ['#fff0f7', '#9a8fd0', 0.95], sun: ['#fff2e8', 1.25, [-30, 45, 45]], cap: 'snow', wall: 'stone', plateau: '#fff4f8', snow: { base: 900, color: '#ffb7d5', size: 0.36, speed: 0.4 } },
   cyber: { sky: ['#05020f', '#1a0b3a', '#5a1a6e'], hemi: ['#b8a8ff', '#2a1a48', 1.35], sun: ['#c0d8ff', 1.1, [30, 50, 40]], cap: 'grid', wall: 'panel', plateau: '#14121f', snow: { base: 2600, color: '#8fd0ff', size: 0.14, speed: 4.5, glow: true } },
-  space: { sky: ['#010008', '#0d0626', '#2a1a55'], hemi: ['#9fb4ff', '#120a26', 0.75], sun: ['#e6ecff', 1.5, [40, 45, 30]], cap: 'lunar', wall: 'panel', plateau: '#706882', snow: { base: 450, color: '#cfeaff', size: 0.24, speed: 0.25, glow: true } },
+  space: { sky: ['#17132e', '#29234b', '#4d416f'], hemi: ['#d8d6ff', '#30264b', 1.25], sun: ['#ffe4cc', 1.5, [-30, 50, 40]], cap: 'lunar', wall: 'lunar', plateau: '#82709e', snow: { base: 100, color: '#e4dcff', size: 0.13, speed: 0.1, glow: true } },
 };
 const SURF = () => ({ snow: snowTex, sand: sandTex, stone: stoneTex, timber: timberTex, icing: icingTex, biscuit: biscuitTex, blocks: blockTex, parquet: parquetTex, moon: moonTex, lunar: lunarTex, panel: panelTex, moss: mossTex, rock: rockTex, grid: gridTex });
 
@@ -542,11 +543,12 @@ export function buildWorld(theme, cols, calItems) {
   sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 160;
   sun.shadow.bias = -0.0008;
   sun.shadow.normalBias = 0.03;
+  if (['gingerbread', 'space', 'jungle', 'toys'].includes(theme)) sun.shadow.radius = 4;
   root.add(sun, sun.target);
 
   // Ground + terraces
-  const capMat = std({ color: '#ffffff', map: tx[ST.cap], roughness: 1 });
-  const wallMat = std({ color: '#ffffff', map: tx[ST.wall] });
+  const capMat = std({ color: '#ffffff', map: tx[ST.cap], roughness: 1, ...(theme === 'space' ? { bumpMap: tx[ST.cap], bumpScale: 0.13 } : {}) });
+  const wallMat = theme === 'jungle' ? std({ color: '#ad925e', roughness: 1, flatShading: false }) : theme === 'gingerbread' ? std({ color: '#efb3be', roughness: 1, flatShading: false }) : std({ color: '#ffffff', map: tx[ST.wall] });
   if (!summer) {
     const gGeo = new THREE.PlaneGeometry(440, 440, 110, 110);
     gGeo.rotateX(-Math.PI / 2);
@@ -556,7 +558,7 @@ export function buildWorld(theme, cols, calItems) {
     const groundTex = tx[ST.cap].clone();
     groundTex.repeat.set(30, 30);
     groundTex.needsUpdate = true;
-    const ground = new THREE.Mesh(gGeo, std({ color: '#ffffff', map: groundTex, roughness: 1 }));
+    const ground = new THREE.Mesh(gGeo, std({ color: '#ffffff', map: groundTex, roughness: 1, ...(theme === 'space' ? { bumpMap: groundTex, bumpScale: 0.13 } : {}) }));
     ground.receiveShadow = true;
     root.add(ground);
   } else {
@@ -574,6 +576,16 @@ export function buildWorld(theme, cols, calItems) {
     t.receiveShadow = true;
     t.castShadow = true;
     root.add(t);
+    if (theme === 'gingerbread' || theme === 'space') {
+      // Piped buttercream along the terrace edge softens the hard calendar steps.
+      const points = Array.from({ length: 49 }, (_, i) => {
+        const th = -(L.spread + 0.16 + r * 0.01) + 2 * (L.spread + 0.16 + r * 0.01) * i / 48;
+        return new THREE.Vector3((R - L.dR / 2) * Math.sin(th), y - 0.1, -(R - L.dR / 2) * Math.cos(th));
+      });
+      const lip = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 48, 0.18, 8, false), std({ color: theme === 'space' ? '#a18ab7' : '#fff1df', flatShading: false }));
+      lip.castShadow = lip.receiveShadow = true;
+      root.add(lip);
+    }
   }
   const plateauMat = summer ? std({ color: ST.plateau, roughness: 1 }) : std({ color: '#ffffff', map: tx[ST.cap], roughness: 1 });
   const plateau = new THREE.Mesh(sectorGeo(L.backR, L.backR + 60, L.spread + 0.6, L.topY + 1), [plateauMat, wallMat]);
@@ -593,6 +605,31 @@ export function buildWorld(theme, cols, calItems) {
     root.add(h.group);
     return h;
   });
+  if (theme === 'jungle') {
+    const wood = std({ color: '#d2a35f', roughness: 0.95, flatShading: false });
+    const rope = std({ color: '#edce88', roughness: 1, flatShading: false });
+    houses.forEach((h, i) => {
+      const next = houses[i + 1];
+      if (!next || next.slot.r !== h.slot.r) return;
+      h.group.updateMatrixWorld(true); next.group.updateMatrixWorld(true);
+      const from = h.group.localToWorld(new THREE.Vector3(1.12, 0.88, 0.15));
+      const to = next.group.localToWorld(new THREE.Vector3(-1.12, 0.88, 0.15));
+      const mid = from.clone().lerp(to, 0.5); mid.y -= 0.13;
+      const path = new THREE.CatmullRomCurve3([from, mid, to]);
+      const count = Math.max(3, Math.ceil(from.distanceTo(to) / 0.2));
+      for (let k = 0; k <= count; k++) {
+        const p = path.getPoint(k / count), d = path.getTangent(k / count);
+        const plank = new THREE.Mesh(new RoundedBoxGeometry(0.21, 0.07, 0.55, 1, 0.025), wood);
+        plank.position.copy(p); plank.rotation.y = -Math.atan2(d.z, d.x);
+        plank.castShadow = plank.receiveShadow = true; root.add(plank);
+      }
+      for (const side of [-1, 1]) {
+        const points = [from, mid, to].map(p => p.clone().add(new THREE.Vector3(0, 0.36, side * 0.24)));
+        const rail = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 16, 0.035, 6, false), rope);
+        rail.castShadow = true; root.add(rail);
+      }
+    });
+  }
 
   // The light tree, centre top
   const tree = makeLightTree(theme, rng);

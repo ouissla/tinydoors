@@ -2,20 +2,25 @@
 import * as THREE from 'three';
 import { canvasTexture } from './houses.js';
 const A = window.Advent, TAU = Math.PI * 2;
+// Fine lavender dust, leaving the large craters to actual rounded geometry.
 export const lunarTex = canvasTexture(512, 512, (g, w, h) => {
   const rng = A.rng(517);
-  g.fillStyle = '#55516e'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 11000; i++) {
-    g.fillStyle = ['#706887', '#91809b', '#454661', '#b5a0ad'][i % 4];
-    g.globalAlpha = 0.12 + rng() * 0.3; g.fillRect(rng() * w, rng() * h, 1 + rng() * 2, 1 + rng() * 2);
+  g.fillStyle = '#695783'; g.fillRect(0, 0, w, h);
+  // Broad mineral mottling stays visible at village scale; fine grains read on zoom.
+  for (let i = 0; i < 95; i++) {
+    const x = rng() * w, y = rng() * h, r = 8 + rng() * 28;
+    const patch = g.createRadialGradient(x, y, 0, x, y, r);
+    patch.addColorStop(0, i % 2 ? '#8e79a54d' : '#47385d40');
+    patch.addColorStop(1, '#69578300');
+    g.fillStyle = patch; g.fillRect(x-r, y-r, r*2, r*2);
+  }
+  for (let i = 0; i < 12500; i++) {
+    g.fillStyle = i % 2 ? '#b19ac1' : '#493b62';
+    g.globalAlpha = 0.16 + rng() * 0.18;
+    const size = 0.7 + rng() * 2.2;
+    g.fillRect(rng() * w, rng() * h, size, size);
   }
   g.globalAlpha = 1;
-  for (let i = 0; i < 12; i++) {
-    const x = rng() * w, y = rng() * h, r = 5 + rng() * 24;
-    const gradient = g.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.15, x, y, r);
-    gradient.addColorStop(0, '#41415b'); gradient.addColorStop(0.7, '#55516e'); gradient.addColorStop(0.83, '#94839a'); gradient.addColorStop(1, '#55516e');
-    g.fillStyle = gradient; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
-  }
 });
 lunarTex.wrapS = lunarTex.wrapT = THREE.RepeatWrapping; lunarTex.repeat.set(0.13, 0.13); lunarTex.userData.shared = true;
 
@@ -34,7 +39,7 @@ export function buildEnvironmentDetails(theme, c, fx) {
       const radius = L.R0 + r * L.dR - 1.35;
       for (let i = 0; i < L.cols + 3; i++) {
         const a = -L.spread + i / (L.cols + 2) * L.spread * 2;
-        const tile = mesh(root, new THREE.CylinderGeometry(0.72, 0.72, 0.06, 6), i % 3 ? '#7587a5' : '#bd947e', Math.sin(a) * radius, 0.34 + r * L.dy, -Math.cos(a) * radius, { metalness: 0.45, roughness: 0.4 });
+        const tile = mesh(root, new THREE.CylinderGeometry(0.72, 0.72, 0.06, 24), i % 3 ? '#9c8ab7' : '#b6a0c5', Math.sin(a) * radius, 0.34 + r * L.dy, -Math.cos(a) * radius, { metalness: 0, roughness: 0.94, flatShading: false });
         mesh(tile, new THREE.BoxGeometry(0.48, 0.025, 0.05), '#8cf5ef', 0, 0.04, 0, { emissive: '#56dada', emissiveIntensity: 0.9 });
       }
     }

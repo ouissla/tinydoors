@@ -155,6 +155,7 @@ try {
 renderer.setPixelRatio(bgMode ? 1 : Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = { snow: 1.05, summer: 1.0, gingerbread: 1.05, toys: 1.0, space: 1.1, workshop: 1.05, jungle: 1.0, japan: 1.05, cyber: 1.0 }[theme];
+if (theme === 'gingerbread') renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = !bgMode;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -164,6 +165,9 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), { snow: 0.7, summer: 0.45, gingerbread: 0.6, toys: 0.35, space: 0.6, workshop: 0.7, jungle: 0.55, japan: 0.45, cyber: 0.48 }[theme], theme === 'cyber' ? 0.32 : 0.55, 0.97);
 composer.addPass(bloom);
+if (theme === 'gingerbread') { bloom.strength = 0.18; bloom.radius = 0.35; }
+if (theme === 'space') { bloom.strength = 0.3; bloom.radius = 0.4; }
+if (theme === 'toys' || theme === 'jungle') { bloom.strength = 0.2; bloom.radius = 0.35; }
 composer.addPass(new OutputPass());
 
 const doorLight = new THREE.PointLight('#ffb35c', 0, 6, 1.6);
@@ -296,7 +300,7 @@ function housePose(h, outPos, outLook) {
   const front = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry));
   const portrait = W / H < 0.8;
   // Stay in the gap before the next row down, and look down at the door.
-  outPos.copy(door).addScaledVector(front, portrait ? 2.2 : 3.3).add(new THREE.Vector3(0, portrait ? 3.6 : 2.5, 0));
+  outPos.copy(door).addScaledVector(front, ['gingerbread', 'space', 'toys', 'jungle'].includes(theme) && !portrait ? 4.2 : portrait ? 2.2 : 3.3).add(new THREE.Vector3(0, ['gingerbread', 'space', 'toys', 'jungle'].includes(theme) && !portrait ? 1.65 : portrait ? 3.6 : 2.5, 0));
   outLook.copy(door).add(new THREE.Vector3(0, 0.05, 0));
 }
 

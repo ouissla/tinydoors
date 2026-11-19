@@ -22,17 +22,17 @@ function tex(w, h, draw, repeat) {
 
 // ---------------- Surface textures ----------------
 export const icingTex = tex(256, 256, (g, w, h) => {
-  g.fillStyle = '#fff6fa';
+  g.fillStyle = '#f5ccd7';
   g.fillRect(0, 0, w, h);
   const r = A.rng(31);
   for (let i = 0; i < 1800; i++) {
-    g.fillStyle = ['#ffffff', '#ffe6f0', '#fbeff5'][(r() * 3) | 0];
-    g.globalAlpha = 0.6;
+    g.fillStyle = ['#ffe5e8', '#eebeca', '#fbe0dc'][(r() * 3) | 0];
+    g.globalAlpha = 0.22;
     g.fillRect(r() * w, r() * h, 2, 2);
   }
   g.globalAlpha = 1;
   // sprinkles
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 8; i++) {
     g.save();
     g.translate(r() * w, r() * h);
     g.rotate(r() * TAU);
@@ -118,22 +118,13 @@ export const panelTex = tex(256, 256, (g, w, h) => {
 }, 0.4);
 
 export const mossTex = tex(256, 256, (g, w, h) => {
-  g.fillStyle = '#3f8a4e';
-  g.fillRect(0, 0, w, h);
-  const r = A.rng(61);
-  for (let i = 0; i < 2600; i++) {
-    g.fillStyle = ['#357a43', '#4c9a58', '#2f6d3c', '#5aa863', '#6b8a3a'][(r() * 5) | 0];
-    g.globalAlpha = 0.6;
-    g.beginPath();
-    g.ellipse(r() * w, r() * h, 1.5 + r() * 3, 0.8 + r() * 1.5, r() * TAU, 0, TAU);
-    g.fill();
+  g.fillStyle = '#809752'; g.fillRect(0,0,w,h);
+  const r=A.rng(61);
+  for(let i=0;i<3200;i++) {
+    g.globalAlpha=0.12+r()*0.12;g.fillStyle=i%2?'#adc16c':'#637d3d';
+    g.beginPath();g.ellipse(r()*w,r()*h,0.6+r()*2,0.4+r(),r()*TAU,0,TAU);g.fill();
   }
-  g.globalAlpha = 1;
-  // tiny flowers
-  for (let i = 0; i < 40; i++) {
-    g.fillStyle = ['#ff6f4a', '#ffd23f', '#ff8ad8', '#ffffff'][(r() * 4) | 0];
-    g.beginPath(); g.arc(r() * w, r() * h, 1.6, 0, TAU); g.fill();
-  }
+  g.globalAlpha=1;
 }, 1 / 10);
 
 export const rockTex = tex(256, 256, (g, w, h) => {
@@ -413,6 +404,59 @@ function painted(list) {
 }
 const at = (geo, x, y, z, sx = 1, sy = 1, sz = 1) => { geo.scale(sx, sy, sz); geo.translate(x, y, z); return geo; };
 
+// A folded, pointed tropical leaf with a raised central vein and a drooping tip.
+// Both surfaces are modelled, so the canopy also reads correctly from underneath.
+function tropicalLeaf(length = 2.4, width = 0.7) {
+  const positions = [], indices = [], uv = [];
+  const rows = 10, cols = 4, stride = cols + 1, count = (rows + 1) * stride;
+  for (let side = 0; side < 2; side++) {
+    for (let i = 0; i <= rows; i++) for (let j = 0; j <= cols; j++) {
+      const t = i / rows, s = j / cols * 2 - 1;
+      const span = Math.pow(Math.sin(Math.PI * t), 0.8) * width;
+      const fold = (1 - Math.abs(s)) * Math.sin(Math.PI * t) * 0.2;
+      positions.push(s * span, 0.22 * Math.sin(Math.PI * t) - t * t * 0.5 + fold - side * 0.025, t * length);
+      uv.push(j / cols, t);
+    }
+    for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) {
+      const a = side * count + i * stride + j, b = a + stride;
+      if (side) indices.push(a, a + 1, b, a + 1, b + 1, b);
+      else indices.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geometry.setIndex(indices); geometry.computeVertexNormals();
+  return geometry;
+}
+
+function tropicalTreeGeometry(palm = false) {
+  const parts = [], colors = ['#527b36', '#779c42', '#93ae52', '#638a39'];
+  const trunk = new THREE.CatmullRomCurve3([new THREE.Vector3(0,0,0),new THREE.Vector3(0.18,2.2,0),new THREE.Vector3(-0.12,4.4,0.15),new THREE.Vector3(0.05,5.8,0)]);
+  parts.push([new THREE.TubeGeometry(trunk,12,palm?0.17:0.24,8,false),'#947046']);
+  if (!palm) for (let i = 0; i < 4; i++) {
+    const a=i*TAU/4;
+    const root=new THREE.CatmullRomCurve3([new THREE.Vector3(Math.sin(a)*0.7,0,Math.cos(a)*0.7),new THREE.Vector3(Math.sin(a)*0.3,0.3,Math.cos(a)*0.3),new THREE.Vector3(0,1.1,0)]);
+    parts.push([new THREE.TubeGeometry(root,6,0.12,6,false),'#947046']);
+  }
+  const tiers = palm ? 2 : 3;
+  for (let tier = 0; tier < tiers; tier++) {
+    const y=4.1+tier*0.68, n=palm?9:8, spread=palm?2.8:2.5-tier*0.35;
+    for (let i = 0; i < n; i++) {
+      const angle=i*TAU/n+tier*0.45;
+      const leaf=tropicalLeaf(spread,palm?0.42:0.72);
+      leaf.rotateX(palm?-0.15:0.02);leaf.rotateY(angle);
+      leaf.translate(Math.sin(angle)*0.25,y+(i%3)*0.1,Math.cos(angle)*0.25);
+      parts.push([leaf,colors[(i+tier)%colors.length]]);
+      if (!palm && tier===0 && i%2===0) {
+        const branch=new THREE.CatmullRomCurve3([new THREE.Vector3(0,2.8,0),new THREE.Vector3(Math.sin(angle)*0.6,3.7,Math.cos(angle)*0.6),new THREE.Vector3(Math.sin(angle),y-0.05,Math.cos(angle))]);
+        parts.push([new THREE.TubeGeometry(branch,6,0.09,6,false),'#947046']);
+      }
+    }
+  }
+  return painted(parts);
+}
+
 // ---------------- Light trees (24 bulbs each) ----------------
 // Each returns { H, surface(frac, angle) -> local Vector3, star? }
 export function buildTree(theme, g, rng, ctx) {
@@ -461,7 +505,7 @@ export function buildTree(theme, g, rng, ctx) {
   if (theme === 'jungle') {
     // A giant rainforest tree: buttress roots and tiers of huge drooping leaves, hibiscus tucked in
     const H = 12;
-    const bark = std({ color: '#5a3b24' });
+    const bark = std({ color: '#a47d45', flatShading: false });
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.95, 5, 8), bark);
     trunk.position.y = 2.5;
     g.add(trunk);
@@ -474,12 +518,12 @@ export function buildTree(theme, g, rng, ctx) {
       g.add(root);
     }
     const n = 6;
-    const greens = ['#2f8a4e', '#3fa35e', '#256f3f', '#4cb069'];
+    const greens = ['#638e43', '#7ba34f', '#527a3a', '#91b05c'];
     const tier = (i) => { const k = i / (n - 1); return { r: 4.9 * (1 - k * 0.78), y: 2.4 + i * 1.72 }; };
-    const leafGeo = new THREE.SphereGeometry(1, 10, 6);
+    const leafGeo = tropicalLeaf(1, 0.34);
     for (let i = 0; i < n; i++) {
       const { r, y } = tier(i);
-      const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 0.42, 0), std({ color: '#1f5e37' }));
+      const blob = new THREE.Mesh(new THREE.SphereGeometry(r * 0.42, 16, 10), std({ color: '#5d8743', flatShading: false, roughness: 0.95 }));
       blob.position.y = y + 0.15;
       g.add(blob);
       const count = Math.max(5, Math.round(4 + r * 1.3));
@@ -487,11 +531,11 @@ export function buildTree(theme, g, rng, ctx) {
         const a = (j / count) * TAU + i * 0.45;
         const holder = new THREE.Group();
         holder.position.y = y;
-        holder.rotation.y = a - Math.PI / 2;
-        const leaf = new THREE.Mesh(leafGeo, std({ color: greens[(i + j) % greens.length] }));
-        leaf.scale.set(r * 0.55, 0.1, 0.38 + r * 0.1);
-        leaf.position.x = r * 0.52;
-        leaf.rotation.z = -0.32;
+        holder.rotation.y = a;
+        const leaf = new THREE.Mesh(leafGeo, std({ color: greens[(i + j) % greens.length], flatShading: false, roughness: 0.95 }));
+        leaf.scale.set(r * 0.75, 1.0, r * 0.95);
+        leaf.position.z = r * 0.1;
+        leaf.rotation.x = -0.06;
         holder.add(leaf);
         g.add(holder);
       }
@@ -681,23 +725,29 @@ export function buildTree(theme, g, rng, ctx) {
       }
       return s;
     };
-    const cookie = mat('#ffffff', { map: biscuitTex });
-    const icing = mat('#fff6fa', { roughness: 0.5 });
+    const cookie = mat('#ca8848', { roughness: 0.95, flatShading: false });
+    const icing = mat('#fff2df', { roughness: 0.94, flatShading: false });
     const n = 9;
     for (let i = 0; i < n; i++) {
       const k = i / (n - 1);
       const r = 5.2 * (1 - k * 0.82);
-      const geo = new THREE.ExtrudeGeometry(starShape(r, r * 0.62), { depth: 0.55, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08, bevelSegments: 1 });
+      const geo = new THREE.ExtrudeGeometry(starShape(r, r * 0.72), { depth: 0.55, bevelEnabled: true, bevelSize: 0.2, bevelThickness: 0.16, bevelSegments: 3 });
       geo.rotateX(-Math.PI / 2);
       const m = new THREE.Mesh(geo, cookie);
       m.position.y = 0.6 + i * 1.25;
       m.rotation.y = i * 0.35;
       g.add(m);
-      const top = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape(r * 0.9, r * 0.55), { depth: 0.08, bevelEnabled: false }), icing);
+      const top = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape(r * 0.94, r * 0.68), { depth: 0.1, bevelEnabled: true, bevelSize: 0.14, bevelThickness: 0.13, bevelSegments: 3 }), icing);
       top.geometry.rotateX(-Math.PI / 2);
       top.position.y = 0.6 + i * 1.25 + 0.66;
       top.rotation.y = i * 0.35;
       g.add(top);
+      for (let j = 0; j < 3; j++) {
+        const angle = i * 0.35 + j * TAU / 3;
+        const sweet = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 8), mat(['#e97799', '#79bda7', '#e8b75d'][(i + j) % 3], { roughness: 0.9, flatShading: false }));
+        sweet.position.set(Math.sin(angle) * r * 0.72, 0.6 + i * 1.25 + 0.9, Math.cos(angle) * r * 0.72);
+        g.add(sweet);
+      }
     }
     const star = makeStar('#ffd36b', 1.0);
     star.position.y = H + 0.4;
@@ -723,7 +773,7 @@ export function buildTree(theme, g, rng, ctx) {
     for (let i = 0; i < n; i++) {
       const k = i / (n - 1);
       const s = 7.2 * (1 - k * 0.8);
-      const m = new THREE.Mesh(new RoundedBoxGeometry(s, 1.45, s, 2, 0.13), mat(cols[i % 3], { roughness: 0.38, flatShading: false }));
+      const m = new THREE.Mesh(new RoundedBoxGeometry(s, 1.45, s, 2, 0.13), mat(cols[i % 3], { roughness: 0.9, flatShading: false }));
       m.position.y = 0.75 + i * 1.5;
       m.rotation.y = i * 0.4;
       g.add(m);
@@ -752,17 +802,17 @@ export function buildTree(theme, g, rng, ctx) {
   for (let i = 0; i < n; i++) {
     const k = i / (n - 1);
     const r = 4.8 * (1 - k * 0.85) + 0.3;
-    const c = i % 2 ? '#7af7ff' : '#ff6fd8';
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.16, 8, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2.2), toneMapped: false }));
+    const c = i % 2 ? '#a3ebef' : '#f1a8da';
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.12, 12, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2.0), toneMapped: false }));
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 1 + i * 1.45;
     ring.userData.spin = (i % 2 ? 1 : -1) * (0.3 + k * 0.4);
     g.add(ring);
   }
-  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.35, H, 8), std({ color: '#c9d2e6', metalness: 0.6, roughness: 0.3 }));
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.35, H, 8), std({ color: '#c9b7df', metalness: 0, roughness: 0.95, flatShading: false }));
   core.position.y = H / 2;
   g.add(core);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.6, 0.6, 16), std({ color: '#5d6478', metalness: 0.5, roughness: 0.4 }));
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.6, 0.6, 16), std({ color: '#a18bb7', metalness: 0, roughness: 0.95, flatShading: false }));
   base.position.y = 0.3;
   g.add(base);
   const star = makeStar('#fff3a6', 1.0);
@@ -784,7 +834,7 @@ export function buildTree(theme, g, rng, ctx) {
 }
 
 // ---------------- Scenery ----------------
-function candyTreeGeometry(cols) {
+function candyTreeGeometry(cols, soft = false) {
   const parts = [];
   const add = (geo, color) => {
     const c = new THREE.Color(color);
@@ -798,12 +848,14 @@ function candyTreeGeometry(cols) {
   trunk.translate(0, 0.4, 0);
   add(trunk, '#6b3d23');
   [[1.3, 1.7, 0.6], [1.05, 1.5, 1.4], [0.78, 1.3, 2.1]].forEach(([r, h, y], i) => {
-    const cone = new THREE.ConeGeometry(r, h, 8);
+    const profile = [new THREE.Vector2(0, 0), new THREE.Vector2(r * 0.82, 0), new THREE.Vector2(r, h * 0.04), new THREE.Vector2(r * 0.96, h * 0.12), new THREE.Vector2(r * 0.58, h * 0.5), new THREE.Vector2(r * 0.23, h * 0.85), new THREE.Vector2(0, h)];
+    const cone = soft ? new THREE.LatheGeometry(profile, 24) : new THREE.ConeGeometry(r, h, 8);
+    if (soft) cone.translate(0, -h / 2, 0);
     cone.translate(0, y + h / 2, 0);
     add(cone, cols[i % cols.length]);
-    const tip = new THREE.ConeGeometry(r * 0.4, h * 0.38, 8);
+    const tip = new THREE.ConeGeometry(r * 0.4, h * 0.38, soft ? 24 : 8);
     tip.translate(0, y + h - (h * 0.38) / 2 + 0.02, 0);
-    add(tip, '#ffffff');
+    add(tip, soft ? '#fff1e4' : '#ffffff');
   });
   return mergeGeometries(parts);
 }
@@ -1545,25 +1597,21 @@ export function buildScenery(theme, c) {
     const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
     buildEnvironmentDetails(theme, c, fx);
     // Rainforest trees and ferns around the village
-    const jungleTree = painted([
-      [at(new THREE.CylinderGeometry(0.22, 0.34, 4.2, 6), 0, 2.1, 0), '#5a3b24'],
-      [at(new THREE.IcosahedronGeometry(1.7, 0), 0, 4.6, 0, 1, 0.75, 1), '#2f8a4e'],
-      [at(new THREE.IcosahedronGeometry(1.3, 0), 1.1, 4.1, 0.5, 1, 0.7, 1), '#256f3f'],
-      [at(new THREE.IcosahedronGeometry(1.2, 0), -1.0, 4.3, -0.4, 1, 0.7, 1), '#3fa35e'],
-      [at(new THREE.IcosahedronGeometry(1.0, 0), 0.2, 5.6, 0.1, 1, 0.75, 1), '#4cb069'],
-    ]);
+    const jungleTree = tropicalTreeGeometry();
     const groveEdge = L.backR * Math.sin(L.spread) + 6;
-    const tall = sides(A.forceLite ? 140 : 185).map((p) => ({
+    const tall = sides(A.forceLite ? 75 : 95).map((p) => ({
       ...p, x: p.side ? Math.sign(p.x) * Math.max(Math.abs(p.x), groveEdge) : p.x,
       s: 1.0 + rng() * 1.6, rot: rng() * 6, tint: 0.8 + rng() * 0.35,
     }));
-    root.add(instanced(jungleTree, vmat(), tall));
+    const treeMaterial=std({vertexColors:true,roughness:0.95,flatShading:false});
+    root.add(instanced(jungleTree,treeMaterial,tall.filter((p,i)=>i%4!==0)));
+    root.add(instanced(tropicalTreeGeometry(true),treeMaterial,tall.filter((p,i)=>i%4===0)));
     const fern = painted([
-      [at(new THREE.IcosahedronGeometry(0.9, 0), 0, 0.4, 0, 1.3, 0.5, 1), '#2f7d43'],
-      [at(new THREE.IcosahedronGeometry(0.7, 0), 0.8, 0.35, 0.3, 1.2, 0.5, 0.9), '#3fa35e'],
-      [at(new THREE.IcosahedronGeometry(0.6, 0), -0.7, 0.3, -0.2, 1.2, 0.5, 0.9), '#256f3f'],
+      [at(new THREE.SphereGeometry(0.9, 14, 8), 0, 0.4, 0, 1.3, 0.5, 1), '#2f7d43'],
+      [at(new THREE.SphereGeometry(0.7, 14, 8), 0.8, 0.35, 0.3, 1.2, 0.5, 0.9), '#7ba452'],
+      [at(new THREE.SphereGeometry(0.6, 14, 8), -0.7, 0.3, -0.2, 1.2, 0.5, 0.9), '#547a3e'],
     ]);
-    root.add(instanced(fern, vmat(), sides(90, 1.5, 0.12).map((p) => ({ ...p, s: 0.8 + rng() * 0.9, rot: rng() * 6, tint: 0.85 + rng() * 0.3 }))));
+    root.add(instanced(fern, std({ vertexColors: true, roughness: 0.95, flatShading: false }), sides(65, 1.5, 0.12).map((p) => ({ ...p, s: 0.8 + rng() * 0.9, rot: rng() * 6, tint: 0.85 + rng() * 0.3 }))));
     // Hibiscus flowers near the square
     sides(16, 1.2, 0.08).forEach((p) => {
       const fl = new THREE.Group();
@@ -1590,9 +1638,9 @@ export function buildScenery(theme, c) {
     const peakM = [std({ color: '#3d7a5a' }), std({ color: '#2f6b4c' }), std({ color: '#4a8a66' })];
     ring(13, 105, 165, (x, z, i) => {
       const h = 40 + rng() * 45, rad = 10 + rng() * 9;
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.55, rad, h, 8), peakM[i % 3]);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.55, rad, h, 20), peakM[i % 3]);
       m.position.set(x, h / 2 - 2, z);
-      const dome = new THREE.Mesh(new THREE.SphereGeometry(rad * 0.55, 8, 6, 0, TAU, 0, Math.PI / 2), peakM[(i + 1) % 3]);
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(rad * 0.55, 20, 12, 0, TAU, 0, Math.PI / 2), peakM[(i + 1) % 3]);
       dome.position.y = h / 2;
       m.add(dome);
       root.add(m);
@@ -1604,25 +1652,23 @@ export function buildScenery(theme, c) {
     // A waterfall pouring off a mossy cliff behind the village into a pool
     const cliffX = 22, cliffZ = -(L.backR + 34);
     const cliff = new THREE.Group();
-    const rockM = new THREE.MeshStandardMaterial({ map: rockTex, roughness: 1, flatShading: true });
+    const rockM = std({ color: '#af986c', roughness: 1, flatShading: false });
     [[0, 0, 26, 28, 10], [-15, -2, 14, 20, 9], [15, -1, 14, 23, 9]].forEach(([x, z, w, h, d]) => {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d, 3, 3, 1), rockM);
-      const pos = b.geometry.attributes.position;
-      for (let k = 0; k < pos.count; k++) pos.setXYZ(k, pos.getX(k) + (rng() - 0.5) * 1.6, pos.getY(k), pos.getZ(k) + (rng() - 0.5) * 1.6);
-      b.geometry.computeVertexNormals();
+      const b = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, 1.1), rockM);
       b.position.set(x, h / 2, z);
       cliff.add(b);
-      const top = new THREE.Mesh(new THREE.BoxGeometry(w + 1, 1.2, d + 1), std({ color: '#3f8a4e' }));
+      const top = new THREE.Mesh(new RoundedBoxGeometry(w + 1, 1.2, d + 1, 2, 0.5), std({ color: '#3f8a4e' }));
       top.position.set(x, h + 0.3, z);
       cliff.add(top);
     });
-    const fallTex = tex(64, 256, (g, w, h) => {
-      g.fillStyle = '#9fe0e8';
-      g.fillRect(0, 0, w, h);
-      const r = A.rng(3);
-      for (let i = 0; i < 90; i++) {
-        g.fillStyle = `rgba(255,255,255,${0.4 + r() * 0.5})`;
-        g.fillRect(r() * w, r() * h, 2 + r() * 3, 18 + r() * 40);
+    const fallTex = tex(128, 256, (g, w, h) => {
+      g.fillStyle = '#75c7c1';g.fillRect(0,0,w,h);
+      const r=A.rng(3);
+      for(let i=0;i<15;i++) {
+        const x=r()*w,width=3+r()*10;
+        const ribbon=g.createLinearGradient(x,0,x+width,0);
+        ribbon.addColorStop(0,'#ffffff00');ribbon.addColorStop(0.5,'#dcfff47d');ribbon.addColorStop(1,'#ffffff00');
+        g.fillStyle=ribbon;g.fillRect(x,0,width,h);
       }
     });
     fallTex.repeat.set(2, 1);
@@ -2305,8 +2351,8 @@ export function buildScenery(theme, c) {
     const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
     const sweets = ['#ff8fc4', '#7fe3c4', '#ffd36b', '#ffffff'];
     // Candy forest in pinks, mints and whites
-    const trees = sides(100).map((p) => ({ ...p, s: 1.1 + rng() * 1.5, rot: rng() * 6, tint: 0.9 + rng() * 0.2 }));
-    root.add(instanced(candyTreeGeometry(['#ff8fc4', '#7fe3c4', '#ffb3d9']), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.6 }), trees));
+    const trees = sides(52).map((p) => ({ ...p, s: 1.1 + rng() * 1.5, rot: rng() * 6, tint: 0.96 + rng() * 0.06 }));
+    root.add(instanced(candyTreeGeometry(['#e990ae', '#81bba7', '#e990ae'], true), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.95 }), trees));
     // Giant lollipops dotted around
     const lolliTex = tex(128, 128, (g, w) => {
       g.fillStyle = '#fff';
@@ -2413,29 +2459,25 @@ export function buildScenery(theme, c) {
         fx.burst(cupcake.localToWorld(new THREE.Vector3(0, 2.8, 0)), sweets, 7, 4, 0.25);
       }
     });
-    // Ice-cream mountains with cherries on top
-    for (let i = 0; i < 10; i++) {
-      const th = -1.25 + (2.5 * i) / 9 + (rng() - 0.5) * 0.15;
-      const R = 110 + rng() * 50;
-      const h = 30 + rng() * 30, rad = 22 + rng() * 14;
-      const m = new THREE.Mesh(new THREE.ConeGeometry(rad, h, 10), std({ color: ['#ffd1e6', '#c9f2e2', '#fff2c9'][i % 3] }));
-      m.position.set(R * Math.sin(th), h / 2 - 2, -R * Math.cos(th));
-      const scoop = new THREE.Mesh(new THREE.SphereGeometry(rad * 0.42, 12, 8), std({ color: '#ffffff' }));
-      scoop.position.y = h * 0.32;
-      const cherry = new THREE.Mesh(new THREE.SphereGeometry(rad * 0.12, 10, 8), new THREE.MeshStandardMaterial({ color: '#e2283a', emissive: '#a0101a', emissiveIntensity: 0.4 }));
-      cherry.position.y = h * 0.32 + rad * 0.45;
-      m.add(scoop, cherry);
-      root.add(m);
+    // Broad pastel hills and pillowy clouds echo the illustrated candy diorama.
+    for (let i = 0; i < 9; i++) {
+      const th = -1.2 + 2.4 * i / 8;
+      const R = 115 + rng() * 25;
+      const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), std({ color: ['#dca5b8', '#ecc0bc', '#cdb0c5'][i % 3], flatShading: false, roughness: 1 }));
+      hill.scale.set(32 + rng() * 18, 24 + rng() * 16, 30);
+      hill.position.set(R * Math.sin(th), -5, -R * Math.cos(th));
+      root.add(hill);
     }
-    // Pink moon, stars, a sleigh pulled through the candy sky
-    const moon = new THREE.Mesh(new THREE.SphereGeometry(10, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffe3f1').multiplyScalar(1.5), toneMapped: false, fog: false }));
-    moon.position.set(-90, 95, -260);
-    root.add(moon);
-    const mg = glowSprite('#ffb3d9', 90, 0.45);
-    mg.position.copy(moon.position);
-    root.add(mg);
-    const stars = starfield(root, rng, 900, 1.6);
-    updaters.push((t) => { stars.material.opacity = 0.7 + Math.sin(t * 1.4) * 0.2; });
+    const cloudMat = std({ color: '#ffe4d3', roughness: 1, flatShading: false });
+    for (let i = 0; i < 5; i++) {
+      const cloud = new THREE.Group();
+      for (const [x, y, size] of [[-5, 0, 5], [0, 2, 7], [6, 0, 5]]) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(size, 20, 12), cloudMat);
+        puff.position.set(x, y, 0); puff.scale.set(1.3, 0.8, 0.6); cloud.add(puff);
+      }
+      cloud.position.set(-100 + i * 48, 35 + (i % 3) * 8, -130 - (i % 2) * 20);
+      root.add(cloud);
+    }
     const sleigh = makeSleigh();
     root.add(sleigh);
     updaters.push((t) => {
@@ -2453,7 +2495,7 @@ export function buildScenery(theme, c) {
     buildToyPlayground(c, fx);
     // Lacquered toy trees, spaced to let the crafted floor show through.
     const trees = sides(48).map((p) => ({ ...p, s: 1.1 + rng() * 1.4, rot: rng() * 6, tint: 0.9 + rng() * 0.2 }));
-    root.add(instanced(candyTreeGeometry(['#62998b', '#39746e', '#a2bda0']), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55 }), trees));
+    root.add(instanced(candyTreeGeometry(['#73a08b', '#4e8274', '#a2bda0'], true), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.92 }), trees));
     // Giant alphabet blocks as the hills on the horizon
     const letters = 'NOELJOYABC';
     for (let i = 0; i < 10; i++) {
@@ -2522,20 +2564,18 @@ export function buildScenery(theme, c) {
   // ---- space ----
   const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
   buildEnvironmentDetails(theme, c, fx);
-  const stars = starfield(root, rng, 2600, 1.6);
+  const stars = starfield(root, rng, 700, 1.8);
   updaters.push((t) => { stars.material.opacity = 0.8 + Math.sin(t * 1.1) * 0.12; });
   // Earth rising over the horizon
   const earthTex = canvasSphereTex((g, w, h) => {
-    g.fillStyle = '#1d5fd1';
-    g.fillRect(0, 0, w, h);
-    const r = A.rng(9);
-    g.fillStyle = '#3fae5a';
-    for (let i = 0; i < 26; i++) { g.beginPath(); g.ellipse(r() * w, h * 0.2 + r() * h * 0.6, 20 + r() * 50, 10 + r() * 30, r() * 3, 0, TAU); g.fill(); }
-    g.fillStyle = 'rgba(255,255,255,.75)';
-    for (let i = 0; i < 40; i++) { g.beginPath(); g.ellipse(r() * w, r() * h, 20 + r() * 60, 4 + r() * 8, 0, 0, TAU); g.fill(); }
-    g.fillStyle = '#ffffff';
-    g.fillRect(0, 0, w, 14);
-    g.fillRect(0, h - 14, w, 14);
+    const gradient = g.createLinearGradient(0, 0, w, h);
+    gradient.addColorStop(0, '#7785d4'); gradient.addColorStop(0.5, '#6673ba'); gradient.addColorStop(1, '#414984');
+    g.fillStyle = gradient; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = i % 2 ? '#9491d1' : '#5965aa'; g.globalAlpha = 0.28;
+      g.beginPath(); g.ellipse(w * 0.5, h * (i / 8), w, 10, -0.13, 0, TAU); g.fill();
+    }
+    g.globalAlpha = 1;
   });
   const earth = new THREE.Mesh(new THREE.SphereGeometry(36, 40, 28), new THREE.MeshStandardMaterial({ map: earthTex, roughness: 0.8, emissive: '#1a3a80', emissiveIntensity: 0.25, fog: false }));
   earth.position.set(-110, 40, -300);
@@ -2545,7 +2585,7 @@ export function buildScenery(theme, c) {
   root.add(atmos);
   updaters.push((t) => { earth.rotation.y = t * 0.03; });
   // A ringed planet
-  const planet = new THREE.Mesh(new THREE.SphereGeometry(16, 28, 20), new THREE.MeshStandardMaterial({ color: '#e7a35a', roughness: 0.9, fog: false }));
+  const planet = new THREE.Mesh(new THREE.SphereGeometry(16, 28, 20), new THREE.MeshStandardMaterial({ color: '#baa0cd', roughness: 0.9, fog: false }));
   planet.position.set(130, 110, -280);
   const rings = new THREE.Mesh(new THREE.RingGeometry(22, 34, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color('#f5d7a8'), side: THREE.DoubleSide, transparent: true, opacity: 0.7, fog: false }));
   rings.rotation.x = Math.PI / 2.4;
@@ -2559,10 +2599,10 @@ export function buildScenery(theme, c) {
   neb2.position.set(-60, 170, -340);
   root.add(neb2);
   // Moon rocks and craters at the sides
-  const rockMat = std({ color: '#877594' });
-  sides(60, 3, 0.25).forEach((p) => {
+  const rockMat = std({ color: '#9b83b0', flatShading: false, roughness: 0.96 });
+  sides(38, 3, 0.25).forEach((p) => {
     const s = 0.4 + rng() * 1.6;
-    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), rockMat);
+    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 1), rockMat);
     m.position.set(p.x, p.y + s * 0.3, p.z);
     m.rotation.set(rng() * 3, rng() * 3, rng() * 3);
     m.castShadow = true;
@@ -2570,37 +2610,40 @@ export function buildScenery(theme, c) {
   });
   sides(16, 4, 0.3).forEach((p) => {
     const r = 2 + rng() * 3;
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.18, 6, 24), std({ color: '#a9a8b6' }));
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.12, 12, 40), std({ color: '#a08abb', flatShading: false, roughness: 1 }));
     rim.rotation.x = Math.PI / 2;
     rim.scale.z = 0.5;
     rim.position.set(p.x, p.y + 0.05, p.z);
     root.add(rim);
-    const pit = new THREE.Mesh(new THREE.CircleGeometry(r, 24), std({ color: '#6e6d7b' }));
+    const pit = new THREE.Mesh(new THREE.CircleGeometry(r, 24), std({ color: '#685582', roughness: 1 }));
     pit.rotation.x = -Math.PI / 2;
     pit.position.set(p.x, p.y + 0.02, p.z);
     root.add(pit);
   });
   // Rocket on its launch pad
   const rocket = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 7, 16), std({ color: '#f2f4fa', metalness: 0.3, roughness: 0.4 }));
-  body.position.y = 4.5;
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(1.1, 2.6, 16), std({ color: '#e2483d' }));
-  nose.position.y = 9.3;
-  const win = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshStandardMaterial({ color: '#7af7ff', emissive: '#3fd6ff', emissiveIntensity: 1.6 }));
-  win.position.set(0, 6, 1.12);
-  rocket.add(body, nose, win);
-  for (let i = 0; i < 3; i++) {
-    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.2, 1.5), std({ color: '#e2483d' }));
-    const a = (i / 3) * TAU;
-    fin.position.set(Math.sin(a) * 1.3, 1.9, Math.cos(a) * 1.3);
-    fin.rotation.y = a;
-    rocket.add(fin);
+  const shellMat = std({ color: '#d9d0e4', roughness: 0.92, flatShading: false });
+  const coralMat = std({ color: '#d97583', roughness: 0.92, flatShading: false });
+  const profile = (points) => new THREE.LatheGeometry(points.map(([r,y]) => new THREE.Vector2(r,y)), 40);
+  const body = new THREE.Mesh(profile([[0,1], [0.95,1], [1.15,1.3], [1.3,3.2], [1.3,5.5], [1.18,7.6], [1.05,8], [0,8]]), shellMat);
+  const nose = new THREE.Mesh(profile([[0,7.8], [1.16,7.8], [1.12,8.2], [0.98,8.8], [0.76,9.4], [0.46,10], [0.15,10.45], [0,10.55]]), coralMat);
+  rocket.add(body, nose);
+  for (const x of [-0.37, 0.37]) {
+    const window = new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.95, 0.18, 3, 0.16), std({ color: '#b2f2ee', emissive: '#8cddd9', emissiveIntensity: 0.85, roughness: 0.85, flatShading: false }));
+    window.position.set(x, 6.2, 1.22); rocket.add(window);
   }
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.4, 0.6, 20), std({ color: '#5d6478', metalness: 0.5 }));
+  const finShape = new THREE.Shape();
+  finShape.moveTo(1, 1.3); finShape.quadraticCurveTo(1.65, 1.25, 2.05, 0.7);
+  finShape.quadraticCurveTo(2.35, 1.6, 1.95, 2.8); finShape.quadraticCurveTo(1.65, 3.7, 1.13, 4.3); finShape.closePath();
+  for (let i = 0; i < 3; i++) {
+    const fin = new THREE.Mesh(new THREE.ExtrudeGeometry(finShape, { depth: 0.24, bevelEnabled: true, bevelSize: 0.12, bevelThickness: 0.12, bevelSegments: 3, curveSegments: 12 }), coralMat);
+    fin.geometry.translate(0, 0, -0.12); fin.rotation.y = i * TAU / 3; rocket.add(fin);
+  }
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.4, 0.6, 20), std({ color: '#8d7caa', roughness: 0.95, flatShading: false }));
   pad.position.y = 0.3;
   pad.position.x = 0;
   const launchPad = new THREE.Group(); launchPad.add(pad);
-  const padRing = new THREE.Mesh(new THREE.TorusGeometry(2.8, 0.08, 8, 40), neonMat('#77e4e8', 1.3));
+  const padRing = new THREE.Mesh(new THREE.TorusGeometry(2.8, 0.08, 8, 40), neonMat('#a3ebef', 1.1));
   padRing.rotation.x = Math.PI / 2; padRing.position.y = 0.65; launchPad.add(padRing);
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffb347').multiplyScalar(2), toneMapped: false }));
   flame.rotation.x = Math.PI;
