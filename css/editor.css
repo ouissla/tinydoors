@@ -471,6 +471,21 @@ body.editor.sheet-open { overflow: hidden; }
 .up-emblem { font-size: 3.4rem; animation: float 2.6s ease-in-out infinite; }
 .upsell .perks { text-align: left; }
 .upsell .btn.big { width: 100%; }
+#buyBtn { display: flex; align-items: center; justify-content: center; gap: .6em; }
+#buyBtn[aria-busy='true'] { cursor: wait; }
+#buyBtn[aria-busy='true']::before {
+  content: '';
+  flex: 0 0 1em;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  #buyBtn[aria-busy='true']::before { animation: none; border-style: dotted; }
+}
 .upsell .btn.ghost { margin-top: 10px; }
 
 @media (max-width: 560px) {

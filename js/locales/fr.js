@@ -22,6 +22,7 @@
   "{remaining} of 5 premium calendars available. Activating this calendar uses one slot; editing and resending it do not.": "{remaining} calendriers premium disponibles sur 5. Activer ce calendrier utilise une place ; le modifier ou le renvoyer n’en utilise pas.",
   "Save a calendar first, then unlock your Season Pass.": "Enregistrez d’abord un calendrier, puis débloquez votre Pass de Noël.",
   "Preparing your Season Pass…": "Préparation de votre Pass de Noël…",
+  "Opening checkout…": "Ouverture du paiement…",
   "Could not open checkout. Please try again.": "Impossible d’ouvrir le paiement. Veuillez réessayer.",
   "Demo Season Pass unlocked — no payment taken": "Pass de Noël de démonstration débloqué — aucun paiement effectué",
   "Every world, unlimited photos, no credit, open until 31 January. This calendar uses 1 of your 5 seasonal slots.": "Tous les univers, photos illimitées, sans mention Tiny Doors, ouvert jusqu’au 31 janvier. Ce calendrier utilise 1 de vos 5 places pour la saison.",

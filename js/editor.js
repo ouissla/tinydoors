@@ -687,6 +687,15 @@
   });
 
   // ---------------- Account Season Pass and Stripe Checkout ----------------
+  function renderCheckoutButton() {
+    const button = $('buyBtn');
+    button.disabled = checkoutBusy || seasonPass?.refunded || (seasonPass?.active ? seasonPass.remaining === 0 && !seasonPass.calendars.includes(cal?.id) : !A.Auth.config.checkoutAvailable);
+    button.setAttribute('aria-busy', String(checkoutBusy));
+    button.textContent = checkoutBusy ? tr('Opening checkout…') : seasonPass?.refunded ? tr('Season Pass refunded') : seasonPass?.active ? tr('Use a Season Pass calendar') : tr('Unlock for A$6.99');
+  }
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && A.DB.isCloud) { checkoutBusy = false; renderCheckoutButton(); }
+  });
   function upsell(why) {
     $('checkoutMessage').textContent = '';
     $('upWhy').textContent = why || tr('You’ve used your {count} free photos.', { count: FREE_PHOTOS });
@@ -704,8 +713,7 @@
       ? tr('Christmas {year} Season Pass · {used} of 5 premium calendars used', { year, used: seasonPass.used })
       : seasonPass.refunded ? tr('Christmas {year} · Season Pass refunded', { year }) : tr('Christmas {year} · Free account', { year });
     if (cal) cal.plan = seasonPass.active && seasonPass.calendars.includes(cal.id) ? 'season' : 'free';
-    $('buyBtn').disabled = checkoutBusy || seasonPass.refunded || (seasonPass.active ? seasonPass.remaining === 0 && !seasonPass.calendars.includes(cal?.id) : !A.Auth.config.checkoutAvailable);
-    $('buyBtn').textContent = seasonPass.refunded ? tr('Season Pass refunded') : seasonPass.active ? tr('Use a Season Pass calendar') : tr('Unlock for A$6.99');
+    renderCheckoutButton();
     if (seasonPass.active) $('checkoutNote').textContent = tr('{remaining} of 5 premium calendars available. Activating this calendar uses one slot; editing and resending it do not.', { remaining: seasonPass.remaining });
   }
   async function activatePremium() {
@@ -724,8 +732,9 @@
       if (!A.Auth.user) { $('upsell').hidden = true; A.Auth.prompt(); return; }
       if (!cal) { $('upsell').hidden = true; go('start'); toast(tr('Save a calendar first, then unlock your Season Pass.')); return; }
       checkoutBusy = true;
-      $('buyBtn').disabled = true;
+      renderCheckoutButton();
       $('checkoutMessage').textContent = tr('Preparing your Season Pass…');
+      let redirecting = false;
       try {
         await refreshSeasonPass();
         if (seasonPass.active) { await activatePremium(); return; }
@@ -736,11 +745,11 @@
         const target = new URL(result.url);
         if (target.protocol !== 'https:' || target.hostname !== 'checkout.stripe.com') throw new Error(tr('Could not open checkout. Please try again.'));
         location.assign(target.href);
+        redirecting = true;
       } catch (error) {
         $('checkoutMessage').textContent = error.message;
       } finally {
-        checkoutBusy = false;
-        $('buyBtn').disabled = seasonPass?.refunded || (seasonPass?.active ? seasonPass.remaining === 0 && !seasonPass.calendars.includes(cal?.id) : !A.Auth.config.checkoutAvailable);
+        if (!redirecting) { checkoutBusy = false; renderCheckoutButton(); }
       }
       return;
     }
