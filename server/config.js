@@ -27,5 +27,5 @@ export function publicConfiguration(env) {
   const app = new URL(env.APP_URL);
   const supabase = new URL(env.SUPABASE_URL);
   if (app.username || app.password || app.search || app.hash || !['', '/'].includes(app.pathname) || supabase.username || supabase.password) throw new Error('Invalid project origin');
-  return { mode: 'cloud', appUrl: app.origin, supabaseUrl: supabase.origin, supabasePublishableKey: key, photoBucket: env.SUPABASE_STORAGE_BUCKET };
+  return { mode: 'cloud', checkoutAvailable: ['STRIPE_SECRET_KEY', 'STRIPE_SEASON_PASS_PRICE_ID', 'STRIPE_WEBHOOK_SECRET'].every((name) => !validateEnvironment(env).includes(name)), appUrl: app.origin, supabaseUrl: supabase.origin, supabasePublishableKey: key, photoBucket: env.SUPABASE_STORAGE_BUCKET };
 }

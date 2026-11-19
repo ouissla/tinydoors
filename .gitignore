@@ -9,3 +9,6 @@ dist/
 .dev.vars
 .dev.vars.*
 coverage/
+
+# Local Supabase CLI cache
+supabase/.temp/

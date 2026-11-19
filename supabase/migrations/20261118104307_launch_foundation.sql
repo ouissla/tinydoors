@@ -1,6 +1,6 @@
--- Launch foundation for creator accounts (email magic links are the proposed default).
--- Not applied automatically. Review and apply to the intended Supabase project.
--- The current browser DB adapter must be replaced before these tables are used.
+-- Tiny Doors launch foundation for Supabase creator accounts and private sharing.
+-- Used by the cloud storage adapter when APP_MODE=cloud.
+-- Keep this migration in sync with the connected project migration history.
 begin;
 
 create table public.calendars (
@@ -33,6 +33,7 @@ end;
 $$;
 create trigger touch_calendar_updated_at before update on public.calendars
   for each row execute function public.touch_calendar_updated_at();
+revoke execute on function public.touch_calendar_updated_at() from public, anon, authenticated;
 
 -- Plans are separate from editable calendar JSON. Only the verified payment server writes them.
 create table public.calendar_entitlements (

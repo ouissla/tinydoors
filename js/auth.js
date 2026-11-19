@@ -30,7 +30,7 @@
       headers.set('Authorization', 'Bearer ' + session.access_token);
       const response = await fetch(path, { ...options, headers });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || tr("Could not complete that request."));
+      if (!response.ok) throw new Error(tr(body.error || "Could not complete that request."));
       return body;
     },
     prompt() {
@@ -75,16 +75,30 @@
       $('accountMessage').setAttribute('role', isError ? 'alert' : 'status');
     };
     auth.ready.then(() => {
-      $('accountPanel').hidden = auth.mode !== 'cloud';
+      $('accountPanel').hidden = auth.mode !== 'cloud' || !!auth.user;
       if (auth.mode !== 'cloud') return;
       $('accountLoading').hidden = true;
       $('accountForm').hidden = !!auth.user;
       $('accountSignedIn').hidden = !auth.user;
-      if (auth.user) $('accountIdentity').textContent = auth.user.email;
+      if (auth.user) {
+        $('accountIdentity').textContent = auth.user.email;
+        $('profileInitial').textContent = (auth.user.email || '?').charAt(0).toUpperCase();
+        $('profileMenu').append($('accountMessage'));
+      }
     }).catch(() => {
       $('accountPanel').hidden = false;
       $('accountLoading').hidden = true;
       message(tr("We couldn’t load sign-in. Please refresh and try again."), true);
+    });
+    const profile = $('accountSignedIn');
+    document.addEventListener('click', (event) => {
+      if (profile.open && !profile.contains(event.target)) profile.open = false;
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && profile.open) {
+        profile.open = false;
+        $('profileToggle').focus();
+      }
     });
     $('accountForm').addEventListener('submit', async (event) => {
       event.preventDefault();

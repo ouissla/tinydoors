@@ -15,3 +15,27 @@
 
 /css/*
   Cache-Control: no-cache
+
+/editor.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/index.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/3d.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/auth.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/home.html
+  Cache-Control: no-cache
+
+/home-fr.html
+  Cache-Control: no-cache
+
+/favicon.ico
+  Cache-Control: public, max-age=86400
+
+/assets/brand/*
+  Cache-Control: public, max-age=86400

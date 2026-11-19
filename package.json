@@ -12,11 +12,15 @@
     "check": "node tools/check.mjs && node --test tests/*.test.mjs",
     "check:env": "node tools/check-env.mjs",
     "deploy:preview": "npm run check && npm run build && wrangler deploy",
-    "deploy:dry-run": "npm run build && wrangler deploy --dry-run --outdir /tmp/tinydoors-worker"
+    "deploy:dry-run": "npm run build && wrangler deploy --dry-run --outdir /tmp/tinydoors-worker",
+    "deploy:production": "npm run check && npm run build && wrangler deploy --config wrangler.production.jsonc"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.119.0",
     "esbuild": "0.28.2",
     "wrangler": "4.164.0"
+  },
+  "dependencies": {
+    "stripe": "23.1.0"
   }
 }

@@ -72,7 +72,7 @@ Seven extra 3D worlds alongside Snowy and Summer, each with its own houses, ligh
 - 🌸 **Kawaii Sakura Town** — pastel shops, cherry blossoms and lanterns; a tappable tea set and swinging wish bell alongside the lucky cat, daruma and capsule machine
 - 🌃 **Neon City** — capsule apartments with aligned neon trim, flying cars and a glowing skyline; cars and motorbikes take crossing streets and alternate routes, with tappable boosts, a routing console and a cargo teleporter
 
-Preview: `3d.html?theme=gingerbread` / `toys` / `space`. In the editor they're marked **✨ Season Pass**; choosing one opens the (mock) upgrade. Without WebGL, the 2D view shows them over the snowy backdrop with their own colours and content.
+Preview: `3d.html?theme=gingerbread` / `toys` / `space`. In the editor they're marked **✨ Season Pass**; choosing one allows free customisation and preview, with the Season Pass required to share. Without WebGL, the 2D view shows them over the snowy backdrop with their own colours and content.
 
 ## Shake to make it snow
 
@@ -92,7 +92,7 @@ The editor's background is the chosen world itself, live in 3D (`3d.html?theme=<
    Suggestion chips nudge the next personal touch, "Add several photos at once" spreads photos across the doors, and a meter counts personal touches.
 3. **Share**: preview as the recipient (every door unlocked), copy or send the link, choose the timezone doors open in. Links and the main preview open the **3D** world (`3d.html?c=<id>`); there's also a 2D preview, and `3d.html` falls back to the 2D view on devices without WebGL.
 
-Free calendars get 3 photos; the 4th opens a mock **Season Pass** (A$12.95 one-time, no payment taken) that unlocks unlimited photos and removes the credit.
+Free calendars get 3 photos. The **Season Pass** costs A$6.99 once per Christmas season and covers up to 5 premium calendars, with every premium world, unlimited photos and no Tiny Doors credit. Cloud accounts use Stripe Checkout and server-verified entitlements; prototype mode uses a demo upgrade without payment.
 
 Recipient links (`3d.html?c=<id>`, or `index.html?c=<id>` for 2D) open on real December dates in the chosen timezone: before 1 December every door is locked, and missed doors stay open to catch up.
 
@@ -119,4 +119,4 @@ Recipient links (`3d.html?c=<id>`, or `index.html?c=<id>` for 2D) open on real D
 - `js/audio.js` — synthesised sounds
 - `css/styles.css` — everything visual
 
-Remaining before a paid release: configure and verify the live Supabase/Auth project, implement Stripe Checkout and webhook fulfillment, and add server-side date filtering if future surprises must stay private from recipients inspecting responses.
+Remaining before a paid release: verify production email delivery, deploy the Worker, complete Stripe test purchases/refunds and configure live payment credentials, and add server-side date filtering if future surprises must stay private from recipients inspecting responses.

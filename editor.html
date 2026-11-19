@@ -25,21 +25,33 @@
       <li data-step="share"><button type="button" data-go="share">3 <span>Share</span></button></li>
     </ol>
     <span class="saved" id="saved" aria-live="polite"></span>
+    <details class="profile" id="accountSignedIn" hidden>
+      <summary class="profile-pill" id="profileToggle" aria-label="My account" aria-controls="profileMenu">
+        <span class="profile-avatar" id="profileInitial" aria-hidden="true"></span>
+        <span class="profile-label">My account</span>
+        <svg class="profile-chevron" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </summary>
+      <div class="profile-menu" id="profileMenu">
+        <p class="profile-identity">Signed in as <strong id="accountIdentity"></strong></p>
+        <p id="accountPassStatus" role="status"></p>
+        <section class="account-calendars" aria-labelledby="savedCalendarsTitle">
+          <h2 id="savedCalendarsTitle">Your saved calendars</h2>
+          <div id="accountCalendars" role="status">Loading your calendars…</div>
+        </section>
+        <button type="button" class="btn ghost" id="signOut">Sign out</button>
+      </div>
+    </details>
   </header>
 
   <main class="ed-main" id="editorMain">
     <section class="panel account-panel" id="accountPanel" aria-labelledby="accountTitle" hidden>
-      <p class="kicker">Your little collection</p>
       <h2 class="ed-h2" id="accountTitle">Your calendars, on any device</h2>
       <p id="accountLoading" role="status">Opening your account…</p>
       <form id="accountForm" hidden>
-        <p>Sign in with an email link to save your calendars and come back to them anywhere. No password needed.</p>
+        <p>Sign in with an email link to save your calendars. No password needed.</p>
         <label for="accountEmail">Your email address</label>
         <div class="account-email-row"><input id="accountEmail" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"><button class="btn primary" id="sendMagicLink" type="submit">Send sign-in link</button></div>
       </form>
-      <div id="accountSignedIn" hidden><p>Signed in as <strong id="accountIdentity"></strong></p><button type="button" class="btn ghost" id="signOut">Sign out</button>
-        <details class="account-calendars"><summary>Your saved calendars</summary><div id="accountCalendars" role="status">Loading your calendars…</div></details>
-      </div>
       <p id="accountMessage" role="status" aria-live="polite"></p>
     </section>
     <!-- 1. Who + theme -->
@@ -52,7 +64,7 @@
         </div>
         <section class="world-picker" aria-labelledby="worldPickerTitle">
           <h2 id="worldPickerTitle">Choose their world</h2>
-          <p class="world-pass-summary"><strong>Season Pass · A$12.95 once</strong><span>7 exclusive worlds + unlimited photos</span></p>
+          <p class="world-pass-summary"><strong>Season Pass · A$6.99 once</strong><span>7 exclusive worlds · up to 5 premium calendars</span></p>
           <div class="theme-cards world-grid">
           <button type="button" class="theme-card" data-description="Timber cottages, warm windows and a quiet snowy night" data-theme-pick="snow">
             <svg viewBox="0 0 240 120" aria-hidden="true">
@@ -86,68 +98,44 @@
             <span class="world-access free-access">Free</span>
           </button>
           <button type="button" class="theme-card premium" data-description="Iced cookie houses, a tree of star cookies, lollipops" data-theme-pick="gingerbread">
-            <svg viewBox="0 0 240 120" aria-hidden="true">
-              <defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1652"/><stop offset="1" stop-color="#e994b8"/></linearGradient></defs>
-              <rect width="240" height="120" fill="url(#mg)"/>
-              <circle cx="40" cy="26" r="11" fill="#ffe3f1"/>
-              <path d="M0,94 Q60,80 120,90 T240,86 V120 H0Z" fill="#fff3f8"/>
-              <g transform="translate(60,100)"><rect x="-17" y="-24" width="34" height="26" fill="#b8743d"/><path d="M-21,-22 L0,-42 L21,-22Z" fill="#ff6fa3"/><path d="M-21,-22 L0,-42 L21,-22 L16,-24 L0,-37 L-16,-24Z" fill="#fff"/><rect x="-6" y="-12" width="12" height="14" fill="#2f9e5b"/><circle cx="0" cy="-44" r="3" fill="#7cf29a"/></g>
-              <g transform="translate(130,98)"><rect x="-19" y="-27" width="38" height="29" fill="#c07a42"/><path d="M-23,-25 L0,-47 L23,-25Z" fill="#5fd4b0"/><path d="M-23,-25 L0,-47 L23,-25 L18,-27 L0,-42 L-18,-27Z" fill="#fff"/><rect x="-6" y="-13" width="12" height="15" fill="#e2283a"/></g>
-              <g transform="translate(196,100)"><rect x="2" y="-38" width="3" height="38" fill="#fff"/><circle cx="3.5" cy="-42" r="10" fill="#ff4f81"/><circle cx="3.5" cy="-42" r="5" fill="#fff"/></g>
-            </svg>
+            <img class="world-thumbnail" src="/assets/worlds/gingerbread-illustrated.jpg" width="1200" height="600" alt="" loading="lazy" decoding="async">
             <b>Gingerbread Lane</b>
             <span class="world-access paid-access">Season Pass</span>
           </button>
           <button type="button" class="theme-card premium" data-description="Wooden houses, a toy train, marching soldiers" data-theme-pick="toys">
-            <svg viewBox="0 0 240 120" aria-hidden="true">
-              <defs><linearGradient id="mt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8fe0"/><stop offset="1" stop-color="#e3f3ff"/></linearGradient></defs>
-              <rect width="240" height="120" fill="url(#mt)"/>
-              <rect x="170" y="30" width="34" height="34" fill="#ffd23f"/><text x="187" y="56" font-size="24" font-weight="900" text-anchor="middle" fill="#e2483d" font-family="sans-serif">A</text>
-              <path d="M0,96 H240 V120 H0Z" fill="#f4f7ff"/>
-              <g transform="translate(55,100)"><rect x="-16" y="-26" width="32" height="28" fill="#e2483d"/><path d="M-20,-26 L0,-46 L20,-26Z" fill="#3f7be0"/><circle cx="0" cy="-12" r="5" fill="#ffd23f"/></g>
-              <g transform="translate(115,100)"><rect x="-17" y="-28" width="34" height="30" fill="#3f7be0"/><rect x="-19" y="-33" width="9" height="7" fill="#ffd23f"/><rect x="-4" y="-33" width="9" height="7" fill="#ffd23f"/><rect x="10" y="-33" width="9" height="7" fill="#ffd23f"/><rect x="-5" y="-14" width="10" height="16" fill="#ffd23f"/></g>
-              <g transform="translate(175,106)"><rect x="-22" y="-10" width="16" height="10" fill="#e2483d"/><rect x="-4" y="-10" width="12" height="10" fill="#ffd23f"/><rect x="10" y="-10" width="12" height="10" fill="#2f9e5b"/><circle cx="-18" cy="2" r="3" fill="#2a2f3a"/><circle cx="-10" cy="2" r="3" fill="#2a2f3a"/></g>
-            </svg>
+            <img class="world-thumbnail" src="/assets/worlds/toys-illustrated.jpg" width="1200" height="600" alt="" loading="lazy" decoding="async">
             <b>Toy Town</b>
             <span class="world-access paid-access">Season Pass</span>
           </button>
           <button type="button" class="theme-card premium" data-description="Moon-base domes, a neon tree, Earth in the sky" data-theme-pick="space">
-            <svg viewBox="0 0 240 120" aria-hidden="true">
-              <rect width="240" height="120" fill="#0d0626"/>
-              <circle cx="36" cy="34" r="16" fill="#1d5fd1"/><path d="M28,28 q8,-6 14,4 q-8,6 -14,-4" fill="#3fae5a"/>
-              <circle cx="80" cy="18" r="1.4" fill="#fff"/><circle cx="150" cy="30" r="1.2" fill="#fff"/><circle cx="210" cy="16" r="1.6" fill="#fff"/><circle cx="120" cy="12" r="1" fill="#fff"/>
-              <path d="M0,92 Q60,84 120,90 T240,88 V120 H0Z" fill="#9a9aa8"/>
-              <g transform="translate(70,96)"><rect x="-16" y="-14" width="32" height="16" fill="#e9edf6"/><path d="M-16,-14 A16,16 0 0 1 16,-14Z" fill="#5fb8ff"/><rect x="-5" y="-10" width="10" height="12" fill="#3d5bd9"/></g>
-              <g transform="translate(130,98)"><rect x="-16" y="-14" width="32" height="16" fill="#e9edf6"/><path d="M-16,-14 A16,16 0 0 1 16,-14Z" fill="#ff8ad8"/><rect x="-5" y="-10" width="10" height="12" fill="#9b5de5"/></g>
-              <g transform="translate(196,96)"><path d="M-6,0 V-34 Q0,-48 6,-34 V0Z" fill="#f2f4fa"/><path d="M-6,-34 Q0,-48 6,-34Z" fill="#e2483d"/><path d="M-6,0 l-6,6 v-12Z M6,0 l6,6 v-12Z" fill="#e2483d"/></g>
-            </svg>
+            <img class="world-thumbnail" src="/assets/worlds/space-illustrated.jpg" width="1200" height="600" alt="" loading="lazy" decoding="async">
             <b>Space Christmas</b>
             <span class="world-access paid-access">Season Pass</span>
           </button>
           <button type="button" class="theme-card premium" data-description="Snowy workshops, busy elves and a magical toy factory" data-theme-pick="workshop">
-            <svg viewBox="0 0 240 120" aria-hidden="true"><rect width="240" height="120" fill="#152a48"/><circle cx="202" cy="24" r="13" fill="#ffefce"/><path d="M0 95Q60 78 120 91T240 88V120H0Z" fill="#edf4ff"/><path d="M62 89V48H177V91Z" fill="#b73935"/><path d="M52 49L84 19H156L189 49Z" fill="#285b48"/><path d="M75 28L84 19H156L165 28L143 25L120 31L97 25Z" fill="#fff"/><rect x="164" y="20" width="10" height="25" fill="#93535a"/><rect x="103" y="59" width="28" height="32" rx="8" fill="#e8b75d"/><path d="M76 58H94V73H76ZM141 58H159V73H141Z" fill="#ffeab0"/><path d="M85 58V73M76 65H94M150 58V73M141 65H159" stroke="#86553f" stroke-width="2"/><circle cx="120" cy="42" r="9" fill="#f2da9e"/><path d="M120 36V42L124 45" stroke="#385a48" stroke-width="2" fill="none"/><path d="M24 98V66L10 83H38L16 98H42L24 76" fill="#245c48"/><path d="M191 97V83H207V97Z" fill="#dfb65c"/><path d="M199 83V97M191 89H207" stroke="#b13a35" stroke-width="3"/></svg>
+            <img class="world-thumbnail" src="/assets/worlds/workshop-illustrated.jpg" width="1200" height="600" alt="" loading="lazy" decoding="async">
             <b>Santa’s Workshop</b>
             <span class="world-access paid-access">Season Pass</span>
           </button>
           <button type="button" class="theme-card premium" data-description="Leafy treehouses, waterfalls and jungle adventures" data-theme-pick="jungle">
-            <svg viewBox="0 0 240 120" aria-hidden="true"><rect width="240" height="120" fill="#164c47"/><path d="M0 84Q60 43 113 79T240 64V120H0Z" fill="#30745b"/><path d="M185 25Q173 55 185 94H201Q188 57 203 25Z" fill="#8fd5d1"/><path d="M65 106V28M142 104V23" stroke="#735130" stroke-width="12"/><g fill="#399566"><ellipse cx="48" cy="24" rx="35" ry="20"/><ellipse cx="88" cy="21" rx="32" ry="19"/><ellipse cx="140" cy="15" rx="38" ry="23"/></g><path d="M46 85V52H97V85ZM117 77V43H164V77Z" fill="#cba465"/><path d="M35 54L72 28L108 54L99 60L92 55L85 60L78 55L71 60L64 55L57 60L50 55L43 60Z M107 46L141 20L175 46L165 51L157 47L149 52L140 47L132 52L123 47L115 51Z" fill="#998044"/><path d="M61 85V66H79V85ZM132 77V56H148V77Z" fill="#206b65"/><path d="M44 86H101M115 78H167M77 88V108M64 92H77M64 99H77M64 106H77" stroke="#755737" stroke-width="4"/><path d="M96 79Q109 87 119 73" fill="none" stroke="#dac389" stroke-width="3"/><ellipse cx="205" cy="104" rx="25" ry="7" fill="#66bdb9"/></svg>
+            <img class="world-thumbnail" src="/assets/worlds/jungle-illustrated.jpg" width="1200" height="600" alt="" loading="lazy" decoding="async">
             <b>Treetop Jungle</b>
             <span class="world-access paid-access">Season Pass</span>
           </button>
           <button type="button" class="theme-card premium" data-description="Pastel shops, cherry blossoms and little lanterns" data-theme-pick="japan">
-            <svg viewBox="0 0 240 120" aria-hidden="true"><rect width="240" height="120" fill="#a6a8e0"/><circle cx="192" cy="29" r="19" fill="#ffe2ed"/><path d="M0 96Q100 81 240 94V120H0Z" fill="#fff2ed"/><path d="M37 101V71H96V101ZM120 99V61H181V99Z" fill="#fff3eb"/><path d="M30 71L66 43L104 71L98 79H37Z" fill="#f39dc0"/><path d="M112 61L150 30L190 61L184 69H120Z" fill="#bca4e9"/><path d="M29 67Q66 84 105 67M111 57Q150 76 191 57" fill="none" stroke="#875f94" stroke-width="4"/><path d="M54 101V84H80V101ZM137 99V78H165V99Z" fill="#bb9a98"/><path d="M50 80H84V89H50ZM133 74H169V83H133Z" fill="#91d3dc"/><path d="M67 80V89M151 74V83" stroke="#fff3eb" stroke-width="3"/><path d="M208 102L209 60L220 37M209 65L192 43" stroke="#79516d" stroke-width="5"/><g fill="#ffc1d9"><circle cx="192" cy="40" r="14"/><circle cx="215" cy="33" r="16"/><circle cx="226" cy="48" r="14"/><circle cx="204" cy="53" r="14"/></g><g fill="#ffedd9"><ellipse cx="42" cy="85" rx="5" ry="8"/><ellipse cx="177" cy="84" rx="5" ry="8"/></g><g fill="#ffd9e7"><ellipse cx="102" cy="98" rx="3" ry="2"/><ellipse cx="27" cy="42" rx="3" ry="2"/><ellipse cx="115" cy="26" rx="3" ry="2"/></g></svg>
+            <img class="world-thumbnail" src="/assets/worlds/japan-illustrated.jpg" width="1200" height="600" alt="" loading="lazy" decoding="async">
             <b>Kawaii Sakura Town</b>
             <span class="world-access paid-access">Season Pass</span>
           </button>
           <button type="button" class="theme-card premium" data-description="Glowing apartments, flying cars and a neon skyline" data-theme-pick="cyber">
-            <svg viewBox="0 0 240 120" aria-hidden="true"><rect width="240" height="120" fill="#130e2d"/><path d="M0 91H240V120H0Z" fill="#27223f"/><g fill="#292946"><path d="M8 81V21H43V81ZM51 81V7H82V81ZM163 82V17H193V82ZM202 82V3H235V82Z"/></g><path d="M16 30H23M29 42H36M16 55H23M59 21H66M69 35H76M59 49H66M171 27H179M182 41H188M211 17H218M222 30H229M211 47H218" stroke="#8fd9e8" stroke-width="4"/><path d="M47 102V66H100V102ZM126 101V62H180V101Z" fill="#4c527a"/><path d="M57 66V46H99V66ZM132 62V40H177V62Z" fill="#5c5a84"/><path d="M47 67H100V102H47Z M57 46H99M126 63H180V101H126Z M132 40H177" fill="none" stroke="#ff4bce" stroke-width="2"/><path d="M67 54H90M143 49H168" stroke="#51e2f1" stroke-width="4"/><path d="M65 102V78H82V102ZM145 101V75H163V101Z" fill="#22243c" stroke="#51e2f1" stroke-width="2"/><path d="M20 112H220M108 92L95 120M119 92V120M130 92L144 120" stroke="#454b7c" fill="none"/><path d="M94 26H120L128 31H87Z" fill="#7b6e9e"/><path d="M89 32H128M128 31H152" stroke="#5fe7f2" stroke-width="2"/></svg>
+            <img class="world-thumbnail" src="/assets/worlds/cyber-illustrated.jpg" width="1200" height="600" alt="" loading="lazy" decoding="async">
             <b>Neon City</b>
             <span class="world-access paid-access">Season Pass</span>
           </button>
           </div>
           <p class="selected-world" id="selectedWorld" aria-live="polite" aria-atomic="true"></p>
           <button type="button" class="btn ghost world-preview-button" id="worldPreviewBtn">👀 Preview this world</button>
-          <p class="pass-notice" id="worldPassNotice" hidden>Season Pass · A$12.95 once. Free to customise and preview; pay when you’re ready to share.</p>
+          <p class="pass-notice" id="worldPassNotice" hidden>Season Pass · A$6.99 once for up to 5 premium calendars this Christmas. Free to customise and preview; pay when you’re ready to share.</p>
         </section>
         <div class="world-picker-footer">
           <button type="button" class="btn primary big" id="goDoors">Fill my 24 doors ✨</button>
@@ -231,13 +219,16 @@
       <p class="lede" id="upWhy">You’ve used your 3 free photos.</p>
       <ul class="perks">
         <li>✨ <b>Seven exclusive worlds</b>: Gingerbread Lane, Toy Town, Space Christmas, Santa’s Workshop, Treetop Jungle, Kawaii Sakura Town and Neon City</li>
+        <li>🎁 <b>Up to 5 premium calendars</b> for this Christmas</li>
         <li>📸 <b>Unlimited photos</b> behind any door</li>
         <li>✨ No “Made with Tiny Doors” credit</li>
         <li>🎄 Keep it open until 31 January</li>
         <li>💛 One payment for this Christmas — <b>no subscription</b></li>
       </ul>
-      <button type="button" class="btn primary big" id="buyBtn">Unlock for A$12.95</button>
-      <p class="fine">Demo: no payment is taken. Stripe Checkout goes here.</p>
+      <button type="button" class="btn primary big" id="buyBtn">Unlock for A$6.99</button>
+      <p class="fine">Each activated calendar uses one of your 5 slots for this Christmas, even if deleted. Editing or resending it uses no extra slot.</p>
+      <p class="fine" id="checkoutNote">Demo: no payment is taken. Cloud accounts use Stripe Checkout.</p>
+      <p class="fine" id="checkoutMessage" role="status" aria-live="polite"></p>
       <button type="button" class="btn ghost" data-close>Maybe later</button>
     </div>
   </div>

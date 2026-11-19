@@ -1,27 +1,48 @@
-# Cloudflare launch setup
+# Tiny Doors launch setup
 
-Cloudflare Workers + Static Assets fits this project: the front end is plain HTML/CSS/JavaScript, and Three.js renders on the visitor's device. Use Supabase for accounts, calendars and private photos, and a Worker for Stripe and recipient access. No framework migration or Node server is needed.
+Cloudflare Workers + Static Assets supports this plain HTML/CSS/JavaScript project. Supabase stores creator accounts, calendars and private photos; the Worker handles Checkout, verified payments and read-only recipient links.
 
-## What is ready
+## Implemented
 
-- All nine world choices have illustrated thumbnails; free worlds and the seven-world Season Pass have separate sections.
-- A repeatable public-only `dist/` build, a pinned Wrangler dependency/lockfile, Node version, syntax checks and deployment tests.
-- A Cloudflare Worker with public configuration, health checks, authenticated share-link creation and account-free, read-only recipient access. Hosting uses the `ASSETS` binding; `/api/*` reaches the Worker.
-- Supabase magic-link sign-in, callback/error screens, restored sessions, account-specific calendar lists, cloud calendar/photo storage, and signed photo URLs.
-- `.env` for your local placeholders and `.env.example` for the tracked template. No keys are embedded in the built site.
-- A Supabase migration with creator-only calendars, separate server-managed entitlements, hashed share tokens, webhook deduplication and a private photo bucket.
+- Searchable English/French public homepages, search/social metadata, canonical/language tags, site identity structured data, sitemap/crawler rules, app/preview noindex protection and a complete favicon set. See [SEO.md](SEO.md).
+- Nine illustrated worlds, with two free and seven premium choices.
+- Supabase email magic-link sign-in, cloud save/reload, account-specific calendar lists and private photos.
+- Account-free recipient links with hashed tokens, expiry and signed photo URLs.
+- **A$6.99 once for a Christmas Season Pass covering up to 5 premium calendars**, all premium worlds, unlimited photos and no Tiny Doors credit. A creator can edit and resend each calendar without consuming more slots. Free calendars and drafts do not count. Explicit activation uses a seasonal slot permanently, including if the calendar is later deleted.
+- Authenticated Stripe Checkout, fixed return URLs, server-only price selection, signature-verified webhooks, server-confirmed return handling, durable checkout idempotency, transactional fulfillment and concurrent five-slot enforcement.
+- Full refunds revoke the account pass and its allocated calendar entitlements; partial refunds retain access. Refunded passes currently need support for repurchase in the same season.
+- English and French checkout/activation messages, including usage and exhaustion states.
+- Public-only `dist/` build, pinned dependencies, syntax/unit tests and optional live Supabase integration tests.
 
-## Current release boundary
+## Current release status — 19 November 2026
 
-**The default remains `APP_MODE=prototype`.** It uses IndexedDB and the demo upgrade, so its links work on the creating browser only. Set `APP_MODE=cloud` after applying the migration and configuring Supabase. Cloud mode uses the implemented sign-in, persistent storage and recipient-sharing paths. It refuses incomplete cloud configuration instead of silently falling back to local storage.
+**Custom domains are connected:** [tinydoors.app](https://tinydoors.app/) opens the public bilingual homepage over HTTPS (the editor is at /editor.html), and [www.tinydoors.app](https://www.tinydoors.app/) redirects to it while preserving paths and query parameters. They use the separate `tinydoors` Worker configured in `wrangler.production.jsonc`. Deploy subsequent production changes with `npm run deploy:production`; the default `npm run deploy:preview` still targets only the test preview. Production is configured for cloud accounts at APP_URL=https://tinydoors.app, with paid checkout disabled until live Stripe settings are installed.
 
-**Stripe Checkout is not implemented yet.** The cloud-mode upgrade button is disabled, and `/api/health` always reports `paidLaunchReady: false`. Adding Stripe keys does not implement payments. Credentials, email delivery and database policies must still be verified against your project before launch.
+The user confirmed preview email sign-in now works. Add the production `/auth.html`, `/auth.html?lang=en` and `/auth.html?lang=fr` URLs to Supabase's redirect allowlist and use https://tinydoors.app as Site URL when moving sign-in to the public domain. Keep the existing preview callback URLs for testing.
 
-The confirmed account model is **Supabase email magic-link sign-in for creators, with no account needed for recipients**. The migration assumes creators have an `auth.users` identity. No changes have been made to your live Supabase, Stripe or Cloudflare accounts.
+Local `.env` remains **APP_MODE=prototype**. It uses browser-only IndexedDB and a demo pass, so prototype links only work in the creating browser. Cloud mode is implemented and refuses incomplete configuration rather than falling back to local saves.
 
-## Install and preview
+The connected Supabase database has both migrations applied. Stripe's active test Price is one-time **AUD 699 cents**. The Worker bundle dry-run passes. `/api/health` reports configuration status and deliberately keeps `paidLaunchReady: false` until the remaining launch checks are complete.
 
-Use Node 24 (see `.node-version`).
+**Preview is deployed:** [open the editor](https://tinydoors-preview.christophe-cresson.workers.dev/editor.html?new). Cloudflare permissions now work, and the three private runtime secrets are installed. `keep_vars: true` in wrangler.jsonc preserves dashboard-configured runtime variables on subsequent deployments; a normal `npm run deploy:preview` was verified after setup.
+
+Stripe test webhook `we_1UdHiAFogonkf7hHdqw7Dkoh` is enabled at the preview's `/api/stripe/webhook` for the three supported events. Its signing secret is installed in Cloudflare and the ignored local .env; it is a hosted test secret, not the earlier CLI secret. Production still needs its own live webhook and signing secret.
+
+**Hosted checks passed:** cancellation returns to the saved calendar without using a slot; retry reuses the same session; a real AUD A$6.99 sandbox purchase returns automatically to the editor and activates one slot; its signed payment webhook was processed with no pending deliveries. A signed-out recipient opened the shared 3D calendar. A full sandbox refund arrived through the hosted webhook, revoked the pass and blocked the old premium link. All 38 tests pass, and test accounts/app fixtures were removed; no real money was charged. The preview and webhook remain deployed.
+
+**Production sign-in still needs its callback update:** preview email sign-in was confirmed working by the user. In [Supabase Auth URL Configuration](https://supabase.com/dashboard/project/sfrrucfzrqgyjltfkyrs/auth/url-configuration), add the production callback URLs listed above and verify a sign-in email on tinydoors.app. Before enabling live payments, separate preview/test data from production data, or explicitly exclude test purchases from production entitlement checks; the preview and production currently use the connected Supabase project.
+
+## Account and payment ownership
+
+The creator signs in with an email link. Supabase assigns a stable `auth.users.id`; calendars and the pass are attached to that ID, never to a browser or a client-supplied email address. Signing in with the same account on another device restores the collection. Recipients only need their read-only link.
+
+The server validates the user's Supabase token, calendar ownership and season. It retrieves the configured Stripe Price and requires one-time AUD 699 cents. Checkout uses card payments; Adaptive Pricing is explicitly disabled while fulfillment requires the exact AUD amount. Changing price/currency requires updating server validation and UI together.
+
+Return-page confirmation and webhooks retrieve authoritative Stripe state before granting the pass. Browser JSON cannot write a plan, claim another creator's payment, allocate a sixth calendar, or grant a pass from a success URL alone.
+
+## Local development
+
+Use Node 24 (see `.node-version`):
 
 ```sh
 npm ci
@@ -29,47 +50,44 @@ npm run check
 npm run dev
 ```
 
-Wrangler serves the local app, normally at `http://localhost:8787/editor.html?new`. Restart it or rebuild after source changes; this is intentionally a simple static build, not a live-reload framework.
+Open `http://localhost:8787/editor.html?new`. Rebuild/restart after source changes. Use this public-only Worker server once `.env` contains secrets; a static server pointed at the repository can expose dotfiles and has no Worker API.
 
-The existing `python3 -m http.server 5178` preview still works for source files, but has no Worker API. `.env` contains placeholders only. Once you add real credentials, use `npm run dev`: a general-purpose file server serving the repository root can expose dotfiles.
-
-## Preview deployment
+For restricted local environments where Wrangler cannot write its normal config directory:
 
 ```sh
-npx wrangler login
+XDG_CONFIG_HOME=/tmp/little-doors-config WRANGLER_SEND_METRICS=false npm run deploy:dry-run
+```
+
+`.env.example` lists all settings. `.env` is ignored by Git; `npm run check:env` prints missing/placeholder names without revealing values. Hosted Checkout does not require a browser Stripe publishable key.
+
+To test cloud mode locally, use a separate private environment file with `APP_MODE=cloud`, the Supabase settings, Stripe **test** key/Price and a Stripe CLI signing secret. `stripe listen --forward-to localhost:8787/api/stripe/webhook` forwards signed test events. Its `whsec_...` is separate from a hosted endpoint's signing secret. Localhost tests with production `APP_URL` must manually return to the local editor; hosted testing must verify the actual redirect.
+
+## Database
+
+These migrations are already applied to Tinydoors (`sfrrucfzrqgyjltfkyrs`); do not re-run them there:
+
+1. `supabase/migrations/20261118104307_launch_foundation.sql`
+2. `supabase/migrations/20261118105907_season_pass_checkout.sql`
+
+The first creates owner-isolated calendars, per-calendar entitlements, hashed share tokens, payment-event records and a private 10 MiB JPEG bucket. The second adds account/season passes, an immutable allocation ledger, checkout reservations and service-only transactional functions. New projects need both migrations in order. Existing browser drafts are not uploaded automatically.
+
+Every app table has RLS. Creators can manage only their calendars and read only their pass/slots. They cannot write payment data or invoke payment/activation functions directly. The Worker uses the server-only Supabase secret key. The three server-only tables intentionally have no browser grants/policies, explaining the informational [RLS-without-policy notice](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
+
+`node --env-file=.env tools/test-season-pass.mjs` optionally runs live database checks with temporary confirmed accounts, no emails and no Stripe charges. It removes fixtures in `finally`. It verifies ownership, RLS, seven concurrent requests yielding exactly five allocations, replay/refund behavior and checkout reservation concurrency.
+
+## Cloudflare preview
+
+The configured Worker name is `tinydoors-preview`. Deploy the Worker and **only `dist/`** as its static assets:
+
+```sh
+npm run check
 npm run deploy:dry-run
 npm run deploy:preview
 ```
 
-The configured Worker is `tinydoors-preview`; use its returned `workers.dev` URL and append `/editor.html?new`. To use Cloudflare's Git build integration, select this repository, build with `npm ci && npm run check && npm run build`, and deploy with `npx wrangler deploy`.
+Wrangler can use local login or local/CI `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. These two credentials are for deployment, not Worker bindings. For Git builds, build with `npm ci && npm run check && npm run build`, then deploy with `npx wrangler deploy`.
 
-Upload **only `dist/`** as static assets. The build intentionally excludes `.env`, Git metadata, SQL migrations, source tooling and this document. Keep the Worker alongside its static assets, rather than uploading the whole repository to Pages. Both Cloudflare Workers and Pages can host the front end, but the included deployment configuration targets Workers so API routes can live on the same origin.
-
-## Fill in the environment
-
-`.env` already exists with placeholders. If starting on a fresh checkout:
-
-```sh
-cp .env.example .env
-```
-
-| Setting | Where to find it | Intended use |
-| --- | --- | --- |
-| `APP_MODE` | Default `prototype`; change to `cloud` after Supabase setup | Select local prototype or account-backed storage |
-| `APP_URL` | `https://tinydoors.app` | Fixed origin for authentication and Checkout redirects |
-| `SUPABASE_URL` | Supabase project Data API settings | Project endpoint |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase API Keys | Browser/auth client; legacy `anon` also works |
-| `SUPABASE_SECRET_KEY` | Supabase API Keys | Worker only; privileged database and photo-signing requests |
-| `SUPABASE_STORAGE_BUCKET` | Default: `calendar-photos` | Must match the migration and Storage policies |
-| `STRIPE_SECRET_KEY` | Stripe API keys, initially test mode | Worker-only Checkout session creation |
-| `STRIPE_SEASON_PASS_PRICE_ID` | Stripe product catalogue | One-time A$12.95 Season Pass price, AUD |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook endpoint signing secret | Signature verification; separate test/live/CLI values |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account | Optional CLI/CI deployment credential |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API Tokens | Optional scoped Workers deployment credential |
-
-`npm run check:env` lists missing/placeholder names without printing values. It checks presence and HTTPS URL format; it cannot validate account access, a Stripe Price, database policies, or integration completeness. Hosted Stripe Checkout does not need a browser publishable key. Supabase-managed email sign-in does not require a separate email API key in this app; configure a production SMTP provider in Supabase Auth when enabling it.
-
-Wrangler reads `.env` for local development. It does **not** upload `.env` when deploying. After the backend is connected, put private values in the intended Worker's Cloudflare secrets:
+Deploying does **not** upload `.env`. Add Worker secrets:
 
 ```sh
 npx wrangler secret put SUPABASE_SECRET_KEY
@@ -77,26 +95,29 @@ npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-Use the Worker's Settings → Variables and Secrets for `APP_MODE`, `APP_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_STORAGE_BUCKET`, and `STRIPE_SEASON_PASS_PRICE_ID`. Keep Cloudflare deployment credentials in your local environment or CI secret store, not in the browser or Worker bindings. Use separate test and live Stripe credentials.
+Add Worker variables `APP_MODE=cloud`, `APP_URL` set to the exact preview HTTPS origin, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_STORAGE_BUCKET=calendar-photos` and `STRIPE_SEASON_PASS_PRICE_ID`. Keep test and live settings separate.
 
-## Finish the cloud integration before selling
+Register the reachable preview origin's `/api/stripe/webhook` in **Stripe test mode**, subscribing to:
 
-1. Review and apply `supabase/migrations/202611180001_launch_foundation.sql` to your intended Supabase project (the file has not been applied). It creates new tables and does not migrate existing IndexedDB calendars. The bucket name is fixed in this initial migration; change both SQL and environment together if using another name.
-2. Enable Email in Supabase Auth and configure production SMTP. Set Auth’s Site URL to the HTTPS `APP_URL` and add `APP_URL/auth.html` to the redirect allowlist. The default magic-link email works with the implemented implicit callback. For an explicit token-hash link that opens on any device, copy [the email template](magic-link-email.html) into Auth → Email Templates → Magic Link. Do not change it to a numeric OTP-only template: this UI expects a link.
-3. Set the Supabase environment values and switch `APP_MODE=cloud`. The implemented adapter in `js/cloud-db.js` takes over from `js/db.js`; it never uploads local IndexedDB calendars automatically. Sign in and create a new cloud calendar. Existing prototype drafts remain on their original browser. Test save/reload, owner isolation, sign-out, expired-link recovery and all five calendar/photo methods against your live policies.
-4. Verify the implemented Worker recipient endpoints: authenticated `POST /api/calendars/:id/share` creates a 256-bit token, stored only as a SHA-256 hash; `GET /api/shared/:token` returns read-only content and one-hour signed photo URLs. No public table/bucket policies are needed. Links expire after 31 January following the calendar year. The current date locks are still enforced by the viewer: add server-side filtering if future surprises must be inaccessible even to someone inspecting network responses or using `?preview`.
-5. Create the one-time AUD Stripe Price and an authenticated `POST /api/checkout` route. The server selects the Price from its own environment and verifies calendar ownership. Use `APP_URL` to build fixed success/cancel URLs. Connect `buyBtn` to this route and replace the cloud-mode “coming soon” state. Keep the prototype demo grant out of the cloud flow.
-6. Implement `POST /api/stripe/webhook` using Stripe's SDK: verify the signature against the **raw request body**, confirm the expected Price/currency/payment status and calendar owner, then transactionally record the event and activate the calendar entitlement. Handle duplicate/retried events, asynchronous payment success/failure and refunds. Never grant access just because the browser lands on the success URL.
-7. Subscribe the Stripe endpoint to the payment/refund events actually handled by that implementation. Do not configure an endpoint at the current placeholder URL: it returns 404 until implemented.
-8. Test on two browsers/devices: create → save → share → recipient opens the right doors/photos; owner A cannot read/edit owner B; a recipient cannot edit; unpaid clients cannot forge a pass; successful/retried/refunded test payments update access correctly. Verify mobile photo capture, 3D fallback and timezone boundaries.
-9. Update the current prototype notices, demo checkout copy and launch/privacy/refund terms to match the working service. Use live Stripe keys/Price/webhook secret only after a complete test purchase passes. Attach `tinydoors.app` as the Cloudflare custom domain. Set Supabase’s Site URL to `https://tinydoors.app`, allow `https://tinydoors.app/auth.html`, and use `https://tinydoors.app/api/stripe/webhook` once that endpoint is implemented.
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `charge.refunded`
 
-## Reference documentation
+Put that endpoint's signing secret in the preview Worker. Unpaid/failed payments never grant a pass. Checkout currently allows cards only; the async-success handler is present for future payment-method expansion.
 
-- [Cloudflare Static Assets bindings](https://developers.cloudflare.com/workers/static-assets/binding/)
-- [Cloudflare secrets and local environment files](https://developers.cloudflare.com/workers/configuration/secrets/)
-- [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
+## Before public launch
+
+1. Configure production SMTP in Supabase Auth. Set Site URL to `https://tinydoors.app`, allow `https://tinydoors.app/auth.html` (including language query variants where needed), and verify real delivery. The default implicit magic-link template works; [magic-link-email.html](magic-link-email.html) is an optional token-hash template for cross-device links. Do not use a numeric OTP-only template with this link UI.
+2. Verify the full preview flow: creator sign-in → save → test Checkout → five premium calendars → share → recipient on a different device; cancel/retry/refund, blocked sixth allocation, account isolation, private photos, mobile capture and 3D fallback.
+3. Decide and implement server-side future-door filtering if future surprises must remain secret from recipients inspecting network responses. Current date locks are in the browser.
+4. Add public privacy/refund/support information. Existing calendars expire at 1 February UTC following their Christmas year.
+5. Create the live one-time AUD A$6.99 Price and live webhook; use live keys only after test payment/refund verification. Attach `tinydoors.app` as a Cloudflare custom domain and verify HTTPS, sign-in callback and Checkout return URLs on it. Keep the preview on test Stripe values.
+
+## References
+
+- [Cloudflare Static Assets](https://developers.cloudflare.com/workers/static-assets/binding/)
+- [Cloudflare secrets](https://developers.cloudflare.com/workers/configuration/secrets/)
+- [Supabase passwordless email](https://supabase.com/docs/guides/auth/auth-email-passwordless)
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Supabase private storage](https://supabase.com/docs/guides/storage/buckets/fundamentals)
 - [Stripe Checkout fulfillment](https://docs.stripe.com/checkout/fulfillment)
 - [Stripe webhook verification and retries](https://docs.stripe.com/events/manage-webhook-endpoints)

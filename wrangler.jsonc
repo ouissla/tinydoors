@@ -2,13 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tinydoors-preview",
   "main": "server/worker.js",
+  "keep_vars": true,
   "compatibility_date": "2026-11-18",
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "html_handling": "none",
     "not_found_handling": "none",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   },
   "observability": { "enabled": true }
 }

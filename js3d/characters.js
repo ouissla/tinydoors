@@ -236,10 +236,17 @@ export function makeDrone(color = '#00e5ff') {
   part(gimbal, new THREE.CircleGeometry(0.065, 14), glow('#7af7ff', 2.6), 0, -0.02, 0.215);
   gimbal.rotation.x = 0.6;
   const rec = part(body, sph(0.04, 6, 4), glow('#ff2b5a', 3), 0.22, 0.12, 0.38);
-  const beam = new THREE.Mesh(new THREE.ConeGeometry(1.4, 5, 16, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-  beam.position.set(0, -2.6, 1.2);
-  beam.rotation.x = 0.45;
-  body.add(beam);
+  // Aim from the lamp's mounting point, rather than rotating an offset cone
+  // around its centre (which left its tip floating beside the drone).
+  const searchlight = pivot(body, 0, -0.12, 0.2);
+  searchlight.rotation.x = 0.45;
+  part(searchlight, cyl(0.12, 0.14, 0.1, 12), dark, 0, 0.05, 0);
+  const emitter = part(searchlight, new THREE.CircleGeometry(0.1, 16), glow(color, 1.8), 0, 0, 0);
+  emitter.rotation.x = Math.PI / 2;
+  const beamGeometry = new THREE.ConeGeometry(1.4, 5, 16, 1, true);
+  beamGeometry.translate(0, -2.5, 0); // The cone tip is exactly at the lamp, local (0, 0, 0).
+  const beam = new THREE.Mesh(beamGeometry, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  searchlight.add(beam);
   root.scale.setScalar(1.6);
   return { kind: 'drone', root, body, rotors, rec };
 }
