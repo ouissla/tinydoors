@@ -109,6 +109,21 @@ These migrations are already applied to Tinydoors (`sfrrucfzrqgyjltfkyrs`); do n
 
 The first creates owner-isolated calendars, per-calendar entitlements, hashed share tokens, payment-event records and a private 10 MiB JPEG bucket. The second adds account/season passes, an immutable allocation ledger, checkout reservations and service-only transactional functions. The third accepts 12 or 24 doors and enables private WebM/MP4 clips with the existing 10 MiB limit. New projects need all three migrations in order. Existing browser drafts are not uploaded automatically.
 
+**Not yet applied:** `supabase/migrations/20261121000000_season_pass_calendar_limit.sql` gives each Season Pass its own premium calendar limit (default 5, the paid amount). Apply it to Tinydoors before deploying the code that reads `calendar_limit`. New projects run it fourth.
+
+### Give an account more premium calendars
+
+To give an account (for example your own, for marketing calendars) more than five premium calendars for a Christmas, run this in the Supabase SQL editor after the migration above. Change the email, the season year (the Christmas the calendars are for) and the limit:
+
+```sql
+insert into public.season_passes (owner_id, season_year, stripe_checkout_session_id, stripe_payment_intent_id, status, expires_at, calendar_limit)
+select id, 2026, 'manual:' || id || ':2026', 'manual:' || id || ':2026', 'active', make_timestamptz(2027, 2, 1, 0, 0, 0, 'UTC'), 100
+from auth.users where email = 'you@example.com'
+on conflict (owner_id, season_year) do update set calendar_limit = excluded.calendar_limit;
+```
+
+If the account has no pass yet, this creates an active one without a Stripe payment. If it already bought one, only the limit changes. The editor then shows the new total, and each activated calendar still uses one slot.
+
 Every app table has RLS. Creators can manage only their calendars and read only their pass/slots. They cannot write payment data or invoke payment/activation functions directly. The Worker uses the server-only Supabase secret key. The three server-only tables intentionally have no browser grants/policies, explaining the informational [RLS-without-policy notice](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
 
 `node --env-file=.env tools/test-season-pass.mjs` optionally runs live database checks with temporary confirmed accounts, no emails and no Stripe charges. It removes fixtures in `finally`. It verifies ownership, RLS, seven concurrent requests yielding exactly five allocations, replay/refund behavior and checkout reservation concurrency.

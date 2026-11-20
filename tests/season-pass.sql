@@ -30,6 +30,10 @@ begin
   delete from public.calendars where id=prefix||5;
   outcome := public.activate_season_calendar(creator,prefix||6);
   if (outcome->>'code')::int<>409 then raise exception 'delete bypassed five calendar limit'; end if;
+  -- An operator can raise one account's allowance.
+  update public.season_passes set calendar_limit=6 where owner_id=creator and season_year=2090;
+  outcome := public.activate_season_calendar(creator,prefix||6);
+  if outcome->>'ok'<>'true' then raise exception 'raised limit not honoured %',outcome; end if;
   begin
     update public.calendars set document=jsonb_set(document,'{year}','2091') where id=prefix||1;
     raise exception 'year changed';

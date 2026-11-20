@@ -31,9 +31,10 @@ async function calendarFor(client, owner, id) {
   return row;
 }
 export async function passStatus(client, owner, year) {
-  const pass = checked(await client.from('season_passes').select('status,expires_at').eq('owner_id', owner).eq('season_year', year).maybeSingle());
+  const pass = checked(await client.from('season_passes').select('status,expires_at,calendar_limit').eq('owner_id', owner).eq('season_year', year).maybeSingle());
   const slots = checked(await client.from('season_pass_calendars').select('calendar_id').eq('owner_id', owner).eq('season_year', year));
-  return { year, refunded: pass?.status === 'revoked', active: pass?.status === 'active' && Date.parse(pass.expires_at) > Date.now(), used: slots.length, limit: 5, remaining: Math.max(0, 5 - slots.length), calendars: slots.map((slot) => slot.calendar_id) };
+  const limit = pass?.calendar_limit || 5;
+  return { year, refunded: pass?.status === 'revoked', active: pass?.status === 'active' && Date.parse(pass.expires_at) > Date.now(), used: slots.length, limit, remaining: Math.max(0, limit - slots.length), calendars: slots.map((slot) => slot.calendar_id) };
 }
 export async function activateCalendar(client, owner, id) {
   const result = checked(await client.rpc('activate_season_calendar', { p_owner: owner, p_calendar: id }));

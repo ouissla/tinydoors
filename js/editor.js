@@ -296,7 +296,7 @@
     const notice = $('doorsPassNotice');
     notice.hidden = !needsPass();
     notice.textContent = seasonPass?.active
-      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of 5 slots are available.', { remaining: seasonPass.remaining }) : tr('All 5 premium calendars are used. Keep editing those calendars, or choose a free world for this one.'))
+      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of {limit} slots are available.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 }) : tr('All {limit} premium calendars are used. Keep editing those calendars, or choose a free world for this one.', { limit: seasonPass.limit || 5 }))
       : tr("Season Pass selected · {price} once for up to 5 premium calendars this Christmas. Free to customise and preview; pay when you’re ready to share.", { price: priceLabel() });
   }
   function openPreview(src, title) {
@@ -909,11 +909,11 @@
     const year = cal?.year || (now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear());
     seasonPass = await A.Auth.request('/api/season-pass?year=' + year);
     $('accountPassStatus').textContent = seasonPass.active
-      ? tr('Christmas {year} Season Pass · {used} of 5 premium calendars used', { year, used: seasonPass.used })
+      ? tr('Christmas {year} Season Pass · {used} of {limit} premium calendars used', { year, used: seasonPass.used, limit: seasonPass.limit || 5 })
       : seasonPass.refunded ? tr('Christmas {year} · Season Pass refunded', { year }) : tr('Christmas {year} · Free account', { year });
     if (cal) cal.plan = seasonPass.active && seasonPass.calendars.includes(cal.id) ? 'season' : 'free';
     renderCheckoutButton();
-    if (seasonPass.active) $('checkoutNote').textContent = tr('{remaining} of 5 premium calendars available. Activating this calendar uses one slot; editing and resending it do not.', { remaining: seasonPass.remaining });
+    if (seasonPass.active) $('checkoutNote').textContent = tr('{remaining} of {limit} premium calendars available. Activating this calendar uses one slot; editing and resending it do not.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 });
   }
   async function activatePremium() {
     clearTimeout(saveT);
@@ -1008,7 +1008,7 @@
     $('shareGateNotice').hidden = !gated && !guest;
     $('guestSave').hidden = !guest;
     $('shareGateNotice').textContent = seasonPass?.active
-      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of 5 slots are available.', { remaining: seasonPass.remaining }) : tr('All 5 premium calendars are used. Keep editing those calendars, or choose a free world for this one.'))
+      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of {limit} slots are available.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 }) : tr('All {limit} premium calendars are used. Keep editing those calendars, or choose a free world for this one.', { limit: seasonPass.limit || 5 }))
       : seasonPass?.refunded ? tr('Your Season Pass was refunded. Your calendars are saved; choose a free world to share this calendar, or contact support.')
       : guest ? tr('Your calendar is saved on this device. Save it to your account to get their private link.')
       : tr('Free to customise and preview. Unlock the Season Pass below when you’re ready to share.');
@@ -1022,7 +1022,7 @@
 
     const up = $('upgradeCard');
     if (cal.plan === 'season') {
-      up.innerHTML = `<div class="paid"><span>🎉</span><div><b>${tr("Season Pass active")}</b><small>${tr("Every world, unlimited photos, no credit, open until 31 January. This calendar uses 1 of your 5 seasonal slots.")}</small></div></div>`;
+      up.innerHTML = `<div class="paid"><span>🎉</span><div><b>${tr("Season Pass active")}</b><small>${tr("Every world, unlimited photos, no credit, open until 31 January. This calendar uses 1 of your {limit} seasonal slots.", { limit: seasonPass?.limit || 5 })}</small></div></div>`;
     } else {
       up.innerHTML = `
         <p class="kicker">${gated ? tr("Season Pass selected") : tr("Free calendar")}</p>
@@ -1040,7 +1040,7 @@
         </div>
         ${gated ? `<p class="fine">${tr("Your messages and personal edits stay saved. Free sharing includes up to 3 photos; remove any extra photos before sharing.")}</p>` : ''}`;
       if (A.DB.isCloud && seasonPass?.active) {
-        $('upBtn').textContent = seasonPass.remaining > 0 ? tr('Activate premium · {remaining} of 5 available', { remaining: seasonPass.remaining }) : tr('All 5 premium calendars used');
+        $('upBtn').textContent = seasonPass.remaining > 0 ? tr('Activate premium · {remaining} of {limit} available', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 }) : tr('All {limit} premium calendars used', { limit: seasonPass.limit || 5 });
         $('upBtn').disabled = seasonPass.remaining === 0;
       }
       if (A.DB.isCloud && seasonPass?.refunded) { $('upBtn').textContent = tr('Season Pass refunded'); $('upBtn').disabled = true; }
