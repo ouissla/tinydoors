@@ -703,7 +703,12 @@ body.editor.sheet-open { overflow: hidden; }
 .account-calendars { margin-top: 18px; }
 .account-calendars h2 { margin: 0; font-size: 1rem; font-weight: 900; }
 #accountCalendars { display: grid; gap: 8px; margin-top: 12px; }
-#accountCalendars a { color: var(--btn); font-weight: 800; padding: 8px 0; }
+#accountCalendars .account-calendar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#accountCalendars a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--btn); font-weight: 800; padding: 8px 0; }
+.account-copy { flex-shrink: 0; padding: 6px 12px; border: 2px solid var(--line); border-radius: 999px; background: #fff; color: var(--panel-ink); font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; }
+.account-copy:disabled { opacity: .6; cursor: progress; }
+.copy-calendar { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.copy-calendar .fine { margin-top: 8px; }
 .auth-result { max-width: 540px; margin-top: 12vh; }
 @media (max-width:560px) { .account-email-row { flex-direction: column; } .account-panel .ed-h2 { font-size: 1.5rem; } }
 

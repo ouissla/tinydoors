@@ -81,6 +81,12 @@
 
     async putVideo(blob) { return this.putPhoto(blob); },
 
+    // A separate copy of a photo or video, so each calendar can replace or delete its own.
+    async copyMedia(id) {
+      const blob = await this.getPhotoBlob(id);
+      return blob ? this.putPhoto(blob) : null;
+    },
+
     async getPhotoURL(id) {
       if (!id) return null;
       const r = await tx('photos', 'readonly', (s, mem) => (s ? s.get(id) : { result: mem.get(id) }));

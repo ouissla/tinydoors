@@ -11,7 +11,7 @@ async function adapter({queryError=null,sessionError=null}={}) {
     DB:{newId:()=> 'random',getCalendar(){state.localCalls++;},saveCalendar(){state.localCalls++;}},
     Auth:{ready:Promise.resolve(),mode:'cloud',user,config:{photoBucket:'calendar-photos'},async session(){if(sessionError)throw sessionError;return {user};},
       client:{from(){const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:row,error:queryError};},async upsert(value){state.writes.push(value);return {data:value,error:queryError};}};return q;},
-        storage:{from(){return {async upload(path,blob,options){state.uploads.push({path,blob,options});return {data:{path},error:null};},async remove(paths){state.deleted.push(...paths);return {data:[],error:null};}};}}}},
+        storage:{from(){return {async upload(path,blob,options){state.uploads.push({path,blob,options});return {data:{path},error:null};},async remove(paths){state.deleted.push(...paths);return {data:[],error:null};},async copy(from,to){state.copies=(state.copies||[]).concat([[from,to]]);return {data:{path:to},error:null};}};}}}},
   };
   const context=vm.createContext({window:{Advent:A},document:{body:{classList:{contains:()=>true}}},location:{search:''},URLSearchParams,structuredClone,fetch(){throw Error('unexpected fetch');},Date,Map,URL});
   vm.runInContext(source,context);
@@ -96,4 +96,13 @@ test('signing in moves a guest calendar, its photos and videos into the account 
  assert.equal(state.writes[0].owner_id,'creator-id');assert.equal(state.writes[0].document.plan,undefined);
  assert.deepEqual(state.localDeleted.sort(),['p1','v1']);assert.deepEqual(state.localCalendarsDeleted,['guest1234']);
  assert.equal(await db.adoptGuestCalendar('missing'),null);
+});
+
+test('copying media duplicates the creator’s own file to a new path with the same type',async()=>{
+ const {db,state}=await adapter();
+ assert.equal(await db.copyMedia('creator-id/old.mp4'),'creator-id/random.mp4');
+ assert.equal(await db.copyMedia('creator-id/old.jpg'),'creator-id/random.jpg');
+ assert.deepEqual(state.copies,[['creator-id/old.mp4','creator-id/random.mp4'],['creator-id/old.jpg','creator-id/random.jpg']]);
+ await assert.rejects(()=>db.copyMedia('another-owner/photo.jpg'));
+ assert.equal(state.copies.length,2);
 });

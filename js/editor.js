@@ -168,7 +168,16 @@
           const link = document.createElement('a');
           link.href = A.I18n.url('editor.html?c=' + encodeURIComponent(item.id) + '&step=doors');
           link.textContent = (item.to || tr("Your calendar")) + ' · ' + (A.THEMES[item.theme]?.name || tr("Calendar"));
-          $('accountCalendars').append(link);
+          const copy = document.createElement('button');
+          copy.type = 'button';
+          copy.className = 'account-copy';
+          copy.textContent = tr('Make a copy');
+          copy.setAttribute('aria-label', tr('Make a copy of {name}', { name: item.to || tr("Your calendar") }));
+          copy.addEventListener('click', () => copyCalendar(item.id, copy));
+          const row = document.createElement('div');
+          row.className = 'account-calendar';
+          row.append(link, copy);
+          $('accountCalendars').append(row);
         });
         if (!calendars.length) $('accountCalendars').textContent = tr("Your first calendar starts below.");
       } catch { $('accountCalendars').textContent = tr("Couldn’t load your calendars. Refresh to try again."); }
@@ -191,14 +200,50 @@
       $('accountMessage').setAttribute('role', 'alert');
     }
   }
+  // Start a calendar for someone else from one already made: same world, doors, photos and videos.
+  // Photos and videos are copied too, so changing one calendar never removes media from the other.
+  let copying = false;
+  async function copyCalendar(sourceId, button) {
+    if (copying) return;
+    if (A.DB.isGuest) { promptSignIn('copy'); return; }
+    copying = true;
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = tr('Copying…');
+    try {
+      if (cal && cal.id === sourceId) { clearTimeout(saveT); await persist(); }
+      const source = cal && cal.id === sourceId ? structuredClone(cal) : await A.DB.getCalendar(sourceId);
+      if (!source) throw new Error('missing');
+      const now = new Date();
+      const { plan, updatedAt, ...rest } = source;
+      const copy = { ...rest, id: A.DB.newId(), to: '', createdAt: Date.now(), year: now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear() };
+      const copied = new Map();
+      for (const item of [...copy.days, ...Object.values(copy.savedDays || {}).flat()]) {
+        for (const field of ['photoId', 'videoId']) {
+          if (!item[field]) continue;
+          if (!copied.has(item[field])) copied.set(item[field], await A.DB.copyMedia(item[field]));
+          if (copied.get(item[field])) item[field] = copied.get(item[field]); else delete item[field];
+        }
+      }
+      await A.DB.saveCalendar(copy);
+      A.store.set(LAST, copy.id);
+      location.href = A.I18n.url('editor.html?c=' + encodeURIComponent(copy.id) + '&step=start&copied=1');
+    } catch {
+      toast(tr('Couldn’t copy that calendar. Please try again.'));
+      button.disabled = false;
+      button.textContent = label;
+      copying = false;
+    }
+  }
   // Ask for an account only when it's needed, and come back to the same step after the email link.
   function promptSignIn(next) {
     if (cal) {
       clearTimeout(saveT);
       persist().then(() => A.store.set(GUEST, cal.id)).catch(() => {});
-      A.store.set(GUEST_NEXT, next === 'checkout' ? 'share' : next || step);
+      A.store.set(GUEST_NEXT, next === 'checkout' || next === 'copy' ? 'share' : next || step);
     }
     A.Auth.prompt(next === 'checkout' ? tr('Save your calendar to your account, then unlock the Season Pass.')
+      : next === 'copy' ? tr('Save your calendar to your account to make copies for other people.')
       : next === 'share' ? tr('Save your calendar to your account to get their private link.')
       : cal ? tr('Don’t lose your progress: save your calendar to your account.') : tr('Sign in to see your saved calendars on any device.'));
   }
@@ -1054,6 +1099,7 @@
 
   $('guestSave').addEventListener('click', () => promptSignIn('share'));
   $('tz').addEventListener('change', (e) => { cal.tz = e.target.value; save(); });
+  $('copyCalendar').addEventListener('click', (e) => copyCalendar(cal.id, e.currentTarget));
   $('copyBtn').addEventListener('click', async () => {
     if (needsPass() || !$('shareLink').value) return;
     const link = $('shareLink').value;
@@ -1109,7 +1155,14 @@
     }
   }
   const startStep = ['doors', 'share'].includes(adoptedNext) ? adoptedNext : params.get('step');
-  go(cal ? (['doors', 'share'].includes(startStep) ? startStep : 'doors') : 'start', true);
+  go(cal ? (['start', 'doors', 'share'].includes(startStep) ? startStep : 'doors') : 'start', true);
   if (cal) $('saved').textContent = tr("Saved ✓");
+  if (cal && params.has('copied')) {
+    toast(tr('Copy ready, with every door, photo and video. Who’s this one for?'));
+    $('fTo').focus();
+    const url = new URL(location.href);
+    url.searchParams.delete('copied');
+    history.replaceState(null, '', url);
+  }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => step === 'doors' && layoutGrid());
 })();

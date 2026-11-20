@@ -69,6 +69,16 @@
         checked(await bucket().upload(path, blob, { contentType: type, upsert: false }));
         return path;
       },
+      // Copy a photo or video inside storage, so each calendar can replace or delete its own.
+      async copyMedia(path) {
+        if (!path) return null;
+        if (guest()) return local.copyMedia(path);
+        const user = await owned();
+        if (!path.startsWith(user.id + '/')) throw new Error('This photo belongs to another account.');
+        const copy = user.id + '/' + local.newId(24) + (path.match(/\.(jpg|webm|mp4)$/)?.[0] || '.jpg');
+        checked(await bucket().copy(path, copy));
+        return copy;
+      },
       async getPhotoURL(path) {
         if (!path) return null;
         if (sharedPhotos.has(path)) return sharedPhotos.get(path);
