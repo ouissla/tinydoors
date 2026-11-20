@@ -10,6 +10,9 @@
   const SIZES = [6, 14, 30];
   const MAX_POINTS = 8000; // Keeps a busy drawing to a few tens of kilobytes.
   const PAPER = '#fffdf7';
+  const MAX_PAUSE = 700; // Long pauses while drawing are shortened to this in the replay (ms).
+  const SPEED = 3; // The replay runs at least this many times faster than it was drawn…
+  const LONGEST = 8000, SHORTEST = 1500; // …and lasts between these (ms) whenever it can.
 
   // Only well-formed strokes from the palette survive, so a stored document can't inject anything odd.
   function clean(strokes) {
@@ -24,9 +27,21 @@
         if (!Number.isFinite(x) || !Number.isFinite(y)) break;
         p.push(Math.max(0, Math.min(W, x)), Math.max(0, Math.min(H, y)));
       }
-      if (p.length) out.push({ c: s.c, w: s.w, p });
+      if (p.length) {
+        const st = { c: s.c, w: s.w, p };
+        // Timing: when the stroke started (t) and when each point was drawn after that (d), in ms.
+        const d = Array.isArray(s.d) ? s.d.slice(0, p.length / 2).map(Math.round) : null;
+        if (Number.isFinite(s.t) && s.t >= 0 && d && d.length === p.length / 2 && d.every((v, i) => Number.isFinite(v) && v >= (i ? d[i - 1] : 0))) {
+          st.t = Math.round(s.t);
+          st.d = d;
+        }
+        out.push(st);
+      }
       if (budget <= 0) break;
     }
+    // Timing is all or nothing, and strokes must run in order, or the replay falls back to a steady pace.
+    const timed = out.every((st, i) => 'd' in st && (!i || st.t >= out[i - 1].t));
+    if (!timed) out.forEach((st) => { delete st.t; delete st.d; });
     return out;
   }
   const pointCount = (strokes) => strokes.reduce((n, s) => n + s.p.length / 2, 0);
@@ -58,26 +73,49 @@
   }
   function drawAll(g, strokes) { paper(g); strokes.forEach((s) => stroke(g, s)); }
 
-  // Replays the drawing as if it were being drawn, in about 2–5 seconds.
+  // When each point appears in the replay, in drawing time (ms), with long pauses shortened.
+  // Drawings saved without timing get a steady pace instead.
+  function timeline(strokes) {
+    const total = pointCount(strokes);
+    if (strokes.length && 'd' in strokes[0]) {
+      let clock = 0, lastEnd = null;
+      return strokes.map((s) => {
+        clock += lastEnd === null ? 0 : Math.min(MAX_PAUSE, Math.max(0, s.t - lastEnd));
+        let prev = 0;
+        const times = s.d.map((v) => (clock += Math.min(MAX_PAUSE, v - prev), prev = v, clock));
+        lastEnd = s.t + s.d[s.d.length - 1];
+        return times;
+      });
+    }
+    const step = Math.max(2000, Math.min(5000, total * 6)) * SPEED / Math.max(1, total);
+    let i = 0;
+    return strokes.map((s) => s.p.filter((_, j) => j % 2 === 0).map(() => i++ * step));
+  }
+
+  // Replays the drawing as it was drawn, sped up.
   function replay(canvas, strokes, onDone) {
     const g = setup(canvas);
-    const total = pointCount(strokes);
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!total || reduce) { drawAll(g, strokes); onDone && onDone(); return () => {}; }
-    const ms = Math.max(2000, Math.min(5000, total * 6));
+    if (!pointCount(strokes) || reduce) { drawAll(g, strokes); onDone && onDone(); return () => {}; }
+    const times = timeline(strokes);
+    const length = Math.max(1, times[times.length - 1].at(-1));
+    let speed = Math.max(SPEED, length / LONGEST);
+    if (length / speed < SHORTEST) speed = Math.max(1, length / SHORTEST);
+    const ms = length / speed;
     let raf = 0, start = 0;
     const frame = (t) => {
       start ||= t;
-      let left = Math.ceil(total * Math.min(1, (t - start) / ms));
+      const now = (t - start) * speed;
       paper(g);
-      for (const s of strokes) {
-        const n = s.p.length / 2;
-        stroke(g, s, left);
-        left -= n;
-        if (left <= 0) break;
+      for (let i = 0; i < strokes.length; i++) {
+        const ts = times[i];
+        if (ts[0] > now) break;
+        let n = 1;
+        while (n < ts.length && ts[n] <= now) n++;
+        stroke(g, strokes[i], n);
       }
       if (t - start < ms) raf = requestAnimationFrame(frame);
-      else onDone && onDone();
+      else { drawAll(g, strokes); onDone && onDone(); }
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
@@ -87,6 +125,11 @@
   function pad(host, initial, onChange) {
     let strokes = clean(initial);
     let color = COLORS[0], size = SIZES[1];
+    // New strokes continue the existing drawing's clock, just after its last line.
+    const last = strokes.at(-1);
+    const resumeAt = last && 'd' in last ? last.t + last.d.at(-1) + 400 : 0;
+    let sessionStart = null;
+    const clock = (e) => resumeAt + Math.round(e.timeStamp - sessionStart);
     host.classList.add('draw-pad');
     host.innerHTML = `
       <canvas class="draw-canvas" aria-label="${tr('Drawing area')}"></canvas>
@@ -133,7 +176,8 @@
       e.preventDefault();
       id = e.pointerId;
       canvas.setPointerCapture(id);
-      cur = { c: color, w: size, p: at(e) };
+      sessionStart ??= e.timeStamp;
+      cur = { c: color, w: size, p: at(e), t: clock(e), d: [0] };
       strokes.push(cur);
       stroke(g, cur);
     });
@@ -147,6 +191,7 @@
         g.strokeStyle = cur.c; g.lineWidth = cur.w;
         g.beginPath(); g.moveTo(lx, ly); g.lineTo(x, y); g.stroke();
         cur.p.push(Math.max(0, Math.min(W, x)), Math.max(0, Math.min(H, y)));
+        cur.d.push(Math.max(cur.d.at(-1), clock(ev) - cur.t));
       }
     });
     const end = (e) => {
