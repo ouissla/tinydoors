@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- Product Hunt gallery slides (1270×760). Render one slide with ?s=1 … ?s=6.
+     Regenerate: see marketing/launch/README.md -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tiny Doors gallery</title>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Nunito:wght@600;700;800;900&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root { --navy:#101a3e; --navy2:#1d2c57; --cream:#fff1cf; --red:#c8473d; --coral:#e56651; --gold:#ffcf6b; --muted:#c9cde0; }
+  * { box-sizing:border-box; margin:0; }
+  html, body { width:1270px; height:760px; overflow:hidden; background:var(--navy); color:var(--cream); font-family:Nunito, sans-serif; }
+  .slide { display:none; position:relative; width:1270px; height:760px; overflow:hidden;
+    background: radial-gradient(900px 600px at 85% 20%, #263964 0, transparent 60%), var(--navy); }
+  .slide.on { display:block; }
+  h1 { font-family:'Bagel Fat One', sans-serif; font-weight:400; font-size:54px; line-height:1.02; letter-spacing:-.5px; }
+  h1 em { font-style:normal; color:var(--gold); }
+  p.sub { font-size:23px; font-weight:700; color:var(--muted); margin-top:14px; line-height:1.35; }
+  .brand { position:absolute; left:48px; bottom:34px; display:flex; align-items:center; gap:10px; font-weight:900; font-size:22px; }
+  .brand svg { width:34px; height:34px; }
+  .url { position:absolute; right:48px; bottom:30px; background:var(--red); color:#fff9ed; font-weight:900; font-size:20px; padding:10px 22px; border-radius:99px; }
+  .shot { border-radius:18px; box-shadow:0 30px 70px rgba(0,0,0,.45), 0 0 0 3px rgba(255,241,207,.18); display:block; object-fit:cover; }
+  .star { position:absolute; color:var(--gold); font-size:26px; }
+  .pill { display:inline-block; background:rgba(255,207,107,.16); color:var(--gold); font-weight:900; font-size:16px; letter-spacing:1.5px; text-transform:uppercase; padding:7px 14px; border-radius:99px; margin-bottom:18px; }
+
+  /* 1 hero */
+  #s1 .txt { position:absolute; left:48px; top:56px; width:430px; }
+  #s1 .shot { position:absolute; right:-40px; top:70px; width:820px; height:491px; }
+  #s1 ul { list-style:none; padding:0; margin-top:26px; font-weight:800; font-size:21px; line-height:1.9; }
+  /* 2 doors */
+  #s2 .head, #s3 .head, #s4 .head, #s5 .head, #s6 .head { position:absolute; left:48px; top:44px; right:48px; }
+  #s2 .row { position:absolute; left:48px; right:48px; top:210px; display:flex; gap:22px; }
+  #s2 .row figure { flex:1; }
+  #s2 .row .shot { width:100%; height:390px; object-position:center; }
+  #s2 figcaption, #s5 figcaption { text-align:center; font-weight:900; font-size:20px; margin-top:14px; }
+  /* 3 worlds */
+  #s3 .grid { position:absolute; left:48px; right:48px; top:190px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  #s3 .grid div { position:relative; }
+  #s3 .grid .shot { width:100%; height:150px; border-radius:12px; }
+  #s3 .grid span { position:absolute; left:10px; bottom:8px; background:rgba(16,26,62,.82); font-weight:900; font-size:15px; padding:4px 10px; border-radius:99px; }
+  #s3 .grid span b { color:var(--gold); }
+  /* 4 editor */
+  #s4 .shot { position:absolute; left:48px; top:200px; width:760px; height:455px; object-position:top left; }
+  #s4 ol { position:absolute; left:875px; top:225px; width:350px; padding:0; list-style:none; counter-reset:n; }
+  #s4 li { counter-increment:n; font-weight:800; font-size:20px; line-height:1.35; margin-bottom:26px; padding-left:56px; position:relative; color:var(--muted); }
+  #s4 li b { display:block; color:var(--cream); font-size:23px; font-weight:900; }
+  #s4 li::before { content:counter(n); position:absolute; left:0; top:2px; width:40px; height:40px; border-radius:50%; background:var(--red); color:#fff; font-family:'Bagel Fat One'; font-size:22px; display:grid; place-items:center; }
+  /* 5 phone */
+  #s5 .phones { position:absolute; left:0; right:0; top:180px; display:flex; justify-content:center; gap:60px; }
+  #s5 .phone { width:250px; height:500px; border-radius:36px; padding:9px; background:#0a0f26; box-shadow:0 30px 70px rgba(0,0,0,.5), 0 0 0 3px rgba(255,241,207,.2); }
+  #s5 .phone img { width:100%; height:100%; object-fit:cover; object-position:top; border-radius:28px; display:block; }
+  #s5 .side { position:absolute; top:250px; width:260px; font-weight:800; font-size:20px; line-height:1.5; color:var(--muted); }
+  #s5 .side b { color:var(--cream); display:block; font-size:24px; font-weight:900; margin-bottom:4px; }
+  /* 6 pricing */
+  #s6 .cards { position:absolute; left:48px; right:48px; top:215px; display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+  #s6 .card { border-radius:22px; padding:30px 34px; background:rgba(255,241,207,.07); border:2px solid rgba(255,241,207,.16); min-height:400px; position:relative; overflow:hidden; }
+  #s6 .card.gold { border-color:var(--gold); background:linear-gradient(160deg, rgba(255,207,107,.16), rgba(255,207,107,.03)); }
+  #s6 .card h2 { font-family:'Bagel Fat One'; font-weight:400; font-size:34px; }
+  #s6 .price { font-family:'Bagel Fat One'; font-size:58px; color:var(--gold); margin:6px 0 10px; }
+  #s6 .price small { font-family:Nunito; font-size:20px; color:var(--muted); font-weight:800; }
+  #s6 .card ul { padding-left:22px; font-weight:800; font-size:20px; line-height:1.75; }
+  #s6 .thumbs { position:absolute; right:-30px; bottom:-20px; display:flex; gap:8px; transform:rotate(-6deg); opacity:.9; }
+  #s6 .thumbs img { width:150px; height:90px; object-fit:cover; border-radius:10px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#1d2c57"/><path d="M14 55V25a18 18 0 0 1 36 0v30Z" fill="#fff1cf"/><path d="M20 55V26a12 12 0 0 1 24 0v29Z" fill="#c8473d"/><path d="M24 55V29a8 8 0 0 1 8-8v34Z" fill="#e56651"/><circle cx="37" cy="38" r="3" fill="#ffcf6b"/><path d="m49 8 1.7 4.3L55 14l-4.3 1.7L49 20l-1.7-4.3L43 14l4.3-1.7Z" fill="#ffcf6b"/></symbol></svg>
+
+<section class="slide" id="s1">
+  <div class="txt">
+    <span class="pill">Digital advent calendar</span>
+    <h1>24 little doors.<br><em>One big smile.</em></h1>
+    <p class="sub">Fill a tiny 3D village with your photos, notes and mini games. Send one link. A new door opens every day in December.</p>
+    <ul><li>📸 Your photos &amp; words</li><li>🎲 Mini games behind the doors</li><li>🔗 No app or account to open it</li></ul>
+  </div>
+  <img class="shot" src="../screenshots/world-snow.jpg" alt="">
+</section>
+
+<section class="slide" id="s2">
+  <div class="head"><span class="pill">Behind every door</span><h1>A little surprise, <em>every single day</em></h1></div>
+  <div class="row">
+    <figure><img class="shot" src="../screenshots/open-snow-9.jpg" style="object-position:50% 50%;object-fit:cover" alt=""><figcaption>📸 Wipe the frost off a photo</figcaption></figure>
+    <figure><img class="shot" src="../screenshots/open-snow-8.jpg" alt=""><figcaption>🎲 Play a mini game</figcaption></figure>
+    <figure><img class="shot" src="../screenshots/open-snow-24.jpg" alt=""><figcaption>💌 Read a Christmas Eve letter</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" id="s3">
+  <div class="head"><span class="pill">Nine worlds</span><h1>A world for <em>every kind of Christmas</em></h1></div>
+  <div class="grid">
+    <div><img class="shot" src="../screenshots/world-snow.jpg" alt=""><span>Snowy Village · <b>Free</b></span></div>
+    <div><img class="shot" src="../screenshots/world-summer.jpg" alt=""><span>Summer Christmas · <b>Free</b></span></div>
+    <div><img class="shot" src="../screenshots/world-gingerbread.jpg" alt=""><span>Gingerbread Lane</span></div>
+    <div><img class="shot" src="../screenshots/world-toys.jpg" alt=""><span>Toy Town</span></div>
+    <div><img class="shot" src="../screenshots/world-space.jpg" alt=""><span>Space Christmas</span></div>
+    <div><img class="shot" src="../screenshots/world-workshop.jpg" alt=""><span>Santa’s Workshop</span></div>
+    <div><img class="shot" src="../screenshots/world-jungle.jpg" alt=""><span>Treetop Jungle</span></div>
+    <div><img class="shot" src="../screenshots/world-japan.jpg" alt=""><span>Kawaii Sakura Town</span></div>
+    <div><img class="shot" src="../screenshots/world-cyber.jpg" alt=""><span>Neon City</span></div>
+  </div>
+</section>
+
+<section class="slide" id="s4">
+  <div class="head"><span class="pill">Made in minutes</span><h1>All 24 doors are filled. <em>You make them personal.</em></h1></div>
+  <img class="shot" src="../screenshots/editor-start.jpg" alt="">
+  <ol>
+    <li><b>Choose their world</b>Snowy village, sunny beach, or seven more.</li>
+    <li><b>Tap any door</b>Add a photo, a note, a voucher or a game.</li>
+    <li><b>Send one link</b>Doors open at midnight in their timezone.</li>
+  </ol>
+</section>
+
+<section class="slide" id="s5">
+  <div class="head" style="text-align:center"><span class="pill">For anyone, anywhere</span><h1>Opens in any browser. <em>No app, no account.</em></h1></div>
+  <div class="side" style="left:70px"><b>📱 Phone, tablet or TV</b>Tilt the phone to look around, shake it to make it snow. Family mode works with a TV remote.</div>
+  <div class="phones">
+    <div class="phone"><img src="../screenshots/mobile-snow.jpg" alt=""></div>
+    <div class="phone"><img src="../screenshots/editor-mobile.jpg" alt=""></div>
+  </div>
+  <div class="side" style="right:70px;text-align:right"><b>🌏 Far-away family</b>Perfect for grandkids, long-distance partners and friends overseas. Missed days stay open to catch up.</div>
+</section>
+
+<section class="slide" id="s6">
+  <div class="head"><span class="pill">Simple pricing</span><h1>Free to make. <em>No subscription.</em></h1></div>
+  <div class="cards">
+    <div class="card"><h2>Free</h2><div class="price">A$0</div>
+      <ul><li>Snowy Village &amp; Summer Christmas</li><li>24 (or 12) doors, all pre-filled</li><li>Notes, vouchers, mini games</li><li>Up to 3 photos</li></ul></div>
+    <div class="card gold"><h2>Season Pass</h2><div class="price">A$6.99 <small>once, this Christmas</small></div>
+      <ul><li>All 7 premium worlds</li><li>Up to 5 premium calendars</li><li>Unlimited photos</li><li>No Tiny Doors credit</li></ul>
+      <div class="thumbs"><img src="../screenshots/world-space.jpg" alt=""><img src="../screenshots/world-japan.jpg" alt=""></div></div>
+  </div>
+</section>
+
+<div class="brand"><svg><use href="#logo"/></svg>Tiny Doors</div>
+<div class="url">tinydoors.app</div>
+<script>
+  const n = new URLSearchParams(location.search).get('s') || '1';
+  document.getElementById('s' + n).classList.add('on');
+</script>
+</body>
+</html>
