@@ -211,7 +211,7 @@ body.editor.sheet-open { overflow: hidden; }
   .ed-top { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 8px; }
   .ed-top .logo { grid-row: 1; grid-column: 1; font-size: 1rem; }
   .ed-top .language-select { grid-row: 1; grid-column: 2; width: 100px; max-width: 100px; margin: 0; }
-  .ed-top .profile { grid-row: 1; grid-column: 3; margin: 0; order: initial; }
+  .ed-top .profile, .ed-top .account-sign-in { grid-row: 1; grid-column: 3; margin: 0; order: initial; }
   .ed-top .profile-label { display: none; }
   .ed-top .profile-pill { min-height: 40px; gap: 5px; padding-right: 8px; }
   .ed-top .ed-steps { grid-row: 2; grid-column: 1 / -1; justify-self: center; margin: 0; }
@@ -324,6 +324,8 @@ body.editor.sheet-open { overflow: hidden; }
 .upgrade h3 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; }
 .perks { margin: 0 0 16px; padding: 0; list-style: none; display: grid; gap: 8px; font-weight: 700; }
 .perks li { padding: 10px 14px; border-radius: 12px; background: var(--soft); }
+.upgrade-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.upgrade-actions + .fine { margin-top: 14px; }
 .paid { display: flex; gap: 14px; align-items: center; }
 .paid span { font-size: 2.4rem; }
 .paid b { display: block; font-size: 1.1rem; }
@@ -665,7 +667,10 @@ body.editor.sheet-open { overflow: hidden; }
   .world-picker-footer { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
 
-.account-panel { max-width: 940px; margin-top: 24px; }
+.account-panel { position: relative; max-width: 940px; margin-top: 24px; }
+.account-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--soft); color: var(--panel-ink); font-size: 1.4rem; font-weight: 900; cursor: pointer; }
+#accountReason { color: var(--panel-ink); font-weight: 800; }
+.ed-top .account-sign-in { min-height: 40px; padding: 8px 16px; font-size: 0.85rem; }
 .account-panel p { color: var(--muted); line-height: 1.5; }
 .account-panel label { display: block; font-weight: 900; margin-bottom: 8px; }
 .account-email-row { display: flex; gap: 10px; }

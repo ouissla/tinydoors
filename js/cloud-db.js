@@ -16,10 +16,15 @@
     if (A.Auth.mode !== 'cloud') return;
     const client = A.Auth.client;
     const bucket = () => client.storage.from(A.Auth.config.photoBucket);
+    // Signed-out creators work as guests: their calendar stays in this browser until they sign in.
+    // A signed-in creator whose session expires is never a guest, so failed cloud writes never fall back.
+    const guest = () => !A.Auth.user;
     A.DB = {
       isCloud: true,
+      get isGuest() { return guest(); },
       newId: local.newId,
       async saveCalendar(cal) {
+        if (guest()) return local.saveCalendar(cal);
         const user = await owned();
         const { plan, ...document } = structuredClone(cal);
         document.updatedAt = Date.now();
@@ -38,7 +43,7 @@
           Object.entries(data.photos).forEach(([path, url]) => sharedPhotos.set(path, url));
           return data.calendar;
         }
-        if (!A.Auth.user) return null;
+        if (guest()) return local.getCalendar(id);
         const row = checked(await client.from('calendars').select('id,document,calendar_entitlements(status,expires_at)').eq('id', id).maybeSingle());
         return fromRow(row);
       },
@@ -49,12 +54,14 @@
         }));
       },
       async putPhoto(blob) {
+        if (guest()) return local.putPhoto(blob);
         const user = await owned();
         const path = user.id + '/' + local.newId(24) + '.jpg';
         checked(await bucket().upload(path, blob, { contentType: 'image/jpeg', upsert: false }));
         return path;
       },
       async putVideo(blob) {
+        if (guest()) return local.putVideo(blob);
         if (!['video/webm', 'video/mp4'].includes(blob.type.split(';')[0]) || blob.size > 10 * 1024 * 1024) throw new Error('Video must be WebM or MP4 and under 10 MB.');
         const user = await owned();
         const type = blob.type.split(';')[0];
@@ -65,11 +72,13 @@
       async getPhotoURL(path) {
         if (!path) return null;
         if (sharedPhotos.has(path)) return sharedPhotos.get(path);
+        if (guest()) return local.getPhotoURL(path);
         await owned();
         return checked(await bucket().createSignedUrl(path, 3600)).signedUrl;
       },
       async deletePhoto(path) {
         if (!path) return;
+        if (guest()) return local.deletePhoto(path);
         const user = await owned();
         if (!path.startsWith(user.id + '/')) throw new Error('This photo belongs to another account.');
         checked(await bucket().remove([path]));
@@ -80,6 +89,32 @@
           shares.set(id, data.token);
         }
         return shares.get(id);
+      },
+      // After sign-in, move a calendar made as a guest (and its photos and videos) into the account.
+      async adoptGuestCalendar(id) {
+        const cal = await local.getCalendar(id);
+        if (!cal) return null;
+        const moved = new Map();
+        const upload = async (key) => {
+          if (!moved.has(key)) {
+            const blob = await local.getPhotoBlob(key);
+            moved.set(key, blob ? await (blob.type.startsWith('video/') ? this.putVideo(blob) : this.putPhoto(blob)) : null);
+          }
+          return moved.get(key);
+        };
+        const items = [...cal.days, ...Object.values(cal.savedDays || {}).flat()];
+        for (const item of items) {
+          for (const field of ['photoId', 'videoId']) {
+            if (!item[field]) continue;
+            const path = await upload(item[field]);
+            if (path) item[field] = path; else delete item[field];
+          }
+        }
+        cal.plan = 'free';
+        await this.saveCalendar(cal);
+        await Promise.all([...moved.keys()].map((key) => local.deletePhoto(key).catch(() => {})));
+        await local.deleteCalendar(id).catch(() => {});
+        return cal;
       },
     };
   });

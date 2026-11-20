@@ -33,7 +33,9 @@
       if (!response.ok) throw new Error(tr(body.error || "Could not complete that request."));
       return body;
     },
-    prompt() {
+    // Sign-in is only asked for when it's needed (saving to an account, sharing, paying).
+    prompt(reason) {
+      if (reason) $('accountReason').textContent = reason;
       $('accountPanel').hidden = false;
       $('accountPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
       $('accountEmail').focus();
@@ -86,7 +88,8 @@
       tick(); countdown = setInterval(tick, 1000);
     };
     auth.ready.then(() => {
-      $('accountPanel').hidden = auth.mode !== 'cloud' || !!auth.user;
+      $('accountPanel').hidden = true;
+      $('accountSignIn').hidden = auth.mode !== 'cloud' || !!auth.user;
       if (auth.mode !== 'cloud') return;
       $('accountLoading').hidden = true;
       $('accountForm').hidden = !!auth.user;
@@ -101,6 +104,8 @@
       $('accountLoading').hidden = true;
       message(tr("We couldn’t load sign-in. Please refresh and try again."), true);
     });
+    $('accountSignIn').addEventListener('click', () => (auth.onSignInClick ? auth.onSignInClick() : auth.prompt()));
+    $('accountClose').addEventListener('click', () => { $('accountPanel').hidden = true; });
     const profile = $('accountSignedIn');
     document.addEventListener('click', (event) => {
       if (profile.open && !profile.contains(event.target)) profile.open = false;

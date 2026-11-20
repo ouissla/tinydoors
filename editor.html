@@ -25,6 +25,7 @@
       <li data-step="share"><button type="button" data-go="share">3 <span>Share</span></button></li>
     </ol>
     <span class="saved" id="saved" aria-live="polite"></span>
+    <button type="button" class="btn ghost account-sign-in" id="accountSignIn" hidden>Sign in</button>
     <details class="profile" id="accountSignedIn" hidden>
       <summary class="profile-pill" id="profileToggle" aria-label="My account" aria-controls="profileMenu">
         <span class="profile-avatar" id="profileInitial" aria-hidden="true"></span>
@@ -45,10 +46,12 @@
 
   <main class="ed-main" id="editorMain">
     <section class="panel account-panel" id="accountPanel" aria-labelledby="accountTitle" hidden>
-      <h2 class="ed-h2" id="accountTitle">Your calendars, on any device</h2>
+      <button type="button" class="close account-close" id="accountClose" aria-label="Close">×</button>
+      <h2 class="ed-h2" id="accountTitle">Save your calendar</h2>
       <p id="accountLoading" role="status">Opening your account…</p>
       <form id="accountForm" hidden>
-        <p>Sign in with an email link to save your calendars. No password needed.</p>
+        <p id="accountReason">Sign in to see your saved calendars on any device.</p>
+        <p>We’ll email you a sign-in link, no password needed. Open it in this browser to keep what you’ve made.</p>
         <label for="accountEmail">Your email address</label>
         <div class="account-email-row"><input id="accountEmail" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"><button class="btn primary" id="sendMagicLink" type="submit">Send sign-in link</button></div>
       </form>
@@ -190,6 +193,7 @@
         </div>
         <button type="button" class="btn ghost" id="nativeShare">📤 Send it…</button>
         </div>
+        <button type="button" class="btn primary" id="guestSave" hidden>Save and get their link</button>
         <p class="pass-notice" id="shareGateNotice" hidden>Free to customise and preview. Unlock the Season Pass below when you’re ready to share.</p>
         <label class="tzrow">Doors open at midnight in
           <select id="tz"></select>

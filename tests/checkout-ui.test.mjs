@@ -18,7 +18,7 @@ function checkoutUI(request) {
   const context = vm.createContext({ $, URL, Date, clearTimeout() {},
     A: { DB: { isCloud: true }, I18n: { locale: 'en' }, Auth: { user: { id: 'creator' }, config: { checkoutAvailable: true }, request } },
     tr: (text, values = {}) => text.replace(/\{(\w+)\}/g, (match, name) => values[name] ?? match), priceLabel: () => 'A$6.99', seasonPass: null, checkoutBusy: false, cal: { id: 'calendar1234', year: 2090 }, saveT: null, step: 'share',
-    persist: async () => {}, updatePassNotice() {}, renderShare() {},
+    persist: async () => {}, updatePassNotice() {}, renderShare() {}, toast() {}, promptSignIn() {},
     location: { assign(url) { state.destination = url; } },
     window: { addEventListener(name, fn) { events[name] = fn; } },
   });

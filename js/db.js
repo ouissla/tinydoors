@@ -63,6 +63,16 @@
       return r ? structuredClone(r) : null;
     },
 
+    async deleteCalendar(id) {
+      await tx('calendars', 'readwrite', (s, mem) => (s ? s.delete(id) : mem.delete(id)));
+    },
+
+    async getPhotoBlob(id) {
+      if (!id) return null;
+      const r = await tx('photos', 'readonly', (s, mem) => (s ? s.get(id) : { result: mem.get(id) }));
+      return r ? r.blob : null;
+    },
+
     async putPhoto(blob) {
       const id = newId(14);
       await tx('photos', 'readwrite', (s, mem) => (s ? s.put({ id, blob }) : mem.set(id, { id, blob })));

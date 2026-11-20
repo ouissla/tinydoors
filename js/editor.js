@@ -6,6 +6,9 @@
   const esc = A.esc;
   const params = new URLSearchParams(location.search);
   let LAST = 'littledoors:last';
+  // Calendars made before signing in live in this browser; these keys bring them into the account.
+  const GUEST = 'littledoors:guest', GUEST_NEXT = 'littledoors:guest-next', GUEST_NUDGED = 'littledoors:guest-nudged';
+  let adoptedNext = null;
   let shareToken = null;
   let seasonPass = null;
   let checkoutBusy = false;
@@ -149,10 +152,15 @@
   if (A.DB.isCloud) {
     document.querySelectorAll('.proto-note').forEach((node) => { node.textContent = tr("Your link is read-only. Recipients do not need to sign in."); });
     $('buyBtn').disabled = !A.Auth.config.checkoutAvailable;
-    $('goDoors').nextElementSibling.textContent = tr("Save your calendar to your account. Recipients open their link without signing in.");
+    $('goDoors').nextElementSibling.textContent = A.Auth.user
+      ? tr("Save your calendar to your account. Recipients open their link without signing in.")
+      : tr("No account needed to start. Save it to your account when you’re ready to share.");
     $('checkoutNote').textContent = A.Auth.config.checkoutAvailable ? tr("Secure payment with Stripe. {price} once for up to 5 premium calendars this Christmas.", { price: priceLabel() }) : tr("Checkout is being set up. Your calendar is saved.");
+    if (!A.Auth.user) LAST = GUEST;
+    A.Auth.onSignInClick = () => promptSignIn(step);
     if (A.Auth.user) {
       LAST += ':' + A.Auth.user.id;
+      await adoptGuestCalendar();
       try {
         const calendars = await A.DB.listCalendars();
         $('accountCalendars').replaceChildren();
@@ -165,6 +173,34 @@
         if (!calendars.length) $('accountCalendars').textContent = tr("Your first calendar starts below.");
       } catch { $('accountCalendars').textContent = tr("Couldn’t load your calendars. Refresh to try again."); }
     }
+  }
+  async function adoptGuestCalendar() {
+    const guestId = A.store.get(GUEST, null);
+    if (!guestId) return;
+    try {
+      const adopted = await A.DB.adoptGuestCalendar(guestId);
+      if (adopted) {
+        A.store.set(LAST, adopted.id);
+        adoptedNext = A.store.get(GUEST_NEXT, null);
+        toast(tr('Your calendar is saved to your account ✓'));
+      }
+      A.store.set(GUEST, null);
+      A.store.set(GUEST_NEXT, null);
+    } catch {
+      $('accountMessage').textContent = tr("Couldn’t move your calendar into your account. Refresh to try again.");
+      $('accountMessage').setAttribute('role', 'alert');
+    }
+  }
+  // Ask for an account only when it's needed, and come back to the same step after the email link.
+  function promptSignIn(next) {
+    if (cal) {
+      clearTimeout(saveT);
+      persist().then(() => A.store.set(GUEST, cal.id)).catch(() => {});
+      A.store.set(GUEST_NEXT, next === 'checkout' ? 'share' : next || step);
+    }
+    A.Auth.prompt(next === 'checkout' ? tr('Save your calendar to your account, then unlock the Season Pass.')
+      : next === 'share' ? tr('Save your calendar to your account to get their private link.')
+      : cal ? tr('Don’t lose your progress: save your calendar to your account.') : tr('Sign in to see your saved calendars on any device.'));
   }
   const wanted = params.has('new') ? null : params.get('c') || A.store.get(LAST, null);
   if (wanted) {
@@ -233,6 +269,7 @@
     }
     if (next === 'doors') renderDoors(!instant);
     if (next === 'share') renderShare();
+    if (A.DB.isGuest) $('accountSignIn').textContent = cal ? tr('Save my calendar') : tr('Sign in');
     window.scrollTo({ top: 0, behavior: instant || animateLayout || A.reducedMotion ? 'auto' : 'smooth' });
     if (animateLayout && typeof main.animate === 'function') {
       // Animate visual geometry after laying out the final grid, so house sizes stay correct.
@@ -292,7 +329,6 @@
   ['calendarPreviewBtn', 'previewBtn', 'preview2dBtn'].forEach((id) => $(id).addEventListener('click', previewCalendar));
 
   $('goDoors').addEventListener('click', () => {
-    if (A.DB.isCloud && !A.Auth.user) { A.Auth.prompt(); return; }
     const to = $('fTo').value.trim();
     const from = $('fFrom').value.trim();
     if (!to) {
@@ -605,6 +641,10 @@
       $('saved').textContent = tr("Saving…");
       try { await persist(); $('saved').textContent = tr("Saved ✓"); A.store.set(LAST, cal.id); }
       catch (error) { cal.days[d - 1] = old; $('saved').textContent = tr("Couldn’t save"); throw error; }
+      if (A.DB.isGuest && !A.store.get(GUEST_NUDGED, false)) {
+        A.store.set(GUEST_NUDGED, true);
+        toast(tr('Saved on this device. Save it to your account so you don’t lose it.'));
+      }
     } else save();
     const oldMedia = old.photoId || old.videoId;
     if (oldMedia && oldMedia !== (next.photoId || next.videoId) && !Object.values(cal.savedDays || {}).flat().some((item) => (item.photoId || item.videoId) === oldMedia)) {
@@ -793,6 +833,17 @@
     button.disabled = checkoutBusy || seasonPass?.refunded || (seasonPass?.active ? seasonPass.remaining === 0 && !seasonPass.calendars.includes(cal?.id) : !A.Auth.config.checkoutAvailable);
     button.setAttribute('aria-busy', String(checkoutBusy));
     button.textContent = checkoutBusy ? tr('Opening checkout…') : seasonPass?.refunded ? tr('Season Pass refunded') : seasonPass?.active ? tr('Use a Season Pass calendar') : tr('Unlock for {price}', { price: priceLabel() });
+    // The share panel's own button starts checkout directly, so it shows the same busy state.
+    const up = $('upBtn');
+    if (up?.dataset && !up.dataset.locked) {
+      up.disabled = checkoutBusy;
+      up.setAttribute('aria-busy', String(checkoutBusy));
+      up.textContent = checkoutBusy ? tr('Opening checkout…') : up.dataset.label;
+    }
+  }
+  function checkoutMessage(text) {
+    $('checkoutMessage').textContent = text;
+    if (text && $('upsell').hidden) toast(text);
   }
   window.addEventListener('pageshow', (event) => {
     if (event.persisted && A.DB.isCloud) { checkoutBusy = false; renderCheckoutButton(); }
@@ -827,10 +878,10 @@
     updatePassNotice();
     if (step === 'share') renderShare();
   }
-  $('buyBtn').addEventListener('click', async () => {
+  async function unlockSeasonPass() {
     if (A.DB.isCloud) {
       if (checkoutBusy) return;
-      if (!A.Auth.user) { $('upsell').hidden = true; A.Auth.prompt(); return; }
+      if (!A.Auth.user) { $('upsell').hidden = true; promptSignIn('checkout'); return; }
       if (!cal) { $('upsell').hidden = true; go('start'); toast(tr('Save a calendar first, then unlock your Season Pass.')); return; }
       checkoutBusy = true;
       renderCheckoutButton();
@@ -848,7 +899,7 @@
         location.assign(target.href);
         redirecting = true;
       } catch (error) {
-        $('checkoutMessage').textContent = error.message;
+        checkoutMessage(error.message);
       } finally {
         if (!redirecting) { checkoutBusy = false; renderCheckoutButton(); }
       }
@@ -860,7 +911,8 @@
     $('upsell').hidden = true;
     toast(tr('Demo Season Pass unlocked — no payment taken'));
     if (step === 'share') renderShare();
-  });
+  }
+  $('buyBtn').addEventListener('click', unlockSeasonPass);
 
   // ---------------- 3. Share ----------------
   const ZONES = ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Adelaide', 'Australia/Perth', 'Australia/Hobart', 'Australia/Darwin', 'Pacific/Auckland', 'Europe/London', 'Europe/Paris', 'America/New_York', 'America/Chicago', 'America/Los_Angeles'];
@@ -904,15 +956,19 @@
     $('preview2dBtn').href = linkFor('&preview', 'index.html');
     ++shareRevision;
     const gated = needsPass();
-    $('shareControls').hidden = gated;
-    $('shareGateNotice').hidden = !gated;
+    const guest = !!A.DB.isGuest && !gated;
+    $('shareControls').hidden = gated || guest;
+    $('shareGateNotice').hidden = !gated && !guest;
+    $('guestSave').hidden = !guest;
     $('shareGateNotice').textContent = seasonPass?.active
       ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of 5 slots are available.', { remaining: seasonPass.remaining }) : tr('All 5 premium calendars are used. Keep editing those calendars, or choose a free world for this one.'))
-      : seasonPass?.refunded ? tr('Your Season Pass was refunded. Your calendars are saved; choose a free world to share this calendar, or contact support.') : tr('Free to customise and preview. Unlock the Season Pass below when you’re ready to share.');
+      : seasonPass?.refunded ? tr('Your Season Pass was refunded. Your calendars are saved; choose a free world to share this calendar, or contact support.')
+      : guest ? tr('Your calendar is saved on this device. Save it to your account to get their private link.')
+      : tr('Free to customise and preview. Unlock the Season Pass below when you’re ready to share.');
     $('shareLink').value = '';
     $('copyBtn').disabled = true;
     $('nativeShare').disabled = true;
-    if (!gated) await prepareShare();
+    if (!gated && !guest) await prepareShare();
     const tz = $('tz');
     const zones = ZONES.includes(cal.tz) ? ZONES : [cal.tz, ...ZONES];
     tz.innerHTML = zones.map((z) => `<option value="${esc(z)}"${z === cal.tz ? ' selected' : ''}>${esc(z.replace(/_/g, ' ').replace('/', ' — '))}</option>`).join('');
@@ -931,18 +987,25 @@
           <li>${tr("✨ Remove the “Made with Tiny Doors” credit")}</li>
           ${seasonPass?.active ? '' : `<li>${tr("💛 One-time {price} for this Christmas — no subscription", { price: priceLabel() })}</li>`}
         </ul>
-        <button type="button" class="btn primary" id="upBtn">${gated ? tr("Unlock &amp; share · {price}", { price: priceLabel() }) : tr("Get the Season Pass")}</button>
-        ${gated ? `<button type="button" class="btn ghost" id="chooseFreeWorld">${tr("Choose a free world")}</button><p class="fine">${tr("Your messages and personal edits stay saved. Free sharing includes up to 3 photos; remove any extra photos before sharing.")}</p>` : ''}`;
+        <div class="upgrade-actions">
+          <button type="button" class="btn primary" id="upBtn">${gated ? tr("Unlock &amp; share · {price}", { price: priceLabel() }) : tr("Get the Season Pass")}</button>
+          ${gated ? `<button type="button" class="btn ghost" id="chooseFreeWorld">${tr("Choose a free world")}</button>` : ''}
+        </div>
+        ${gated ? `<p class="fine">${tr("Your messages and personal edits stay saved. Free sharing includes up to 3 photos; remove any extra photos before sharing.")}</p>` : ''}`;
       if (A.DB.isCloud && seasonPass?.active) {
         $('upBtn').textContent = seasonPass.remaining > 0 ? tr('Activate premium · {remaining} of 5 available', { remaining: seasonPass.remaining }) : tr('All 5 premium calendars used');
         $('upBtn').disabled = seasonPass.remaining === 0;
       }
       if (A.DB.isCloud && seasonPass?.refunded) { $('upBtn').textContent = tr('Season Pass refunded'); $('upBtn').disabled = true; }
-      $('upBtn').addEventListener('click', () => upsell(tr("Unlock the Season Pass to share this calendar. Your edits are saved.")));
+      // The perks are already listed here, so this button goes straight to checkout (or activation).
+      $('upBtn').dataset.label = $('upBtn').textContent;
+      if ($('upBtn').disabled) $('upBtn').dataset.locked = 'true';
+      $('upBtn').addEventListener('click', unlockSeasonPass);
       if (gated) $('chooseFreeWorld').addEventListener('click', () => { go('start'); toast(tr("Choose Snowy village or Summer Christmas. Your personal edits stay saved.")); });
     }
   }
 
+  $('guestSave').addEventListener('click', () => promptSignIn('share'));
   $('tz').addEventListener('change', (e) => { cal.tz = e.target.value; save(); });
   $('copyBtn').addEventListener('click', async () => {
     if (needsPass() || !$('shareLink').value) return;
@@ -998,7 +1061,8 @@
       // Preserve the session ID for a retry after a temporary payment/network failure.
     }
   }
-  go(cal ? (['doors', 'share'].includes(params.get('step')) ? params.get('step') : 'doors') : 'start', true);
+  const startStep = ['doors', 'share'].includes(adoptedNext) ? adoptedNext : params.get('step');
+  go(cal ? (['doors', 'share'].includes(startStep) ? startStep : 'doors') : 'start', true);
   if (cal) $('saved').textContent = tr("Saved ✓");
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => step === 'doors' && layoutGrid());
 })();
