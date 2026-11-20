@@ -40,6 +40,43 @@ The server validates the user's Supabase token, calendar ownership and season. I
 
 Return-page confirmation and webhooks retrieve authoritative Stripe state before granting the pass. Browser JSON cannot write a plan, claim another creator's payment, allocate a sixth calendar, or grant a pass from a success URL alone.
 
+## Deploy changes
+
+Run these commands in Terminal from your local checkout:
+
+```sh
+cd /home/chris/Sites/personal/advent
+nvm use 24
+npm run deploy:production
+```
+
+`deploy:production` runs the checks, builds the app, and publishes it to
+[https://tinydoors.app](https://tinydoors.app), including the `www` domain,
+using `wrangler.production.jsonc`. It deploys the current local files; commit
+and push separately if you also want to save those changes to GitHub.
+Pushing to GitHub alone does not automatically deploy this repository.
+
+On a fresh checkout, run `npm ci` first to install dependencies. If Node 24
+is not installed in nvm, run `nvm install 24`. If Cloudflare asks you to sign
+in, run `npx wrangler login`, complete the browser sign-in, then retry the
+deployment. Existing deployment credentials can also be used as described below.
+
+For the separate test site, use:
+
+```sh
+npm run deploy:preview
+```
+
+This publishes to
+[https://tinydoors-preview.christophe-cresson.workers.dev](https://tinydoors-preview.christophe-cresson.workers.dev)
+using `wrangler.jsonc`.
+
+After deploying, open the site and test the changed feature. If the browser
+still shows an older version, reload the page. Database migrations are separate
+from app deployment: when a change includes a new migration, apply it to the
+intended Supabase project before deploying code that needs it. Do not reapply
+the migrations listed as already applied in the Database section.
+
 ## Local development
 
 Use Node 24 (see `.node-version`):

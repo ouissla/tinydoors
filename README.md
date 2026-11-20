@@ -1,6 +1,6 @@
 # Tiny Doors — advent village prototype
 
-Cloudflare deployment is prepared with `npm run build`, `npm run dev`, and `npm run deploy:preview`. See [the launch guide](docs/LAUNCH.md) for Supabase/Stripe environment placeholders, the database migration, and the remaining work before a paid launch. `.env` is local and ignored by Git; `.env.example` is the shareable template.
+Deploy to the live site with `npm run deploy:production`, or to the test site with `npm run deploy:preview`. See [Deploy changes](docs/LAUNCH.md#deploy-changes) for the full steps. See [the launch guide](docs/LAUNCH.md) for Supabase/Stripe environment placeholders, the database migration, and the remaining work before a paid launch. `.env` is local and ignored by Git; `.env.example` is the shareable template.
 
 A clickable prototype of the recipient experience, in two themes:
 
