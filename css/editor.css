@@ -674,6 +674,24 @@ body.editor.sheet-open { overflow: hidden; }
 .account-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--soft); color: var(--panel-ink); font-size: 1.4rem; font-weight: 900; cursor: pointer; }
 #accountReason { color: var(--panel-ink); font-weight: 800; }
 .ed-top .account-sign-in { min-height: 40px; padding: 8px 16px; font-size: 0.85rem; }
+/* After a guest's first edit: the save button shines while a bubble points at it. */
+.ed-top .account-sign-in.save-shine { position: relative; overflow: hidden; background: var(--btn); color: var(--btn-ink, #fff); border-color: var(--btn); animation: save-glow 1s ease-in-out 3; }
+.ed-top .account-sign-in.save-shine::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.75) 50%, transparent 70%); transform: translateX(-100%); animation: save-sheen 1s ease-in-out 3; pointer-events: none; }
+@keyframes save-glow { 50% { box-shadow: 0 0 0 6px rgba(255, 255, 255, .45), 0 0 24px 6px rgba(255, 214, 102, .8); transform: scale(1.06); } }
+@keyframes save-sheen { to { transform: translateX(100%); } }
+.save-nudge { position: fixed; z-index: 40; width: min(300px, calc(100vw - 24px)); padding: 16px 18px; border-radius: 18px; background: #fffcf5; color: var(--panel-ink); box-shadow: 0 18px 40px rgba(0, 0, 0, .3); animation: nudge-in .35s cubic-bezier(.2, 1.4, .4, 1) both, nudge-bob 1.2s ease-in-out .35s infinite; }
+.save-nudge::before { content: ''; position: absolute; top: -9px; left: calc(var(--tail, 50%) - 10px); width: 20px; height: 20px; background: inherit; border-radius: 4px; transform: rotate(45deg); }
+.save-nudge strong { display: block; padding-right: 28px; font-size: 1.05rem; font-weight: 900; }
+.save-nudge span { display: block; margin: 4px 0 12px; color: var(--muted); font-size: .88rem; line-height: 1.4; }
+.save-nudge .save-nudge-go { width: 100%; }
+.save-nudge-close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; border-radius: 999px; background: var(--soft); color: var(--panel-ink); font-size: 1.1rem; font-weight: 900; cursor: pointer; }
+.save-nudge.leaving { animation: nudge-out .25s ease forwards; }
+@keyframes nudge-in { from { opacity: 0; transform: translateY(-10px) scale(.9); } }
+@keyframes nudge-bob { 50% { transform: translateY(-5px); } }
+@keyframes nudge-out { to { opacity: 0; transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .save-nudge, .ed-top .account-sign-in.save-shine, .ed-top .account-sign-in.save-shine::after { animation: none; }
+}
 .account-panel p { color: var(--muted); line-height: 1.5; }
 .account-panel label { display: block; font-weight: 900; margin-bottom: 8px; }
 .account-email-row { display: flex; gap: 10px; }

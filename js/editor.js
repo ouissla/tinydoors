@@ -7,7 +7,7 @@
   const params = new URLSearchParams(location.search);
   let LAST = 'littledoors:last';
   // Calendars made before signing in live in this browser; these keys bring them into the account.
-  const GUEST = 'littledoors:guest', GUEST_NEXT = 'littledoors:guest-next', GUEST_NUDGED = 'littledoors:guest-nudged';
+  const GUEST = 'littledoors:guest', GUEST_NEXT = 'littledoors:guest-next';
   let adoptedNext = null;
   let shareToken = null;
   let seasonPass = null;
@@ -488,13 +488,52 @@
     document.body.classList.remove('sheet-open');
     if (sheetDay && huts[sheetDay - 1]) huts[sheetDay - 1].focus({ preventScroll: true });
     sheetDay = null;
-    setTimeout(promptAfterSheet, 0);
+    setTimeout(nudgeAfterSheet, 0);
   }
-  let signInAfterSheet = false;
-  function promptAfterSheet() {
-    if (!signInAfterSheet || !$('sheet').hidden || !A.DB.isGuest) return;
-    signInAfterSheet = false;
-    promptSignIn(step);
+  // After a guest's first change, point at "Save my calendar" so they don't lose their work.
+  let nudgeAfterClose = false, nudged = false;
+  function nudgeAfterSheet() {
+    if (!nudgeAfterClose || !$('sheet').hidden || !A.DB.isGuest) return;
+    nudgeAfterClose = false;
+    showSaveNudge();
+  }
+  function showSaveNudge() {
+    const button = $('accountSignIn');
+    if (button.hidden || !button.offsetParent) return;
+    document.querySelector('.save-nudge')?.remove();
+    const bubble = document.createElement('div');
+    bubble.className = 'save-nudge';
+    bubble.setAttribute('role', 'status');
+    bubble.innerHTML = '<button type="button" class="save-nudge-close"></button><strong></strong><span></span><button type="button" class="btn primary save-nudge-go"></button>';
+    bubble.querySelector('.save-nudge-close').textContent = '×';
+    bubble.querySelector('.save-nudge-close').setAttribute('aria-label', tr('Close'));
+    bubble.querySelector('strong').textContent = tr('Don’t lose your progress');
+    bubble.querySelector('span').textContent = tr('Save your calendar to your account with your email. No password needed.');
+    bubble.querySelector('.save-nudge-go').textContent = tr('Save my calendar');
+    document.body.append(bubble);
+    const place = () => {
+      const r = button.getBoundingClientRect();
+      const width = bubble.offsetWidth;
+      const left = Math.max(12, Math.min(innerWidth - width - 12, r.left + r.width / 2 - width / 2));
+      bubble.style.top = r.bottom + 14 + 'px';
+      bubble.style.left = left + 'px';
+      bubble.style.setProperty('--tail', r.left + r.width / 2 - left + 'px');
+    };
+    place();
+    const close = () => {
+      removeEventListener('resize', place);
+      button.classList.remove('save-shine');
+      bubble.classList.add('leaving');
+      setTimeout(() => bubble.remove(), 250);
+    };
+    addEventListener('resize', place);
+    bubble.querySelector('.save-nudge-close').addEventListener('click', close);
+    bubble.querySelector('.save-nudge-go').addEventListener('click', () => { close(); promptSignIn(step); });
+    button.addEventListener('click', close, { once: true });
+    button.classList.remove('save-shine');
+    void button.offsetWidth;
+    button.classList.add('save-shine');
+    setTimeout(() => button.classList.remove('save-shine'), 3000);
   }
 
   function renderSheet() {
@@ -648,10 +687,10 @@
       $('saved').textContent = tr("Saving…");
       try { await persist(); $('saved').textContent = tr("Saved ✓"); A.store.set(LAST, cal.id); }
       catch (error) { cal.days[d - 1] = old; $('saved').textContent = tr("Couldn’t save"); throw error; }
-      if (A.DB.isGuest && !A.store.get(GUEST_NUDGED, false)) {
-        A.store.set(GUEST_NUDGED, true);
-        signInAfterSheet = true; // Ask once the door sheet closes, so the prompt isn't hidden behind it.
-        if ($('sheet').hidden) setTimeout(promptAfterSheet, 0);
+      if (A.DB.isGuest && !nudged) {
+        nudged = true;
+        nudgeAfterClose = true; // Point at the button once the door sheet closes, so nothing hides it.
+        if ($('sheet').hidden) setTimeout(nudgeAfterSheet, 0);
       }
     } else save();
     const oldMedia = old.photoId || old.videoId;

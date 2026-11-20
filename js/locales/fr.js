@@ -206,6 +206,8 @@
   "We’ll email you a sign-in link, no password needed. Open it in this browser to keep what you’ve made.": "Nous vous envoyons un lien de connexion par e-mail, sans mot de passe. Ouvrez-le dans ce navigateur pour conserver ce que vous avez créé.",
   "Sign in to see your saved calendars on any device.": "Connectez-vous pour retrouver vos calendriers sur tous vos appareils.",
   "No account needed to start. Save it to your account when you’re ready to share.": "Aucun compte nécessaire pour commencer. Enregistrez-le sur votre compte au moment de le partager.",
+  "Don’t lose your progress": "Ne perdez pas votre travail",
+  "Save your calendar to your account with your email. No password needed.": "Enregistrez votre calendrier sur votre compte avec votre e-mail. Aucun mot de passe nécessaire.",
   "Don’t lose your progress: save your calendar to your account.": "Ne perdez pas votre travail : enregistrez votre calendrier sur votre compte.",
   "Save your calendar to your account to get their private link.": "Enregistrez votre calendrier sur votre compte pour obtenir son lien privé.",
   "Save your calendar to your account, then unlock the Season Pass.": "Enregistrez votre calendrier sur votre compte, puis débloquez le Pass de Noël.",
