@@ -333,7 +333,30 @@
     return { node, closed() { player.pause(); player.removeAttribute('src'); player.load(); } };
   }
 
-  const R = { link, video, photo, message, riddle: qa, joke: qa, activity, voucher, finale, game };
+  // ---- Drawing: replays stroke by stroke, as if drawn in front of them ----
+  function drawing(day, item, ctx) {
+    const strokes = A.Drawing.clean(item.strokes);
+    const node = el('div', 'drawing-surprise', `
+      <figure class="sketch">
+        <canvas class="sketch-canvas" role="img" aria-label="${tr('A drawing from {from}', { from: esc(ctx.from) })}"></canvas>
+        ${item.caption ? `<figcaption>${fill(item.caption, ctx)}</figcaption>` : ''}
+      </figure>`);
+    const canvas = node.querySelector('canvas');
+    let stop = () => {};
+    const play = () => {
+      stop();
+      ctx.setPrimary(null);
+      stop = A.Drawing.replay(canvas, strokes, () => {
+        ctx.setPrimary(tr('Watch it again ✏️'));
+        ctx.sound.chime();
+      });
+      return true;
+    };
+    play();
+    return { node, primary: play, closed() { stop(); } };
+  }
+
+  const R = { drawing, link, video, photo, message, riddle: qa, joke: qa, activity, voucher, finale, game };
 
   A.Reveal = {
     render(day, item, ctx) {

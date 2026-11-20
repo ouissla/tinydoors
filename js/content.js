@@ -287,6 +287,7 @@
   A.KIND_LABEL = {
     link: tr("A link for you"),
     video: tr("A video for you"),
+    drawing: tr("A drawing for you"),
     message: tr("A note for you"),
     photo: tr("A memory"),
     riddle: tr("A riddle"),
@@ -301,6 +302,7 @@
     switch (item.type) {
       case 'link': return '🔗';
       case 'video': return '🎥';
+      case 'drawing': return '🖍️';
       case 'photo': return '📸';
       case 'message': return '💌';
       case 'riddle': return '❓';

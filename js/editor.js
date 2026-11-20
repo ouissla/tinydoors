@@ -490,6 +490,7 @@
       case 'photo': return { title: day.caption ? fill(day.caption) : tr("A photo memory"), text: day.photoId ? tr('Your photo, hidden under {cover}', { cover: tr(cal.theme === 'snow' ? 'frost' : 'sand') }) : tr("Add your own photo here") };
       case 'link': return { title: day.title || tr('Open link'), text: day.url };
       case 'video': return { title: day.caption || tr('A video for you'), text: tr('Your short video · up to 10 seconds') };
+      case 'drawing': return { title: day.caption ? fill(day.caption) : tr('A drawing for you'), text: tr('Your drawing, replayed line by line when they open it') };
       case 'message': return { title: tr("A note"), text: fill(day.text).slice(0, 110) };
       case 'finale': return { title: tr("Christmas Eve letter"), text: fill(day.text).slice(0, 110) };
       case 'riddle': case 'joke': return { title: fill(day.q), text: A.KIND_LABEL[day.type] };
@@ -513,7 +514,7 @@
     A.Sound.init();
     sheetDay = d;
     const day = cal.days[d - 1];
-    sheetMode = mode || (day.photoId ? 'photo' : day.videoId ? 'video' : day.type === 'link' ? 'link' : 'home');
+    sheetMode = mode || (day.photoId ? 'photo' : day.videoId ? 'video' : day.type === 'link' ? 'link' : day.type === 'drawing' ? 'drawing' : 'home');
     renderSheet();
     $('sheet').hidden = false;
     document.body.classList.add('sheet-open');
@@ -525,6 +526,7 @@
   }
 
   let recording = null;
+  let drawPad = null;
   function stopRecording() { recording?.cancel(); recording = null; }
 
   function closeSheet() {
@@ -605,6 +607,7 @@
           <button type="button" data-act="video"><span>🎥</span><b>${tr("Record a video")}</b><small>${tr("Up to 10 seconds")}</small></button>
           <button type="button" data-act="note"><span>💌</span><b>${isEve ? tr("Write the letter") : tr("Write a note")}</b></button>
           <button type="button" data-act="voucher"><span>🎟️</span><b>${tr("Make a voucher")}</b></button>
+          <button type="button" class="wide" data-act="drawing"><span>🖍️</span><b>${tr("Draw something")}</b><small>${tr("A quick doodle they’ll watch come to life")}</small></button>
           <button type="button" class="wide" data-act="games"><span>🎮</span><b>${tr("Add a mini game")}</b><small>${tr("Sudoku, word search, memory…")}</small></button>
         </div>
         ${day.type === 'game' && day.game === 'wordsearch' ? `<button type="button" class="pick-preset" data-act="words">${tr("✏️ Use your own words in this word search")} <span>→</span></button>` : ''}
@@ -625,6 +628,15 @@
         <p class="hint" id="recordStatus" role="status" aria-live="polite">${tr("Record a personal video, up to 10 seconds. Allow your camera and microphone when asked.")}</p>
         <div class="row-btns"><button type="button" class="btn primary" data-act="recordVideo">${day.videoId ? tr("Record again") : tr("Start recording")}</button><button type="button" class="btn ghost" id="stopVideo" data-act="stopVideo" hidden>${tr("Stop recording")}</button></div>
         <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("Back")}</button>${day.videoId ? `<button type="button" class="link" data-act="reset">${tr("Remove video")}</button>` : ''}<button type="button" class="btn primary" data-act="done">${tr("Done")}</button></div>`;
+    } else if (sheetMode === 'drawing') {
+      body.innerHTML = `
+        <div id="drawPad"></div>
+        <label class="field">${tr("Caption")} <small>${tr("(optional)")}</small>
+          <input type="text" id="drawCap" maxlength="60" value="${esc(day.type === 'drawing' ? day.caption || '' : '')}" placeholder="${tr("I drew you a reindeer!")}">
+        </label>
+        <p class="hint" id="drawHint" role="status">${tr("{to} will watch it being drawn, line by line.", { to: esc(cal.to) })}</p>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("← Back")}</button>${day.type === 'drawing' ? `<button type="button" class="link" data-act="reset">${tr("Remove drawing")}</button>` : ''}<button type="button" class="btn primary" data-act="saveDrawing">${tr("Save drawing")}</button></div>`;
+      drawPad = A.Drawing.pad($('drawPad'), day.type === 'drawing' ? day.strokes : [], () => { $('drawHint').textContent = tr("{to} will watch it being drawn, line by line.", { to: cal.to }); $('drawHint').style.color = ''; });
     } else if (sheetMode === 'photo') {
       body.innerHTML = `
         <div class="photo-edit">
@@ -774,7 +786,7 @@
     switch (act) {
       case 'done': closeSheet(); break;
       case 'home': sheetMode = 'home'; renderSheet(); break;
-      case 'note': case 'voucher': case 'presets': case 'words': case 'link': case 'video': sheetMode = act; renderSheet(); break;
+      case 'note': case 'voucher': case 'presets': case 'words': case 'link': case 'video': case 'drawing': sheetMode = act; renderSheet(); break;
       case 'games': sheetMode = 'presets'; presetFilter = tr("Games"); renderSheet(); break;
       case 'saveLink': {
         const url = A.safeLink($('linkURL').value.trim());
@@ -818,6 +830,17 @@
         break;
       }
       case 'stopVideo': recording?.stop(); break;
+      case 'saveDrawing': {
+        if (!drawPad || drawPad.isEmpty()) {
+          $('drawHint').textContent = tr("Draw something first ✏️");
+          $('drawHint').style.color = '#d22f4a';
+          return;
+        }
+        await setDay(d, { type: 'drawing', strokes: drawPad.strokes(), caption: $('drawCap').value.trim(), personal: true }, { celebrate: true });
+        closeSheet();
+        toast(tr("Drawing saved 🖍️"));
+        break;
+      }
       case 'saveWords': {
         const words = [...new Set(A.I18n.letters($('wsWords').value).split(/[^A-Z]+/).filter((w) => w.length >= 2 && w.length <= 10))].slice(0, 8);
         if (words.length < 3) {
