@@ -2,6 +2,7 @@ import { crawlRules, indexingHeaders } from './seo.js';
 import { publicConfiguration } from './config.js';
 import { json, createShare, readShare } from './sharing.js';
 import { checkout, confirmCheckout, seasonPassRoute, webhook, paymentError, paymentSettingsReady } from './payments.js';
+import { seasonPassPrice, publicPrice } from './pricing.js';
 async function handleRequest(request, env) {
     const rules = crawlRules(request);
     if (rules) return rules;
@@ -12,7 +13,7 @@ async function handleRequest(request, env) {
       catch { return json({ error: 'Account services are not configured yet. Please try again later.' }, 503); }
       if (path === '/api/config') {
         if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
-        return json(config);
+        return json({ ...config, price: publicPrice(seasonPassPrice(env, request.cf?.country)) });
       }
       if (path === '/api/health') {
         if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'Method not allowed' }, 405);

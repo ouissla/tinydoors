@@ -10,6 +10,19 @@
   let seasonPass = null;
   let checkoutBusy = false;
   const FREE_PHOTOS = 3;
+  // The server picks the Season Pass currency from the visitor's country; A$6.99 is the default.
+  const priceLabel = () => {
+    const price = A.Auth?.config?.price || { currency: 'aud', amount: 699 };
+    try { return new Intl.NumberFormat(A.I18n.locale, { style: 'currency', currency: price.currency.toUpperCase() }).format(price.amount / 100); }
+    catch { return 'A$6.99'; }
+  };
+  function applyPriceLabels() {
+    const price = priceLabel();
+    document.querySelector('.world-pass-summary strong').textContent = tr('Season Pass · {price} once', { price });
+    $('worldPassNotice').textContent = tr('Season Pass · {price} once for up to 5 premium calendars this Christmas. Free to customise and preview; pay when you’re ready to share.', { price });
+    $('buyBtn').textContent = tr('Unlock for {price}', { price });
+  }
+  applyPriceLabels();
 
   let cal = null;
   let theme = 'snow';
@@ -132,12 +145,12 @@
   // ---------------- Load ----------------
   try { await A.DBReady; }
   catch { return; } // The account panel shows the retry message; never silently save locally.
+  applyPriceLabels(); // Config (and with it the local price) has loaded by now.
   if (A.DB.isCloud) {
     document.querySelectorAll('.proto-note').forEach((node) => { node.textContent = tr("Your link is read-only. Recipients do not need to sign in."); });
-    $('buyBtn').textContent = tr("Unlock for A$6.99");
     $('buyBtn').disabled = !A.Auth.config.checkoutAvailable;
     $('goDoors').nextElementSibling.textContent = tr("Save your calendar to your account. Recipients open their link without signing in.");
-    $('checkoutNote').textContent = A.Auth.config.checkoutAvailable ? tr("Secure payment with Stripe. A$6.99 once for up to 5 premium calendars this Christmas.") : tr("Checkout is being set up. Your calendar is saved.");
+    $('checkoutNote').textContent = A.Auth.config.checkoutAvailable ? tr("Secure payment with Stripe. {price} once for up to 5 premium calendars this Christmas.", { price: priceLabel() }) : tr("Checkout is being set up. Your calendar is saved.");
     if (A.Auth.user) {
       LAST += ':' + A.Auth.user.id;
       try {
@@ -247,7 +260,7 @@
     notice.hidden = !needsPass();
     notice.textContent = seasonPass?.active
       ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of 5 slots are available.', { remaining: seasonPass.remaining }) : tr('All 5 premium calendars are used. Keep editing those calendars, or choose a free world for this one.'))
-      : tr("Season Pass selected · A$6.99 once for up to 5 premium calendars this Christmas. Free to customise and preview; pay when you’re ready to share.");
+      : tr("Season Pass selected · {price} once for up to 5 premium calendars this Christmas. Free to customise and preview; pay when you’re ready to share.", { price: priceLabel() });
   }
   function openPreview(src, title) {
     $('worldPreviewTitle').textContent = title;
@@ -779,7 +792,7 @@
     const button = $('buyBtn');
     button.disabled = checkoutBusy || seasonPass?.refunded || (seasonPass?.active ? seasonPass.remaining === 0 && !seasonPass.calendars.includes(cal?.id) : !A.Auth.config.checkoutAvailable);
     button.setAttribute('aria-busy', String(checkoutBusy));
-    button.textContent = checkoutBusy ? tr('Opening checkout…') : seasonPass?.refunded ? tr('Season Pass refunded') : seasonPass?.active ? tr('Use a Season Pass calendar') : tr('Unlock for A$6.99');
+    button.textContent = checkoutBusy ? tr('Opening checkout…') : seasonPass?.refunded ? tr('Season Pass refunded') : seasonPass?.active ? tr('Use a Season Pass calendar') : tr('Unlock for {price}', { price: priceLabel() });
   }
   window.addEventListener('pageshow', (event) => {
     if (event.persisted && A.DB.isCloud) { checkoutBusy = false; renderCheckoutButton(); }
@@ -916,9 +929,9 @@
           <li>${tr("✨ All seven Season Pass worlds, from Gingerbread Lane to Neon City")}</li>
           <li>${tr("📸 Unlimited photos (")}${p} ${tr("added; free sharing includes")} ${FREE_PHOTOS})</li>
           <li>${tr("✨ Remove the “Made with Tiny Doors” credit")}</li>
-          ${seasonPass?.active ? '' : `<li>${tr("💛 One-time A$6.99 for this Christmas — no subscription")}</li>`}
+          ${seasonPass?.active ? '' : `<li>${tr("💛 One-time {price} for this Christmas — no subscription", { price: priceLabel() })}</li>`}
         </ul>
-        <button type="button" class="btn primary" id="upBtn">${gated ? tr("Unlock &amp; share · A$6.99") : tr("Get the Season Pass")}</button>
+        <button type="button" class="btn primary" id="upBtn">${gated ? tr("Unlock &amp; share · {price}", { price: priceLabel() }) : tr("Get the Season Pass")}</button>
         ${gated ? `<button type="button" class="btn ghost" id="chooseFreeWorld">${tr("Choose a free world")}</button><p class="fine">${tr("Your messages and personal edits stay saved. Free sharing includes up to 3 photos; remove any extra photos before sharing.")}</p>` : ''}`;
       if (A.DB.isCloud && seasonPass?.active) {
         $('upBtn').textContent = seasonPass.remaining > 0 ? tr('Activate premium · {remaining} of 5 available', { remaining: seasonPass.remaining }) : tr('All 5 premium calendars used');

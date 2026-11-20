@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { adminClient, json } from './sharing.js';
+import { seasonPassPrice, priceById } from './pricing.js';
 
 export const stripeClient = (env) => new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient(), maxNetworkRetries: 2 });
 export const paymentSettingsReady = (env) => ['STRIPE_SECRET_KEY', 'STRIPE_SEASON_PASS_PRICE_ID', 'STRIPE_WEBHOOK_SECRET'].every((key) => env[key] && !/REPLACE_ME|YOUR_/.test(env[key]));
@@ -54,8 +55,10 @@ export async function checkout(request, env, client = adminClient(env), stripe =
   const pass = await passStatus(client, user.id, year);
   if (pass.active) return json({ activated: await activateCalendar(client, user.id, cal.id) });
   if (pass.refunded) throw failure('This Season Pass was refunded. Please contact support before purchasing again for this Christmas.', 409);
-  const price = await stripe.prices.retrieve(env.STRIPE_SEASON_PASS_PRICE_ID);
-  if (!price.active || price.type !== 'one_time' || price.currency !== 'aud' || price.unit_amount !== 699) throw failure('The Season Pass price needs checking. Your calendar is saved.', 503);
+  // The currency follows the visitor's country as Cloudflare reports it; the browser cannot choose it.
+  const local = seasonPassPrice(env, request.cf?.country);
+  const price = await stripe.prices.retrieve(local.priceId);
+  if (!price.active || price.type !== 'one_time' || price.currency !== local.currency || price.unit_amount !== local.amount) throw failure('The Season Pass price needs checking. Your calendar is saved.', 503);
   // A durable attempt plus Stripe's idempotency key prevents repeated clicks/tabs creating multiple charges.
   let attempt = checked(await client.rpc('reserve_season_checkout', { p_owner: user.id, p_year: year, p_calendar: cal.id, p_lang: body.lang === 'fr' ? 'fr' : 'en', p_expired_session: null }));
   const create = async () => {
@@ -95,7 +98,8 @@ export async function fulfillSession(id, env, client, stripe, eventId = 'checkou
   if (session.client_reference_id !== owner || !/^[a-f0-9-]{36}$/.test(owner || '') || !Number.isInteger(year) || year < 2020 || year > 2100) throw failure('Invalid checkout identity.');
   if (session.mode !== 'payment' || session.status !== 'complete' || session.payment_status !== 'paid') return { pending: true };
   const items = session.line_items?.data;
-  if (items?.length !== 1 || session.line_items.has_more || items[0].price?.id !== env.STRIPE_SEASON_PASS_PRICE_ID || items[0].quantity !== 1 || session.currency !== 'aud' || session.amount_total !== 699) throw failure('Unexpected checkout price.');
+  const paidPrice = priceById(env, items?.[0]?.price?.id);
+  if (items?.length !== 1 || session.line_items.has_more || !paidPrice || items[0].quantity !== 1 || session.currency !== paidPrice.currency || session.amount_total !== paidPrice.amount) throw failure('Unexpected checkout price.');
   if (session.livemode !== !env.STRIPE_SECRET_KEY.startsWith('sk_test_')) throw failure('Payment mode mismatch.');
   const intent = session.payment_intent;
   if (!intent?.id || typeof intent.latest_charge !== 'object' || !intent.latest_charge) throw failure('Payment details are unavailable.', 503);

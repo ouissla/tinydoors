@@ -90,3 +90,32 @@ test('invalid JSON bodies fail as a bad request',async()=>{
  const {client,stripe}=fixture();
  for(const body of [null,[],42])await assert.rejects(checkout(req(body),env,client,stripe),e=>e.status===400);
 });
+
+// Local currencies: the country comes from Cloudflare (request.cf), never from the request body.
+const priced={...env,STRIPE_SEASON_PASS_PRICE_ID_EUR:'price_eur',STRIPE_SEASON_PASS_PRICE_ID_USD:'price_usd'};
+const fromCountry=(country,body={calendarId:'calendar1234'})=>{const r=req(body);Object.defineProperty(r,'cf',{value:country?{country}:undefined});return r;};
+const stripePrices={price_fixture:{currency:'aud',unit_amount:699},price_eur:{currency:'eur',unit_amount:499},price_usd:{currency:'usd',unit_amount:499}};
+const localStripe=(stripe)=>{stripe.prices.retrieve=async(id)=>({id,active:true,type:'one_time',...stripePrices[id]});return stripe;};
+test('checkout charges the configured price for the visitor’s country',async()=>{
+ for(const [country,price] of [['FR','price_eur'],['US','price_usd'],['JP','price_usd'],['AU','price_fixture'],['GB','price_fixture'],[null,'price_usd']]){
+  const {client,stripe,state}=fixture();
+  await checkout(fromCountry(country,{calendarId:'calendar1234',currency:'aud',country:'AU'}),priced,client,localStripe(stripe));
+  assert.deepEqual(state.created[0].params.line_items,[{price,quantity:1}],String(country));
+ }
+});
+test('a local Stripe price with the wrong amount fails closed',async()=>{
+ const {client,stripe,state}=fixture();localStripe(stripe);stripePrices.price_eur.unit_amount=399;
+ try{await assert.rejects(checkout(fromCountry('FR'),priced,client,stripe),e=>e.status===503);}finally{stripePrices.price_eur.unit_amount=499;}
+ assert.equal(state.created.length,0);
+});
+test('fulfillment accepts each configured currency only at its own amount',async()=>{
+ const eur={currency:'eur',amount_total:499,line_items:{data:[{price:{id:'price_eur'},quantity:1}],has_more:false}};
+ const ok=fixture({session:{...paid(),...eur}});await fulfillSession('cs_test_fixture',priced,ok.client,ok.stripe);
+ assert.equal(ok.state.calls[0].name,'fulfill_season_pass');
+ for(const patch of [{amount_total:699},{currency:'aud'},{line_items:{data:[{price:{id:'price_gbp'},quantity:1}],has_more:false}}]){
+  const {client,stripe,state}=fixture({session:{...paid(),...eur,...patch}});
+  await assert.rejects(fulfillSession('cs_test_fixture',priced,client,stripe));assert.equal(state.calls.length,0);
+ }
+ const unconfigured=fixture({session:{...paid(),...eur}});
+ await assert.rejects(fulfillSession('cs_test_fixture',env,unconfigured.client,unconfigured.stripe));
+});

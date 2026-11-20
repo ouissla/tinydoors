@@ -96,7 +96,7 @@ npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-Add Worker variables `APP_MODE=cloud`, `APP_URL` set to the exact preview HTTPS origin, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_STORAGE_BUCKET=calendar-photos` and `STRIPE_SEASON_PASS_PRICE_ID`. Keep test and live settings separate.
+Add Worker variables `APP_MODE=cloud`, `APP_URL` set to the exact preview HTTPS origin, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_STORAGE_BUCKET=calendar-photos` and `STRIPE_SEASON_PASS_PRICE_ID` (AUD). For local-currency pricing also add `STRIPE_SEASON_PASS_PRICE_ID_USD`, `_EUR`, `_GBP`, `_CAD`, `_NZD` and `_CHF`; each must match the amount in `server/pricing.js`, and any left unset falls back to AUD. Keep test and live settings separate: Price IDs differ between modes.
 
 Register the reachable preview origin's `/api/stripe/webhook` in **Stripe test mode**, subscribing to:
 
