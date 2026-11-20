@@ -14,6 +14,11 @@ body.w3d { overflow: hidden; height: 100dvh; }
   --title-shadow: 0 2px 0 #fff0ca;
   --chip-bg: #fff3d4c9;
 }
+.poster3d { position: fixed; inset: 0; background: center / cover no-repeat; opacity: 0; transition: opacity 0.35s ease; pointer-events: none; }
+.poster3d.on { opacity: 1; }
+body.live3d .poster3d { opacity: 0; transition: opacity 0.4s ease 0.8s; }
+#gl { opacity: 0; transition: opacity 0.8s ease; }
+body.live3d #gl { opacity: 1; }
 #gl {
   position: fixed;
   inset: 0;

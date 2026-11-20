@@ -20,6 +20,30 @@
   </script>
 </head>
 <body class="w3d">
+  <div class="poster3d" id="poster3d" aria-hidden="true"></div>
+  <script>
+    // Show a picture of the world at once, while the 3D village downloads and builds over it.
+    (function () {
+      var el = document.getElementById('poster3d'), params = new URLSearchParams(location.search), shown = '';
+      window.tinyDoorsPoster = function (theme) {
+        if (!/^(snow|summer|gingerbread|toys|space|workshop|jungle|japan|cyber)$/.test(theme || '') || shown) return;
+        shown = theme;
+        var src = 'assets/worlds/posters/' + theme + (innerWidth / innerHeight < 0.8 ? '-tall' : '-wide') + '.webp';
+        var img = new Image();
+        img.onload = function () {
+          if (document.body.classList.contains('live3d')) return;
+          el.style.backgroundImage = 'url("' + src + '")';
+          el.classList.add('on');
+          // Behind the editor, the picture is good enough to swap worlds straight away.
+          if (params.has('bg') && window.parent !== window) {
+            try { window.parent.postMessage({ littleDoorsBg: 'ready', theme: theme }, location.origin); } catch (e) { /* not embedded */ }
+          }
+        };
+        img.src = src;
+      };
+      window.tinyDoorsPoster(params.get('theme'));
+    })();
+  </script>
   <canvas id="gl" aria-label="3D advent village. Use the arrow keys to choose a door and Enter to open it."></canvas>
 
   <header class="top hud" id="top">

@@ -95,6 +95,7 @@ function save() {
 
 // ---------------- Page chrome ----------------
 document.documentElement.dataset.theme = theme;
+window.tinyDoorsPoster?.(theme); // recipients' links name a calendar, not a theme
 document.documentElement.dataset.base = A.baseOf(theme);
 document.querySelector('meta[name=theme-color]').content = { snow: '#0b1638', summer: '#ff9a8b', gingerbread: '#2a1236', toys: '#3f8fe0', space: '#05031a', workshop: '#0b1730', jungle: '#123b3a', japan: '#7d84e0', cyber: '#05020f' }[theme];
 A.Sound.theme = A.THEMES[theme].sound || 'snow';
@@ -773,9 +774,14 @@ if (bgMode) {
   controls.target.copy(home.target);
   camera.lookAt(home.target);
 }
+// Prepare every shader before the first frame, so the loading message (over the world's picture)
+// stays up while the GPU works instead of leaving an empty, frozen canvas.
+try { await renderer.compileAsync(scene, camera); } catch (e) { /* the first frame compiles instead */ }
 $('loading3d').classList.add('done');
 $('splashGo').disabled = false;
 requestAnimationFrame(frame);
+// Fade the live world in over its picture once the first frame is on screen.
+requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('live3d')));
 
 function intro() {
   askMotion();
