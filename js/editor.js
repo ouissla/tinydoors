@@ -488,6 +488,13 @@
     document.body.classList.remove('sheet-open');
     if (sheetDay && huts[sheetDay - 1]) huts[sheetDay - 1].focus({ preventScroll: true });
     sheetDay = null;
+    setTimeout(promptAfterSheet, 0);
+  }
+  let signInAfterSheet = false;
+  function promptAfterSheet() {
+    if (!signInAfterSheet || !$('sheet').hidden || !A.DB.isGuest) return;
+    signInAfterSheet = false;
+    promptSignIn(step);
   }
 
   function renderSheet() {
@@ -643,7 +650,8 @@
       catch (error) { cal.days[d - 1] = old; $('saved').textContent = tr("Couldn’t save"); throw error; }
       if (A.DB.isGuest && !A.store.get(GUEST_NUDGED, false)) {
         A.store.set(GUEST_NUDGED, true);
-        toast(tr('Saved on this device. Save it to your account so you don’t lose it.'));
+        signInAfterSheet = true; // Ask once the door sheet closes, so the prompt isn't hidden behind it.
+        if ($('sheet').hidden) setTimeout(promptAfterSheet, 0);
       }
     } else save();
     const oldMedia = old.photoId || old.videoId;

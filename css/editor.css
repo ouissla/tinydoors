@@ -667,7 +667,10 @@ body.editor.sheet-open { overflow: hidden; }
   .world-picker-footer { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
 
-.account-panel { position: relative; max-width: 940px; margin-top: 24px; }
+.account-panel { position: relative; margin-top: 24px; }
+/* Match the width of the step's own panel underneath. */
+.editor[data-editor-step="start"] .account-panel { max-width: 640px; }
+.editor[data-editor-step="share"] .account-panel { max-width: 600px; }
 .account-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--soft); color: var(--panel-ink); font-size: 1.4rem; font-weight: 900; cursor: pointer; }
 #accountReason { color: var(--panel-ink); font-weight: 800; }
 .ed-top .account-sign-in { min-height: 40px; padding: 8px 16px; font-size: 0.85rem; }

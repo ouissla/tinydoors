@@ -210,7 +210,6 @@
   "Save your calendar to your account to get their private link.": "Enregistrez votre calendrier sur votre compte pour obtenir son lien privé.",
   "Save your calendar to your account, then unlock the Season Pass.": "Enregistrez votre calendrier sur votre compte, puis débloquez le Pass de Noël.",
   "Your calendar is saved on this device. Save it to your account to get their private link.": "Votre calendrier est enregistré sur cet appareil. Enregistrez-le sur votre compte pour obtenir son lien privé.",
-  "Saved on this device. Save it to your account so you don’t lose it.": "Enregistré sur cet appareil. Enregistrez-le sur votre compte pour ne pas le perdre.",
   "Your calendar is saved to your account ✓": "Votre calendrier est enregistré sur votre compte ✓",
   "Couldn’t move your calendar into your account. Refresh to try again.": "Impossible de transférer votre calendrier sur votre compte. Actualisez la page pour réessayer.",
   "for this Christmas": "pour ce Noël",
