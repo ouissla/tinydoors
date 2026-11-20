@@ -22,7 +22,7 @@ The user confirmed preview email sign-in now works. Add the production `/auth.ht
 
 Local `.env` remains **APP_MODE=prototype**. It uses browser-only IndexedDB and a demo pass, so prototype links only work in the creating browser. Cloud mode is implemented and refuses incomplete configuration rather than falling back to local saves.
 
-The connected Supabase database has all three migrations applied, including support for 12-door schedules and private video clips. Stripe's active test Price is one-time **AUD 699 cents**. The Worker bundle dry-run passes. `/api/health` reports configuration status and deliberately keeps `paidLaunchReady: false` until the remaining launch checks are complete.
+The connected Supabase database has all four migrations applied, including support for 12-door schedules and private video clips. Stripe's active test Price is one-time **AUD 699 cents**. The Worker bundle dry-run passes. `/api/health` reports configuration status and deliberately keeps `paidLaunchReady: false` until the remaining launch checks are complete.
 
 **Preview is deployed:** [open the editor](https://tinydoors-preview.christophe-cresson.workers.dev/editor.html?new). Cloudflare permissions now work, and the three private runtime secrets are installed. `keep_vars: true` in wrangler.jsonc preserves dashboard-configured runtime variables on subsequent deployments; a normal `npm run deploy:preview` was verified after setup.
 
@@ -106,10 +106,11 @@ These migrations are already applied to Tinydoors (`sfrrucfzrqgyjltfkyrs`); do n
 1. `supabase/migrations/20261118104307_launch_foundation.sql`
 2. `supabase/migrations/20261118105907_season_pass_checkout.sql`
 3. `supabase/migrations/20261120024845_calendar_schedules_and_video.sql`
+4. `supabase/migrations/20261121000000_season_pass_calendar_limit.sql`
 
-The first creates owner-isolated calendars, per-calendar entitlements, hashed share tokens, payment-event records and a private 10 MiB JPEG bucket. The second adds account/season passes, an immutable allocation ledger, checkout reservations and service-only transactional functions. The third accepts 12 or 24 doors and enables private WebM/MP4 clips with the existing 10 MiB limit. New projects need all three migrations in order. Existing browser drafts are not uploaded automatically.
+The first creates owner-isolated calendars, per-calendar entitlements, hashed share tokens, payment-event records and a private 10 MiB JPEG bucket. The second adds account/season passes, an immutable allocation ledger, checkout reservations and service-only transactional functions. The third accepts 12 or 24 doors and enables private WebM/MP4 clips with the existing 10 MiB limit. New projects need all four migrations in order. Existing browser drafts are not uploaded automatically.
 
-**Not yet applied:** `supabase/migrations/20261121000000_season_pass_calendar_limit.sql` gives each Season Pass its own premium calendar limit (default 5, the paid amount). Apply it to Tinydoors before deploying the code that reads `calendar_limit`. New projects run it fourth.
+The fourth gives each Season Pass its own premium calendar limit (default 5, the paid amount).
 
 ### Give an account more premium calendars
 
