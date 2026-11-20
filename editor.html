@@ -57,11 +57,25 @@
     <!-- 1. Who + theme -->
     <section class="screen" id="s-start" hidden>
       <div class="panel hero">
-        <h1 class="ed-h1">Give someone <em>24 little moments</em> of Christmas</h1>
+        <h1 class="ed-h1">Give someone <em>little moments</em> of Christmas</h1>
         <div class="fields">
           <label>Who’s it for?<input id="fTo" type="text" maxlength="20" placeholder="Emma" autocomplete="off"></label>
           <label>From<input id="fFrom" type="text" maxlength="20" placeholder="Grandma" autocomplete="off"></label>
         </div>
+        <label class="field calendar-length">Calendar length
+          <select id="fLength">
+            <option value="24">24 days · 1–24 December</option>
+            <option value="12">12 days · a shorter calendar</option>
+          </select>
+          <small>Every door comes with a surprise. Choose how many to make your own.</small>
+        </label>
+        <label class="field calendar-length" id="scheduleField" hidden>When should doors open?
+          <select id="fSchedule">
+            <option value="daily">Every day · 13–24 December</option>
+            <option value="alternate">Spread across December · 1–24 December</option>
+          </select>
+          <small id="scheduleHint">12 doors, opening daily from 13 December to Christmas Eve.</small>
+        </label>
         <section class="world-picker" aria-labelledby="worldPickerTitle">
           <h2 id="worldPickerTitle">Choose their world</h2>
           <p class="world-pass-summary"><strong>Season Pass · A$6.99 once</strong><span>7 exclusive worlds · up to 5 premium calendars</span></p>
@@ -138,7 +152,7 @@
         </section>
         <div class="world-picker-footer">
           <button type="button" class="btn ghost world-preview-button" id="worldPreviewBtn">👀 Preview this world</button>
-          <button type="button" class="btn primary big" id="goDoors">Fill my 24 doors ✨</button>
+          <button type="button" class="btn primary big" id="goDoors">Fill my doors ✨</button>
           <p class="fine">Free to make and preview. No sign-up, no subscription.</p>
         </div>
       </div>
@@ -148,7 +162,7 @@
     <section class="screen panel doors-panel" id="s-doors" hidden>
       <div class="doors-head">
         <h2 class="ed-h2" id="dTitle"></h2>
-        <p class="lede">All 24 doors already have a surprise behind them. <b>Tap any door</b> to make it personal.</p>
+        <p class="lede" id="doorsIntro">Every door already has a surprise behind it. <b>Tap any door</b> to make it personal.</p>
         <p class="pass-notice" id="doorsPassNotice" hidden></p>
         <button type="button" class="btn ghost" id="calendarPreviewBtn">👀 Preview your calendar</button>
         <div class="meter">
@@ -253,6 +267,7 @@
   <script src="js/audio.js"></script>
   <script src="js/fx.js"></script>
   <script src="js/scene.js"></script>
+  <script src="js/video-recorder.js"></script>
   <script src="js/editor.js"></script>
 </body>
 </html>

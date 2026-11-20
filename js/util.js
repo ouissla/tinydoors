@@ -12,6 +12,18 @@
   };
 
   A.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  A.dayCount = (cal) => cal?.days?.length === 12 ? 12 : 24;
+  A.dayInterval = (cal) => A.dayCount(cal) === 12 && cal?.schedule === 'alternate' ? 2 : 1;
+  A.startDay = (cal) => A.dayInterval(cal) === 2 ? 1 : 25 - A.dayCount(cal);
+  // The early short calendar has a three-day gap before the Christmas Eve finale.
+  A.doorDate = (cal, door) => door === A.dayCount(cal) ? 24 : A.startDay(cal) + (door - 1) * A.dayInterval(cal);
+  A.availableDoors = (cal, decemberDay) => Array.from({ length: A.dayCount(cal) }, (_, i) => A.doorDate(cal, i + 1)).filter((date) => date <= decemberDay).length;
+  A.safeLink = (value) => {
+    try {
+      const url = new URL(value);
+      return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+    } catch { return null; }
+  };
   A.lerp = (a, b, t) => a + (b - a) * t;
   A.wait = (ms) => new Promise((r) => setTimeout(r, ms));
 

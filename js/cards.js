@@ -16,14 +16,14 @@
   A.Cards = {
     isOpen: () => !!current,
 
-    show({ day, item, theme, to, from, photo, origin, onClosed }) {
+    show({ day, item, theme, to, from, photo, video, kind, origin, onClosed }) {
       const card = $('card');
       const overlay = $('overlay');
       card.innerHTML = '';
       card.className = `card type-${item.type}`;
       const head = A.el('div', 'card-head', `
         <span class="day-badge">${tr("Day")} ${day}</span>
-        <span class="kind" id="cardTitle">${A.KIND_LABEL[item.type]}</span>
+        <span class="kind" id="cardTitle">${kind || A.KIND_LABEL[item.type]}</span>
         <button class="close" type="button" aria-label="${tr("Close")}">×</button>`);
       const body = A.el('div', 'card-body');
       const foot = A.el('div', 'card-foot');
@@ -32,7 +32,7 @@
       const closeBtn = A.el('button', 'btn ghost', tr("Back to the village"));
       closeBtn.type = 'button';
       const ctx = {
-        theme, to, from, photo, sound: A.Sound, fx: A.FX,
+        theme, to, from, photo, video, sound: A.Sound, fx: A.FX,
         setPrimary(label) {
           primaryBtn.hidden = !label;
           if (label) primaryBtn.textContent = label;
@@ -64,7 +64,8 @@
 
     async close() {
       if (!current) return;
-      const { origin, onClosed } = current;
+      const { origin, onClosed, r } = current;
+      r.closed?.();
       current = null;
       const card = $('card');
       const overlay = $('overlay');

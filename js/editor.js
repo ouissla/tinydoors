@@ -30,16 +30,18 @@
   })();
   let bgTheme = null;
   function setBackdrop(t) {
-    if (!webgl || location.protocol === 'file:' || t === bgTheme) return;
-    bgTheme = t;
+    const count = Number($('fLength').value);
+    const key = t + ':' + count;
+    if (!webgl || location.protocol === 'file:' || key === bgTheme) return;
+    bgTheme = key;
     const box = $('bg3d');
     const f = document.createElement('iframe');
     f.tabIndex = -1;
     f.setAttribute('aria-hidden', 'true');
     f.title = '';
-    f.src = A.I18n.url(`3d.html?theme=${encodeURIComponent(t)}&bg`);
+    f.src = A.I18n.url(`3d.html?theme=${encodeURIComponent(t)}&doors=${count}&bg`);
     f._show = () => {
-      if (bgTheme !== t) { f.remove(); return; } // picked another world meanwhile
+      if (bgTheme !== key) { f.remove(); return; } // picked another world meanwhile
       if (f.classList.contains('on')) return;
       f.classList.add('on');
       document.body.classList.add('has3d');
@@ -163,18 +165,34 @@
   }
   if (cal) {
     cal.days = cal.days.map(A.I18n.localizePreset);
-    await Promise.all(cal.days.map(async (d) => {
-      if (d.photoId && !photoURL[d.photoId]) {
-        try { photoURL[d.photoId] = await A.DB.getPhotoURL(d.photoId); }
+    await Promise.all([...cal.days, ...Object.values(cal.savedDays || {}).flat()].map(async (d) => {
+      const id = d.photoId || d.videoId;
+      if (id && !photoURL[id]) {
+        try { photoURL[id] = await A.DB.getPhotoURL(id); }
         catch { $('accountMessage').textContent = tr("Some photos couldn’t load. Refresh to try again."); }
       }
     }));
     setTheme(cal.theme);
     $('fTo').value = cal.to;
     $('fFrom').value = cal.from;
+    $('fLength').value = A.dayCount(cal);
+    $('fSchedule').value = cal.schedule || 'daily';
   } else {
     setTheme(params.get('theme') || 'snow');
   }
+
+  function updateLengthChoice() {
+    const short = $('fLength').value === '12';
+    $('scheduleField').hidden = !short;
+    setBackdrop(theme);
+    $('goDoors').textContent = tr('Fill my {count} doors ✨', { count: $('fLength').value });
+    $('scheduleHint').textContent = $('fSchedule').value === 'alternate'
+      ? tr('12 doors on 1, 3, 5…21 December, then the final door on 24 December.')
+      : tr('12 doors, opening daily from 13 December to Christmas Eve.');
+  }
+  $('fLength').addEventListener('change', updateLengthChoice);
+  $('fSchedule').addEventListener('change', updateLengthChoice);
+  updateLengthChoice();
 
   // ---------------- Steps ----------------
   let layoutAnimation = null;
@@ -236,7 +254,7 @@
     $('worldPreviewFrame').src = A.I18n.url(src);
     $('worldPreview').showModal();
   }
-  $('worldPreviewBtn').addEventListener('click', () => openPreview(`3d.html?theme=${encodeURIComponent(theme)}&skip`, A.THEMES[theme].name));
+  $('worldPreviewBtn').addEventListener('click', () => openPreview(`3d.html?theme=${encodeURIComponent(theme)}&doors=${$('fLength').value}&skip&unlock`, A.THEMES[theme].name));
   $('closeWorldPreview').addEventListener('click', () => $('worldPreview').close());
   $('worldPreview').addEventListener('close', () => $('worldPreviewFrame').removeAttribute('src'));
   $('worldPreviewFrame').addEventListener('load', () => {
@@ -272,6 +290,7 @@
       toast(tr("Who is this calendar for?"));
       return;
     }
+    const count = Number($('fLength').value);
     if (!cal) {
       const now = new Date();
       cal = {
@@ -283,17 +302,21 @@
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Australia/Sydney',
         plan: pendingPass ? 'season' : 'free',
         createdAt: Date.now(),
-        days: clone(A.CONTENT[theme]),
+        days: A.presetDays(theme, count),
       };
     } else {
       cal.to = to;
       cal.from = from || cal.from;
+      if (cal.days.length !== count) {
+        cal.days = A.resizeDays(cal, count, theme);
+      }
       if (cal.theme !== theme) {
         // Keep everything they made; swap the untouched presets for the new world's pack.
-        cal.days = cal.days.map((d, i) => (d.personal ? d : clone(A.CONTENT[theme][i])));
+        cal.days = cal.days.map((d, i) => (d.personal ? d : A.presetDays(theme, count)[i]));
         cal.theme = theme;
       }
     }
+    cal.schedule = count === 12 ? $('fSchedule').value : 'daily';
     save();
     celebrate($('goDoors'), 110);
     go('doors');
@@ -305,8 +328,9 @@
   function renderDoors(animate) {
     $('dTitle').textContent = fill(A.THEMES[cal.theme].title);
     updatePassNotice();
+    $('doorsIntro').innerHTML = tr('All {count} doors already have a surprise behind them.', { count: cal.days.length }) + ' <b>' + tr('Tap any door to make it personal.') + '</b>';
     grid.innerHTML = '';
-    huts = A.makeHuts(cal.theme, (d) => A.iconFor(cal.days[d - 1], cal.theme), (d) => openSheet(d));
+    huts = A.makeHuts(cal.theme, (d) => A.iconFor(cal.days[d - 1], cal.theme), (d) => openSheet(d), cal.days.length);
     huts.forEach((h, i) => {
       h.insertAdjacentHTML('beforeend', '<span class="badge" aria-hidden="true">♥</span><span class="add" aria-hidden="true">+</span>');
       decorate(i + 1);
@@ -354,7 +378,7 @@
     const tips = [];
     const emptyPhoto = cal.days.findIndex((d) => d.type === 'photo' && !d.photoId);
     if (emptyPhoto >= 0) tips.push({ label: `${tr("📸 Add a photo to day")} ${emptyPhoto + 1}`, run: () => openSheet(emptyPhoto + 1) });
-    if (!cal.days[23].personal) tips.push({ label: tr("💌 Write the Christmas Eve letter"), run: () => openSheet(24, 'note') });
+    if (!cal.days[cal.days.length - 1].personal) tips.push({ label: tr("💌 Write the Christmas Eve letter"), run: () => openSheet(cal.days.length, 'note') });
     tips.push({ label: tr("🖼️ Add several photos at once"), run: () => $('bulkIn').click() });
     if (!cal.days[0].personal && tips.length < 3) tips.push({ label: tr("👋 Write the welcome note"), run: () => openSheet(1, 'note') });
     const box = $('suggest');
@@ -370,6 +394,8 @@
   function summary(day) {
     switch (day.type) {
       case 'photo': return { title: day.caption ? fill(day.caption) : tr("A photo memory"), text: day.photoId ? tr('Your photo, hidden under {cover}', { cover: tr(cal.theme === 'snow' ? 'frost' : 'sand') }) : tr("Add your own photo here") };
+      case 'link': return { title: day.title || tr('Open link'), text: day.url };
+      case 'video': return { title: day.caption || tr('A video for you'), text: tr('Your short video · up to 10 seconds') };
       case 'message': return { title: tr("A note"), text: fill(day.text).slice(0, 110) };
       case 'finale': return { title: tr("Christmas Eve letter"), text: fill(day.text).slice(0, 110) };
       case 'riddle': case 'joke': return { title: fill(day.q), text: A.KIND_LABEL[day.type] };
@@ -393,7 +419,7 @@
     A.Sound.init();
     sheetDay = d;
     const day = cal.days[d - 1];
-    sheetMode = mode || (day.photoId ? 'photo' : 'home');
+    sheetMode = mode || (day.photoId ? 'photo' : day.videoId ? 'video' : day.type === 'link' ? 'link' : 'home');
     renderSheet();
     $('sheet').hidden = false;
     document.body.classList.add('sheet-open');
@@ -404,7 +430,11 @@
     });
   }
 
+  let recording = null;
+  function stopRecording() { recording?.cancel(); recording = null; }
+
   function closeSheet() {
+    stopRecording();
     $('sheet').hidden = true;
     document.body.classList.remove('sheet-open');
     if (sheetDay && huts[sheetDay - 1]) huts[sheetDay - 1].focus({ preventScroll: true });
@@ -412,13 +442,14 @@
   }
 
   function renderSheet() {
+    stopRecording();
     const d = sheetDay;
     const day = cal.days[d - 1];
-    $('shDay').textContent = `${tr("Day")} ${d}`;
-    $('shKind').textContent = d === 24 ? tr("Christmas Eve") : day.personal ? tr("Made by you ♥") : tr("Ready-made surprise");
+    $('shDay').textContent = tr('Door {door} · {date} December', { door: d, date: A.doorDate(cal, d) });
+    $('shKind').textContent = A.doorDate(cal, d) === 24 ? tr("Christmas Eve") : day.personal ? tr("Made by you ♥") : tr("Ready-made surprise");
     const body = $('shBody');
     const s = summary(day);
-    const isEve = d === 24;
+    const isEve = A.doorDate(cal, d) === 24;
 
     if (sheetMode === 'home') {
       body.innerHTML = `
@@ -430,6 +461,8 @@
         <div class="actions">
           <button type="button" data-act="camera"><span>📸</span><b>${tr("Take a photo")}</b></button>
           <button type="button" data-act="library"><span>🖼️</span><b>${tr("Choose a photo")}</b></button>
+          <button type="button" data-act="link"><span>🔗</span><b>${tr("Add a link")}</b><small>${tr("YouTube or any website")}</small></button>
+          <button type="button" data-act="video"><span>🎥</span><b>${tr("Record a video")}</b><small>${tr("Up to 10 seconds")}</small></button>
           <button type="button" data-act="note"><span>💌</span><b>${isEve ? tr("Write the letter") : tr("Write a note")}</b></button>
           <button type="button" data-act="voucher"><span>🎟️</span><b>${tr("Make a voucher")}</b></button>
           <button type="button" class="wide" data-act="games"><span>🎮</span><b>${tr("Add a mini game")}</b><small>${tr("Sudoku, word search, memory…")}</small></button>
@@ -440,6 +473,18 @@
           ${day.personal ? `<button type="button" class="link" data-act="reset">${tr("Reset to the original")}</button>` : '<span></span>'}
           <button type="button" class="btn primary" data-act="done">${tr("Done")}</button>
         </div>`;
+    } else if (sheetMode === 'link') {
+      body.innerHTML = `
+        <label class="field">${tr("Website or YouTube link")}<input id="linkURL" type="url" maxlength="2048" placeholder="https://www.youtube.com/watch?v=…" value="${esc(day.type === 'link' ? day.url : '')}"></label>
+        <label class="field">${tr("Button text")}<input id="linkTitle" type="text" maxlength="80" placeholder="${tr('Open link')}" value="${esc(day.type === 'link' ? day.title || '' : '')}"></label>
+        <p class="hint" id="linkHint" role="status">${tr("Opens in a new tab when they click. Use a full http:// or https:// address.")}</p>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("Back")}</button><button type="button" class="btn primary" data-act="saveLink">${tr("Save link")}</button></div>`;
+    } else if (sheetMode === 'video') {
+      body.innerHTML = `
+        <video id="videoPreview" class="surprise-video" playsinline ${day.videoId ? `controls src="${esc(photoURL[day.videoId] || '')}"` : 'muted'}></video>
+        <p class="hint" id="recordStatus" role="status" aria-live="polite">${tr("Record a personal video, up to 10 seconds. Allow your camera and microphone when asked.")}</p>
+        <div class="row-btns"><button type="button" class="btn primary" data-act="recordVideo">${day.videoId ? tr("Record again") : tr("Start recording")}</button><button type="button" class="btn ghost" id="stopVideo" data-act="stopVideo" hidden>${tr("Stop recording")}</button></div>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("Back")}</button>${day.videoId ? `<button type="button" class="link" data-act="reset">${tr("Remove video")}</button>` : ''}<button type="button" class="btn primary" data-act="done">${tr("Done")}</button></div>`;
     } else if (sheetMode === 'photo') {
       body.innerHTML = `
         <div class="photo-edit">
@@ -548,10 +593,11 @@
       try { await persist(); $('saved').textContent = tr("Saved ✓"); A.store.set(LAST, cal.id); }
       catch (error) { cal.days[d - 1] = old; $('saved').textContent = tr("Couldn’t save"); throw error; }
     } else save();
-    if (old.photoId && old.photoId !== next.photoId) {
-      A.DB.deletePhoto(old.photoId).catch(() => {}); // Cleanup follows a durable calendar update.
-      if (photoURL[old.photoId]) URL.revokeObjectURL(photoURL[old.photoId]);
-      delete photoURL[old.photoId];
+    const oldMedia = old.photoId || old.videoId;
+    if (oldMedia && oldMedia !== (next.photoId || next.videoId) && !Object.values(cal.savedDays || {}).flat().some((item) => (item.photoId || item.videoId) === oldMedia)) {
+      A.DB.deletePhoto(oldMedia).catch(() => {});
+      if (photoURL[oldMedia]) URL.revokeObjectURL(photoURL[oldMedia]);
+      delete photoURL[oldMedia];
     }
     decorate(d);
     renderHelpers();
@@ -583,8 +629,50 @@
     switch (act) {
       case 'done': closeSheet(); break;
       case 'home': sheetMode = 'home'; renderSheet(); break;
-      case 'note': case 'voucher': case 'presets': case 'words': sheetMode = act; renderSheet(); break;
+      case 'note': case 'voucher': case 'presets': case 'words': case 'link': case 'video': sheetMode = act; renderSheet(); break;
       case 'games': sheetMode = 'presets'; presetFilter = tr("Games"); renderSheet(); break;
+      case 'saveLink': {
+        const url = A.safeLink($('linkURL').value.trim());
+        if (!url) { $('linkHint').textContent = tr('Enter a full http:// or https:// link.'); $('linkURL').focus(); return; }
+        await setDay(d, { type: 'link', url, title: $('linkTitle').value.trim() || tr('Open link'), personal: true }, { celebrate: true });
+        closeSheet(); toast(tr('Link saved 🔗')); break;
+      }
+      case 'recordVideo': {
+        if (recording) return;
+        const previewNode = $('videoPreview'), status = $('recordStatus'), stopButton = $('stopVideo');
+        const button = $('shBody').querySelector('[data-act="recordVideo"]');
+        button.disabled = true;
+        recording = A.recordVideo({
+          preview: previewNode,
+          onTick(seconds) { status.textContent = tr('Recording… {seconds}/10 seconds', { seconds }); },
+          async onComplete(blob) {
+            recording = null;
+            stopButton.hidden = true;
+            status.textContent = tr('Saving your video…');
+            let id;
+            try {
+              id = await A.DB.putVideo(blob);
+              await setDay(d, { type: 'video', videoId: id, personal: true }, { celebrate: true });
+              photoURL[id] = URL.createObjectURL(blob);
+              if (sheetDay === d) { sheetMode = 'video'; renderSheet(); }
+              toast(tr('Video saved 🎥'));
+            } catch {
+              if (id) A.DB.deletePhoto(id).catch(() => {});
+              status.textContent = tr('Couldn’t save your video. Please record again.');
+              button.disabled = false;
+            }
+          },
+          onError() {
+            recording = null;
+            button.disabled = false;
+            stopButton.hidden = true;
+            status.textContent = tr('Couldn’t record. Allow camera and microphone access and use a browser that supports video recording.');
+          },
+          onReady() { stopButton.hidden = false; },
+        });
+        break;
+      }
+      case 'stopVideo': recording?.stop(); break;
       case 'saveWords': {
         const words = [...new Set(A.I18n.letters($('wsWords').value).split(/[^A-Z]+/).filter((w) => w.length >= 2 && w.length <= 10))].slice(0, 8);
         if (words.length < 3) {
@@ -617,9 +705,9 @@
       case 'saveNote': {
         const text = $('noteIn').value.trim();
         if (!text) { $('noteIn').focus(); return; }
-        await setDay(d, { type: d === 24 ? 'finale' : 'message', text, personal: true }, { celebrate: true });
+        await setDay(d, { type: d === cal.days.length ? 'finale' : 'message', text, personal: true }, { celebrate: true });
         closeSheet();
-        toast(d === 24 ? tr("Christmas Eve letter saved 💌") : tr("Note saved 💌"));
+        toast(A.doorDate(cal, d) === 24 ? tr("Christmas Eve letter saved 💌") : tr("Note saved 💌"));
         break;
       }
       case 'saveVoucher': {
@@ -635,7 +723,7 @@
     void day;
   }
 
-  const resetItem = (d) => clone(A.CONTENT[cal.theme][d - 1]);
+  const resetItem = (d) => A.presetDays(cal.theme, cal.days.length)[d - 1];
 
   async function addPhotoTo(d, file) {
     const blob = await A.preparePhoto(file);
@@ -671,7 +759,7 @@
     if (!files.length) return;
     const slots = [];
     cal.days.forEach((d, i) => { if (d.type === 'photo' && !d.photoId) slots.push(i + 1); });
-    cal.days.forEach((d, i) => { if (!d.personal && d.type !== 'photo' && i > 0 && i < 23) slots.push(i + 1); });
+    cal.days.forEach((d, i) => { if (!d.personal && d.type !== 'photo' && i > 0 && i < cal.days.length - 1) slots.push(i + 1); });
     let added = 0;
     toast(tr("Adding your photos…"));
     for (const f of files) {
@@ -797,7 +885,7 @@
     $('shareEmblem').textContent = A.THEMES[cal.theme].emblem;
     $('shareTitle').textContent = `${tr("Ready for")} ${cal.to}!`;
     const n = personalCount(), p = photoCount();
-    $('shareSummary').innerHTML = `${tr("24 doors ·")} <b>${n}</b> ${tr("made by you ·")} <b>${p}</b> photo${p === 1 ? '' : 's'}<br>${tr("The first door opens on")} <b>${tr("1 December")}</b>.`;
+    $('shareSummary').innerHTML = `${cal.days.length} ${tr("doors ·")} <b>${n}</b> ${tr("made by you ·")} <b>${p}</b> photo${p === 1 ? '' : 's'}<br>${tr("The first door opens on")} <b>${tr("{day} December", { day: A.startDay(cal) })}</b>. ${A.dayInterval(cal) === 2 ? tr("Doors open every second day through 21 December, then the final door opens on 24 December.") : tr("A new door opens every day.")}`;
     $('previewBtn').href = linkFor('&preview');
     $('previewBtn').textContent = `${tr("👀 Preview as")} ${cal.to}`;
     $('preview2dBtn').href = linkFor('&preview', 'index.html');

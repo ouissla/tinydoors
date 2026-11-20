@@ -34,7 +34,7 @@ if (cid) {
   }
   cal.days = cal.days.map(A.I18n.localizePreset);
   await Promise.all(cal.days.map(async (day, i) => {
-    if (day.photoId) photoURLs[i + 1] = await A.DB.getPhotoURL(day.photoId);
+    if (day.photoId || day.videoId) photoURLs[i + 1] = await A.DB.getPhotoURL(day.photoId || day.videoId);
   }));
 }
 
@@ -60,22 +60,24 @@ const state = {
   today: 9,
   focus: 1,
 };
+const count = cal ? A.dayCount(cal) : params.get('doors') === '12' ? 12 : 24;
 const openKey = cal ? `littledoors:open:${cal.id}` : null;
-let opened = new Set(bgMode ? [] : cal ? (preview ? [] : A.store.get(openKey, [])) : (saved.opened && saved.opened[theme]) || []);
+let opened = new Set((bgMode ? [] : cal ? (preview ? [] : A.store.get(openKey, [])) : (saved.opened && saved.opened[theme]) || []).filter((d) => Number.isInteger(d) && d >= 1 && d <= count));
 
+const startDay = A.startDay(cal);
 let sleepsUntil;
 if (cal) {
   const t = partsIn(cal.tz);
   const todayUTC = Date.UTC(t.y, t.m - 1, t.d);
   sleepsUntil = (day) => Math.round((Date.UTC(cal.year, 11, day) - todayUTC) / 86400000);
-  state.today = sleepsUntil(1) > 0 ? 0 : A.clamp(24 - Math.max(0, sleepsUntil(24)), 0, 24);
+  state.today = sleepsUntil(startDay) > 0 ? 0 : A.availableDoors(cal, 24 - sleepsUntil(24));
 } else {
   const n = new Date();
   const real = n.getMonth() === 11 && n.getDate() <= 24 ? n.getDate() : null;
-  state.today = A.clamp(+(params.get('day') || real || 9), 1, 24);
+  state.today = A.clamp(+(params.get('day') || real || 9), 1, count);
   sleepsUntil = (day) => day - state.today;
 }
-const items = cal ? cal.days : A.CONTENT[theme];
+const items = cal ? cal.days : A.presetDays(theme, count);
 const isUnlocked = (d) => state.unlockAll || d <= state.today;
 const fill = (s) => s.replace(/\{to\}/g, state.to).replace(/\{from\}/g, state.from);
 const plural = (n, w) => `${n} ${tr(w)}${n === 1 ? '' : 's'}`;
@@ -103,7 +105,7 @@ A.FX.setTheme(theme);
 const T = A.THEMES[theme];
 $('splashEmblem').textContent = T.emblem;
 $('splashEyebrow').textContent = `${state.to}, ${state.from} ${tr("made you something")}`;
-$('splashTitle').innerHTML = T.splashTitle;
+$('splashTitle').innerHTML = T.splashTitle.replace('24', String(count));
 $('btn2d').href = 'index.html' + location.search;
 if (cal) {
   $('btnTheme').hidden = true;
@@ -133,11 +135,11 @@ function refreshHUD() {
   $('eyebrow').textContent = fill(T.eyebrow);
   const toX = sleepsUntil(25);
   let when;
-  if (state.today === 0) when = `${tr("Doors open 1 December —")} ${plural(sleepsUntil(1), 'sleep')} ${tr("to go")}`;
+  if (state.today === 0) when = `${tr("Doors open {day} December —", { day: startDay })} ${plural(sleepsUntil(startDay), 'sleep')} ${tr("to go")}`;
   else if (toX <= 0) when = tr("Merry Christmas! 🎄");
   else if (toX === 1) when = tr("Christmas Eve! 🎅");
   else when = `${toX} ${tr("sleeps to Christmas")}`;
-  $('sub').innerHTML = `<span>${opened.size}${tr("/24 lights on")}</span><span class="dot">•</span><span>${when}</span>`;
+  $('sub').innerHTML = `<span>${opened.size}/${count} ${tr("lights on")}</span><span class="dot">•</span><span>${when}</span>`;
   $('btnSound').textContent = state.sound ? '🔊' : '🔇';
   $('btnSound').setAttribute('aria-label', tr(state.sound ? 'Sound off' : 'Sound on'));
 }
@@ -178,7 +180,7 @@ let world = null;
 let cols = 0;
 let todayStar = null, todayRing = null, focusRing = null;
 
-const colsFor = (aspect) => (aspect >= 1.15 ? 8 : aspect >= 0.8 ? 6 : 4);
+const colsFor = (aspect) => count === 12 ? (aspect >= 0.8 ? 6 : 4) : (aspect >= 1.15 ? 8 : aspect >= 0.8 ? 6 : 4);
 
 function buildAll(nextCols) {
   if (world) {
@@ -375,7 +377,7 @@ async function openDay(d) {
   A.Sound.init();
   if (!isUnlocked(d)) {
     A.Sound.thunk();
-    const n = sleepsUntil(d);
+    const n = sleepsUntil(A.doorDate(cal, d));
     toast(`${tr("Not yet! Door")} ${d} ${tr("opens in")} ${plural(n, 'sleep')} 💤`);
     tween(450, (e, k) => { h.group.rotation.z = Math.sin(k * Math.PI * 6) * 0.06 * (1 - k); }, (k) => k);
     return;
@@ -442,6 +444,7 @@ function showCard(d) {
     theme,
     to: state.to,
     from: state.from,
+    video: item.type === 'video' ? photoURLs[d] || null : null,
     photo: item.type === 'photo' ? photoURLs[d] || null : null,
     origin: screenOf(h),
     onClosed() {
@@ -606,7 +609,7 @@ document.addEventListener('keydown', (e) => {
   const moves = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols };
   if (moves[e.key]) {
     e.preventDefault();
-    state.focus = A.clamp(state.focus + moves[e.key], 1, 24);
+    state.focus = A.clamp(state.focus + moves[e.key], 1, count);
     const h = world.houses[state.focus - 1];
     focusRing.visible = true;
     focusRing.position.copy(h.group.position).add(new THREE.Vector3(0, 0.08, 0.4));

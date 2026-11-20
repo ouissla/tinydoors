@@ -4,14 +4,14 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 const source = await readFile(new URL('../js/cloud-db.js', import.meta.url), 'utf8');
 async function adapter({queryError=null,sessionError=null}={}) {
-  const state={writes:[],deleted:[],localCalls:0};
+  const state={writes:[],deleted:[],uploads:[],localCalls:0};
   const user={id:'creator-id'};
   const row={id:'calendar1234',document:{to:'Sam',plan:'season',days:[]},calendar_entitlements:null};
   const A={
     DB:{newId:()=> 'random',getCalendar(){state.localCalls++;},saveCalendar(){state.localCalls++;}},
     Auth:{ready:Promise.resolve(),mode:'cloud',user,config:{photoBucket:'calendar-photos'},async session(){if(sessionError)throw sessionError;return {user};},
       client:{from(){const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:row,error:queryError};},async upsert(value){state.writes.push(value);return {data:value,error:queryError};}};return q;},
-        storage:{from(){return {async remove(paths){state.deleted.push(...paths);return {data:[],error:null};}};}}}},
+        storage:{from(){return {async upload(path,blob,options){state.uploads.push({path,blob,options});return {data:{path},error:null};},async remove(paths){state.deleted.push(...paths);return {data:[],error:null};}};}}}},
   };
   const context=vm.createContext({window:{Advent:A},document:{body:{classList:{contains:()=>true}}},location:{search:''},URLSearchParams,structuredClone,fetch(){throw Error('unexpected fetch');},Date,Map,URL});
   vm.runInContext(source,context);
@@ -43,4 +43,17 @@ test('photo deletion refuses a different creator’s path',async()=>{
  assert.equal(state.deleted.length,0);
  await db.deletePhoto('creator-id/photo.jpg');
  assert.equal(state.deleted[0],'creator-id/photo.jpg');
+});
+
+test('private video uploads preserve supported MIME types and owner paths',async()=>{
+ const {db,state}=await adapter();
+ const path=await db.putVideo(new Blob(['clip'],{type:'video/webm;codecs=vp8,opus'}));
+ assert.equal(path,'creator-id/random.webm');
+ assert.equal(state.uploads[0].options.contentType,'video/webm');
+ assert.equal(state.uploads[0].options.upsert,false);
+ const mp4=await db.putVideo(new Blob(['clip'],{type:'video/mp4'}));
+ assert.equal(mp4,'creator-id/random.mp4');
+ await assert.rejects(()=>db.putVideo(new Blob(['data'],{type:'text/html'})));
+ await assert.rejects(()=>db.putVideo(new Blob([new Uint8Array(10*1024*1024+1)],{type:'video/webm'})));
+ assert.equal(state.uploads.length,2);
 });

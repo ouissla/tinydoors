@@ -306,7 +306,34 @@
   }
 
   const game = (day, item, ctx) => A.Games.render(day, item, ctx);
-  const R = { photo, message, riddle: qa, joke: qa, activity, voucher, finale, game };
+  function link(day, item, ctx) {
+    const url = A.safeLink(item.url);
+    const node = el('div', 'activity link-surprise', `<div class="act-emoji">🔗</div><h2>${fill(item.title || tr('Open link'), ctx)}</h2>`);
+    if (url) {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.className = 'btn primary';
+      anchor.textContent = item.title || tr('Open link');
+      node.appendChild(anchor);
+    } else node.appendChild(el('p', '', tr('This link is unavailable.')));
+    return { node };
+  }
+
+  function video(day, item, ctx) {
+    const node = el('div', 'video-surprise');
+    const player = document.createElement('video');
+    player.controls = true;
+    player.playsInline = true;
+    player.preload = 'metadata';
+    player.className = 'surprise-video';
+    if (ctx.video) { player.src = ctx.video; node.appendChild(player); }
+    else node.textContent = tr('This video is unavailable. Please refresh to try again.');
+    return { node, closed() { player.pause(); player.removeAttribute('src'); player.load(); } };
+  }
+
+  const R = { link, video, photo, message, riddle: qa, joke: qa, activity, voucher, finale, game };
 
   A.Reveal = {
     render(day, item, ctx) {

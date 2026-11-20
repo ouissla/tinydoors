@@ -267,7 +267,26 @@
     24: { type: 'finale', text: tr("Every sign in Neon City is glowing for you.\n\nThank you for opening a door with me every day. Wherever the night takes you, you’re my favourite light in the city.") },
   });
 
+  // Keep a welcome, a mix of surprises, and the Christmas Eve finale in the short pack.
+  A.presetDays = (theme, count = 24) => {
+    const pack = A.CONTENT[theme];
+    return structuredClone(count === 12 ? [...pack.slice(0, 11), pack[23]] : pack);
+  };
+
+  A.resizeDays = (cal, count, theme) => {
+    cal.savedDays = { ...(cal.savedDays || {}), [cal.days.length]: structuredClone(cal.days) };
+    const base = cal.savedDays[count] || A.presetDays(theme, count);
+    const previousCount = cal.days.length;
+    const result = base.map((item, i) => {
+      const previous = cal.days[i === count - 1 ? previousCount - 1 : i < previousCount - 1 ? i : -1];
+      return structuredClone(previous?.personal ? previous : item.personal ? item : A.presetDays(theme, count)[i]);
+    });
+    return result;
+  };
+
   A.KIND_LABEL = {
+    link: tr("A link for you"),
+    video: tr("A video for you"),
     message: tr("A note for you"),
     photo: tr("A memory"),
     riddle: tr("A riddle"),
@@ -280,6 +299,8 @@
 
   A.iconFor = function (item, theme) {
     switch (item.type) {
+      case 'link': return '🔗';
+      case 'video': return '🎥';
       case 'photo': return '📸';
       case 'message': return '💌';
       case 'riddle': return '❓';

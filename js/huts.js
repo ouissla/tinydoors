@@ -76,10 +76,10 @@
   };
 
   // Returns an array of 24 hut <button>s. Same seed => same village every time.
-  A.makeHuts = function (theme, iconFor, onClick) {
+  A.makeHuts = function (theme, iconFor, onClick, count = 24) {
     const r = A.rng(theme === 'snow' ? 7 : 11);
     const out = [];
-    for (let d = 1; d <= 24; d++) {
+    for (let d = 1; d <= count; d++) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'hut';
@@ -123,7 +123,8 @@
     const vw = window.innerWidth;
     let best = { cols: 4, cw: 0, gap: 10 };
     for (const cols of colsOptions) {
-      const rows = 24 / cols;
+      if (cols > huts.length) continue;
+      const rows = Math.ceil(huts.length / cols);
       const gap = Math.max(6, Math.min(18, vw * 0.012));
       const cw = Math.min((availW - gap * (cols - 1)) / cols, (availH - gap * (rows - 1)) / rows / ratio);
       if (cw > best.cw) best = { cols, cw, gap };

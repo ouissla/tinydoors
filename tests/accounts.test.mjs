@@ -121,3 +121,19 @@ test('sharing requires a current server entitlement and counts photo doors', () 
   row.document.days.push({photoId:owner+'/same.jpg'});
   assert.equal(requiresSeasonPass(row),true);
 });
+
+test('recipient shares sign private videos and omit archived creator edits', async () => {
+  const token = 'video-share', hash = await tokenHash(token);
+  const cal = structuredClone(calendar);
+  cal.document.days = [{ type: 'video', videoId: owner + '/clip.webm', personal: true }];
+  cal.document.savedDays = { 24: [{ text: 'Hidden creator-only draft' }] };
+  const { client, state } = fakeClient({cal, share: {calendar_id:cal.id, token_hash:hash, expires_at:'2091-01-01T00:00:00Z'}});
+  const response = await readShare(token, env, client);
+  assert.equal(response.status,200);
+  const body = await response.json();
+  assert.deepEqual(state.signed,[owner+'/clip.webm']);
+  assert.equal(body.calendar.savedDays,undefined);
+  assert.ok(body.photos[owner+'/clip.webm']);
+  cal.document.days[0].videoId = 'someone-else/clip.webm';
+  assert.equal((await readShare(token,env,client)).status,422);
+});

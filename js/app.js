@@ -35,7 +35,7 @@
     }
     cal.days = cal.days.map(A.I18n.localizePreset);
     await Promise.all(cal.days.map(async (day, i) => {
-      if (day.photoId) photoURLs[i + 1] = await A.DB.getPhotoURL(day.photoId);
+      if (day.photoId || day.videoId) photoURLs[i + 1] = await A.DB.getPhotoURL(day.photoId || day.videoId);
     }));
   }
 
@@ -67,18 +67,20 @@
   if (!A.THEMES[state.theme]) state.theme = 'snow';
 
   // How many sleeps until December `day` (25 = Christmas).
+  const count = cal ? A.dayCount(cal) : params.get('doors') === '12' ? 12 : 24;
+  const startDay = A.startDay(cal);
   let sleepsUntil;
   if (cal) {
     const t = partsIn(cal.tz);
     const year = cal.year;
     const todayUTC = Date.UTC(t.y, t.m - 1, t.d);
     sleepsUntil = (day) => Math.round((Date.UTC(year, 11, day) - todayUTC) / 86400000);
-    state.today = A.clamp(24 - Math.max(0, sleepsUntil(24)), 0, 24);
-    if (sleepsUntil(1) > 0) state.today = 0;
+    state.today = A.availableDoors(cal, 24 - sleepsUntil(24));
+    if (sleepsUntil(startDay) > 0) state.today = 0;
   } else {
     const n = new Date();
     const realToday = n.getMonth() === 11 && n.getDate() <= 24 ? n.getDate() : null;
-    state.today = A.clamp(+(params.get('day') || saved.today || realToday || 9), 1, 24);
+    state.today = A.clamp(+(params.get('day') || saved.today || realToday || 9), 1, count);
     sleepsUntil = (day) => day - state.today;
   }
 
@@ -93,8 +95,8 @@
     });
   };
 
-  const items = () => (cal ? cal.days : A.CONTENT[state.theme]);
-  const openedSet = () => new Set(state.opened[state.theme] || []);
+  const items = () => (cal ? cal.days : A.presetDays(state.theme, count));
+  const openedSet = () => new Set((state.opened[state.theme] || []).filter((d) => Number.isInteger(d) && d >= 1 && d <= count));
   const isUnlocked = (d) => state.unlockAll || d <= state.today;
   const fill = (s) => s.replace(/\{to\}/g, state.to).replace(/\{from\}/g, state.from);
   const plural = (n, w) => `${n} ${tr(w)}${n === 1 ? '' : 's'}`;
@@ -106,7 +108,7 @@
   function buildGrid() {
     grid.innerHTML = '';
     const list = items();
-    huts = A.makeHuts(state.theme, (d) => A.iconFor(list[d - 1], state.theme), (d) => openDay(d));
+    huts = A.makeHuts(state.theme, (d) => A.iconFor(list[d - 1], state.theme), (d) => openDay(d), count);
     huts.forEach((b, i) => {
       b.addEventListener('focus', () => (state.focus = i + 1));
       grid.appendChild(b);
@@ -126,7 +128,7 @@
       h.classList.toggle('ready', isUnlocked(d) && !op.has(d));
       const label = op.has(d)
         ? `${tr("Day")} ${d}${tr(", opened.")} ${A.KIND_LABEL[list[i].type]}`
-        : isUnlocked(d) ? `${tr("Day")} ${d}${tr(", ready to open")}` : `${tr("Day")} ${d}${tr(", opens in")} ${plural(sleepsUntil(d), 'day')}`;
+        : isUnlocked(d) ? `${tr("Day")} ${d}${tr(", ready to open")}` : `${tr("Day")} ${d}${tr(", opens in")} ${plural(sleepsUntil(A.doorDate(cal, d)), 'day')}`;
       h.setAttribute('aria-label', label);
     });
     // Garland: one bulb per opened door.
@@ -136,9 +138,9 @@
       let d = '';
       for (let k = 0; k <= 60; k++) d += (k ? ' L' : 'M') + (2 + (k / 60) * 96).toFixed(2) + ',' + wave(k / 60).toFixed(2);
       g.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,${wave(0)} L2,${wave(0)} ${d.slice(1)} L100,${wave(1)}" stroke="rgba(30,40,60,.55)" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/></svg>`;
-      for (let i = 0; i < 24; i++) {
+      for (let i = 0; i < count; i++) {
         const b = A.el('i');
-        const t = i / 23;
+        const t = i / (count - 1);
         b.style.left = (2 + t * 96).toFixed(2) + '%';
         b.style.top = wave(t) + '%';
         b.style.setProperty('--c', ['#ff5d5d', '#ffd36b', '#6be3ff', '#7cf29a', '#ff8ad8'][i % 5]);
@@ -153,11 +155,11 @@
     $('eyebrow').textContent = fill(T.eyebrow);
     const toXmas = sleepsUntil(25);
     let when;
-    if (state.today === 0) when = `${tr("Doors start opening 1 December —")} ${plural(sleepsUntil(1), 'sleep')} ${tr("to go")}`;
+    if (state.today === 0) when = `${tr("Doors open {day} December —", { day: startDay })} ${plural(sleepsUntil(startDay), 'sleep')} ${tr("to go")}`;
     else if (toXmas <= 0) when = tr("Merry Christmas! 🎄");
     else if (toXmas === 1) when = tr("Christmas Eve! 🎅");
     else when = `${toXmas} ${tr("sleeps to Christmas")}`;
-    $('sub').innerHTML = `<span>${op.size}${tr("/24 doors open")}</span><span class="dot">•</span><span>${when}</span>`;
+    $('sub').innerHTML = `<span>${op.size}/${count} ${tr("doors open")}</span><span class="dot">•</span><span>${when}</span>`;
     $('btnTheme').textContent = state.theme === 'snow' ? '☀️' : '❄️';
     $('btnTheme').setAttribute('aria-label', state.theme === 'snow' ? tr("Switch to summer") : tr("Switch to snowy"));
     $('btnSound').textContent = state.sound ? '🔊' : '🔇';
@@ -184,7 +186,7 @@
       void hut.offsetWidth;
       hut.classList.add('rattle');
       A.Sound.thunk();
-      const n = sleepsUntil(d);
+      const n = sleepsUntil(A.doorDate(cal, d));
       toast(`${tr("Not yet! Door")} ${d} ${tr("opens in")} ${plural(n, 'sleep')} 💤`);
       return;
     }
@@ -258,6 +260,7 @@
 
     const ctx = {
       theme: state.theme, to: state.to, from: state.from,
+      video: item.type === 'video' ? photoURLs[d] || null : null,
       photo: item.type === 'photo' ? photoFor(d) : null,
       sound: A.Sound, fx: A.FX,
       setPrimary(label) {
@@ -303,7 +306,8 @@
 
   async function closeCard() {
     if (!current) return;
-    const { d } = current;
+    const { d, r } = current;
+    r.closed?.();
     current = null;
     const card = $('card');
     const overlay = $('overlay');
@@ -358,7 +362,7 @@
     const T = A.THEMES[theme];
     $('splashEmblem').textContent = T.emblem;
     $('splashEyebrow').textContent = `${state.to}, ${state.from} ${tr("made you something")}`;
-    $('splashTitle').innerHTML = T.splashTitle;
+    $('splashTitle').innerHTML = T.splashTitle.replace('24', String(count));
     document.querySelectorAll('[data-theme-pick]').forEach((b) => b.classList.toggle('on', b.dataset.themePick === theme));
     buildGrid();
     save();
@@ -435,7 +439,7 @@
     const moves = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: state.cols, ArrowUp: -state.cols };
     if (moves[e.key]) {
       e.preventDefault();
-      const n = A.clamp(state.focus + moves[e.key], 1, 24);
+      const n = A.clamp(state.focus + moves[e.key], 1, count);
       huts[n - 1].focus();
     }
   });

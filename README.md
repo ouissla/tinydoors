@@ -120,3 +120,22 @@ Recipient links (`3d.html?c=<id>`, or `index.html?c=<id>` for 2D) open on real D
 - `css/styles.css` — everything visual
 
 Remaining before a paid release: verify production email delivery, deploy the Worker, complete Stripe test purchases/refunds and configure live payment credentials, and add server-side date filtering if future surprises must stay private from recipients inspecting responses.
+
+### Calendar length, links and videos
+
+The creator can choose 24 doors (daily, 1–24 December) or 12 doors, with either
+schedule: daily from 13–24 December, or on 1, 3, 5…21 December, with the final door on 24 December. Both short schedules finish on Christmas Eve.
+Schedules use the calendar's selected time zone. Switching lengths keeps hidden
+personal edits for when the creator switches back.
+
+Each house can contain a clickable HTTP/HTTPS link, including a YouTube link,
+with custom button text. Links open in a new tab. Video surprises use the device
+camera and microphone, stop automatically after 10 seconds, and can be stopped
+early or recorded again. Recording requires HTTPS or localhost and a browser
+supporting MediaRecorder. Clips use private storage and the same recipient
+signed-URL flow as photos; each clip is limited to 10 MB.
+
+Before deploying these features in cloud mode, apply the
+`calendar_schedules_and_video` migration. It accepts 12 or 24 doors and adds
+WebM/MP4 to the existing private media bucket's allowed formats without changing
+ownership policies. The existing 10 MB bucket limit remains in place.

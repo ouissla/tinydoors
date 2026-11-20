@@ -764,3 +764,12 @@ body:has(.world-preview-dialog[open]) { overflow: hidden; }
   .profile-label { display: none; }
   .profile-menu { position: fixed; top: auto; right: 12px; margin-top: 12px; }
 }
+
+.calendar-length { margin-top: 16px; }
+.calendar-length[hidden] { display: none; }
+.field select {
+  width: 100%; padding: 12px 14px; border: 2px solid var(--line, #ddd);
+  border-radius: 12px; background: #fff; color: var(--panel-ink); font: inherit; font-size: 1rem;
+}
+.calendar-length small { font-size: .875rem; }
+.surprise-video { display: block; width: 100%; max-height: 340px; border-radius: 14px; background: #111; }

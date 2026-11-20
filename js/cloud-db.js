@@ -54,6 +54,14 @@
         checked(await bucket().upload(path, blob, { contentType: 'image/jpeg', upsert: false }));
         return path;
       },
+      async putVideo(blob) {
+        if (!['video/webm', 'video/mp4'].includes(blob.type.split(';')[0]) || blob.size > 10 * 1024 * 1024) throw new Error('Video must be WebM or MP4 and under 10 MB.');
+        const user = await owned();
+        const type = blob.type.split(';')[0];
+        const path = user.id + '/' + local.newId(24) + (type === 'video/mp4' ? '.mp4' : '.webm');
+        checked(await bucket().upload(path, blob, { contentType: type, upsert: false }));
+        return path;
+      },
       async getPhotoURL(path) {
         if (!path) return null;
         if (sharedPhotos.has(path)) return sharedPhotos.get(path);

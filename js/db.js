@@ -69,6 +69,8 @@
       return id;
     },
 
+    async putVideo(blob) { return this.putPhoto(blob); },
+
     async getPhotoURL(id) {
       if (!id) return null;
       const r = await tx('photos', 'readonly', (s, mem) => (s ? s.get(id) : { result: mem.get(id) }));

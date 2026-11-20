@@ -14,15 +14,15 @@ const A = window.Advent;
 const std = (o) => surfaceMaterial({ roughness: 0.9, metalness: 0, flatShading: true, ...o });
 
 // ---------- Layout ----------
-export function layoutFor(cols) {
+export function layoutFor(cols, count = 24) {
   const P = {
     8: { spread: 0.78, R0: 15, dR: 4.4, dy: 1.6 },
     6: { spread: 0.6, R0: 13, dR: 4.1, dy: 1.55 },
     4: { spread: 0.42, R0: 11.5, dR: 3.7, dy: 1.5 },
   }[cols];
-  const rows = 24 / cols;
+  const rows = Math.ceil(count / cols);
   const slots = [];
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < count; i++) {
     const r = rows - 1 - Math.floor(i / cols); // day 1 is top-left, like reading
     const c = i % cols;
     const th = -P.spread + (2 * P.spread * c) / (cols - 1);
@@ -259,7 +259,7 @@ function makePalm(h, lean, rng, lights) {
 }
 
 // ---------- Tree with 24 lights (the "garland") ----------
-function makeLightTree(theme, rng) {
+function makeLightTree(theme, rng, count) {
   const g = new THREE.Group();
   const bulbs = [];
   const BULB = theme === 'snow' ? ['#ffe0a0'] : ['#ff4f5e', '#ffd23f', '#5fd4ff', '#7cf29a', '#ff8ad8', '#ffa94d'];
@@ -318,8 +318,8 @@ function makeLightTree(theme, rng) {
     hat.position.copy(top).add(new THREE.Vector3(0, 0.3, 0));
     g.add(hat);
   }
-  for (let i = 0; i < 24; i++) {
-    const f = 0.04 + (i / 23) * 0.86;
+  for (let i = 0; i < count; i++) {
+    const f = 0.04 + (i / (count - 1)) * 0.86;
     const a = -1.25 + 2.5 * ((i * 0.6180339) % 1);
     const p = surface(f, a);
     const c = new THREE.Color(BULB[i % BULB.length]);
@@ -512,7 +512,7 @@ export function buildWorld(theme, cols, calItems) {
   const tx = SURF();
   const snow = theme === 'snow';
   const summer = theme === 'summer';
-  const L = layoutFor(cols);
+  const L = layoutFor(cols, calItems.length);
   // Gentle hills, flat where the village and its square are.
   const groundAt = (x, z) => {
     if (summer || theme === 'cyber') return 0;
@@ -632,7 +632,7 @@ export function buildWorld(theme, cols, calItems) {
   }
 
   // The light tree, centre top
-  const tree = makeLightTree(theme, rng);
+  const tree = makeLightTree(theme, rng, calItems.length);
   tree.group.position.set(0, L.topY, -(L.backR + (summer ? 5 : 6)));
   root.add(tree.group);
 

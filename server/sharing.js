@@ -44,7 +44,7 @@ export async function readShare(token, env, client = adminClient(env)) {
   if (calError) return json({ error: 'Could not load the calendar.' }, 503);
   if (!row) return json({ error: 'Calendar not found.' }, 404);
   if (requiresSeasonPass(row)) return paymentRequired();
-  const paths = [...new Set(row.document.days.map((day) => day.photoId).filter(Boolean))];
+  const paths = [...new Set(row.document.days.flatMap((day) => [day.photoId, day.videoId]).filter(Boolean))];
   // Administrative signing must never grant access to a different creator's photos.
   if (paths.some((path) => typeof path !== 'string' || !path.startsWith(row.owner_id + '/') || path.includes('..'))) return json({ error: 'This calendar has an invalid photo reference.' }, 422);
   const photos = {};
@@ -55,5 +55,6 @@ export async function readShare(token, env, client = adminClient(env)) {
   }
   const entitlement = row.calendar_entitlements;
   const plan = entitlement?.status === 'active' && Date.parse(entitlement.expires_at) > Date.now() ? 'season' : 'free';
-  return json({ calendar: { ...row.document, id: row.id, plan }, photos });
+  const { savedDays, ...document } = row.document;
+  return json({ calendar: { ...document, id: row.id, plan }, photos });
 }
