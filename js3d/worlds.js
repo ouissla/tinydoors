@@ -8,6 +8,7 @@ import { buildProps } from './props.js';
 import { parquetTex } from './toy-town.js';
 import { lunarTex } from './environment-details.js';
 import { populate } from './characters.js';
+import { seabedTex, reefRockTex, addCaustics } from './ocean.js';
 import { buildTree, buildScenery, icingTex, biscuitTex, blockTex, moonTex, panelTex, mossTex, rockTex, gridTex } from './worlds-extra.js';
 
 const A = window.Advent;
@@ -457,9 +458,10 @@ const STYLES = {
   jungle: { sky: ['#6d9263', '#b8bd7b', '#f5d79b'], hemi: ['#fff1cb', '#52623b', 1.5], sun: ['#ffe0a3', 2.1, [-35, 45, 40]], cap: 'moss', wall: 'rock', plateau: '#3f8a4e', snow: { base: 380, color: '#fff09a', size: 0.22, speed: 0.12, glow: true } },
   japan: { sky: ['#6f7be0', '#c3a3ec', '#ffcadc'], hemi: ['#fff0f7', '#9a8fd0', 0.95], sun: ['#fff2e8', 1.25, [-30, 45, 45]], cap: 'snow', wall: 'stone', plateau: '#fff4f8', snow: { base: 900, color: '#ffb7d5', size: 0.36, speed: 0.4 } },
   cyber: { sky: ['#05020f', '#1a0b3a', '#5a1a6e'], hemi: ['#b8a8ff', '#2a1a48', 1.35], sun: ['#c0d8ff', 1.1, [30, 50, 40]], cap: 'grid', wall: 'panel', plateau: '#14121f', snow: { base: 2600, color: '#8fd0ff', size: 0.14, speed: 4.5, glow: true } },
+  ocean: { sky: ['#9eeeff', '#3ab8e0', '#2f8fc8'], hemi: ['#b6e6ff', '#1f6fa8', 1.6], sun: ['#d4f2ff', 1.75, [-25, 60, 30]], cap: 'seabed', wall: 'reefrock', plateau: '#f0d6a0', snow: { base: 650, color: '#d8fbff', size: 0.12, speed: 0.12, glow: true } },
   space: { sky: ['#17132e', '#29234b', '#4d416f'], hemi: ['#d8d6ff', '#30264b', 1.25], sun: ['#ffe4cc', 1.5, [-30, 50, 40]], cap: 'lunar', wall: 'lunar', plateau: '#82709e', snow: { base: 100, color: '#e4dcff', size: 0.13, speed: 0.1, glow: true } },
 };
-const SURF = () => ({ snow: snowTex, sand: sandTex, stone: stoneTex, timber: timberTex, icing: icingTex, biscuit: biscuitTex, blocks: blockTex, parquet: parquetTex, moon: moonTex, lunar: lunarTex, panel: panelTex, moss: mossTex, rock: rockTex, grid: gridTex });
+const SURF = () => ({ snow: snowTex, sand: sandTex, stone: stoneTex, timber: timberTex, icing: icingTex, biscuit: biscuitTex, blocks: blockTex, parquet: parquetTex, moon: moonTex, lunar: lunarTex, panel: panelTex, moss: mossTex, rock: rockTex, grid: gridTex, seabed: seabedTex, reefrock: reefRockTex });
 
 // Falling snow for every world, with a blizzard on demand (shake the phone / press S).
 function makeSnowfall(root, rng, cfg) {
@@ -523,14 +525,14 @@ export function buildWorld(theme, cols, calItems) {
     const n = Math.sin(x * 0.07) * Math.cos(z * 0.06) * 2.2 + Math.sin(x * 0.17 + z * 0.11) * 0.8 + Math.sin(z * 0.23) * 0.4;
     return Math.max(0, n + 1.2) * fade;
   };
-  const rng = A.rng({ snow: 1225, summer: 2512, gingerbread: 3141, toys: 4242, space: 5150, workshop: 6125, jungle: 7070, japan: 8181, cyber: 9090 }[theme] || 1225);
+  const rng = A.rng({ snow: 1225, summer: 2512, gingerbread: 3141, toys: 4242, space: 5150, workshop: 6125, jungle: 7070, japan: 8181, cyber: 9090, ocean: 3030 }[theme] || 1225);
   const root = new THREE.Group();
   const updaters = [];
 
   // Sky, fog, lights
   const horizon = ST.sky[2];
   root.add(skyDome(ST.sky[0], ST.sky[1], horizon));
-  const fog = new THREE.Fog(horizon, theme === 'space' ? 120 : 70, theme === 'space' ? 420 : theme === 'japan' ? 330 : theme === 'cyber' ? 300 : 260);
+  const fog = new THREE.Fog(horizon, theme === 'space' ? 120 : theme === 'ocean' ? 4 : 70, theme === 'space' ? 420 : theme === 'japan' ? 330 : theme === 'cyber' ? 300 : theme === 'ocean' ? 150 : 260);
 
   const hemi = new THREE.HemisphereLight(ST.hemi[0], ST.hemi[1], ST.hemi[2]);
   root.add(hemi);
@@ -543,11 +545,13 @@ export function buildWorld(theme, cols, calItems) {
   sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 160;
   sun.shadow.bias = -0.0008;
   sun.shadow.normalBias = 0.03;
-  if (['gingerbread', 'space', 'jungle', 'toys'].includes(theme)) sun.shadow.radius = 4;
+  if (['gingerbread', 'space', 'jungle', 'toys', 'ocean'].includes(theme)) sun.shadow.radius = 4;
   root.add(sun, sun.target);
 
   // Ground + terraces
-  const capMat = std({ color: '#ffffff', map: tx[ST.cap], roughness: 1, ...(theme === 'space' ? { bumpMap: tx[ST.cap], bumpScale: 0.13 } : {}) });
+  const ocean = theme === 'ocean';
+  const lit = (m, k = 0.32) => (ocean ? addCaustics(m, k) : m); // dancing caustics on the seabed
+  const capMat = lit(std({ color: '#ffffff', map: tx[ST.cap], roughness: 1, ...(theme === 'space' ? { bumpMap: tx[ST.cap], bumpScale: 0.13 } : {}) }));
   const wallMat = theme === 'jungle' ? std({ color: '#ad925e', roughness: 1, flatShading: false }) : theme === 'gingerbread' ? std({ color: '#efb3be', roughness: 1, flatShading: false }) : std({ color: '#ffffff', map: tx[ST.wall] });
   if (!summer) {
     const gGeo = new THREE.PlaneGeometry(440, 440, 110, 110);
@@ -558,7 +562,7 @@ export function buildWorld(theme, cols, calItems) {
     const groundTex = tx[ST.cap].clone();
     groundTex.repeat.set(30, 30);
     groundTex.needsUpdate = true;
-    const ground = new THREE.Mesh(gGeo, std({ color: '#ffffff', map: groundTex, roughness: 1, ...(theme === 'space' ? { bumpMap: groundTex, bumpScale: 0.13 } : {}) }));
+    const ground = new THREE.Mesh(gGeo, lit(std({ color: '#ffffff', map: groundTex, roughness: 1, ...(theme === 'space' ? { bumpMap: groundTex, bumpScale: 0.13 } : {}) })));
     ground.receiveShadow = true;
     root.add(ground);
   } else {
@@ -587,7 +591,7 @@ export function buildWorld(theme, cols, calItems) {
       root.add(lip);
     }
   }
-  const plateauMat = summer ? std({ color: ST.plateau, roughness: 1 }) : std({ color: '#ffffff', map: tx[ST.cap], roughness: 1 });
+  const plateauMat = summer ? std({ color: ST.plateau, roughness: 1 }) : lit(std({ color: '#ffffff', map: tx[ST.cap], roughness: 1 }));
   const plateau = new THREE.Mesh(sectorGeo(L.backR, L.backR + 60, L.spread + 0.6, L.topY + 1), [plateauMat, wallMat]);
   plateau.position.y = -1;
   plateau.receiveShadow = true;
@@ -837,10 +841,10 @@ export function buildWorld(theme, cols, calItems) {
     keyPoints.push(new THREE.Vector3(-rx - 5.8, 4.8, cz - 0.7), new THREE.Vector3(rx + 4.6, 3.6, cz));
     keyPoints.push(new THREE.Vector3(0, 0, cz + 3.8));
   }
-  if (['space', 'jungle', 'japan', 'cyber'].includes(theme)) {
+  if (['space', 'jungle', 'japan', 'cyber', 'ocean'].includes(theme)) {
     const z = -(L.frontR - 4.3);
-    keyPoints.push(new THREE.Vector3(0, 0, z + (theme === 'cyber' ? 6.5 : theme === 'japan' || theme === 'jungle' ? 4.8 : 3)));
-    if (theme === 'jungle') [-1, 1].forEach((side) => keyPoints.push(new THREE.Vector3(side * 7, 1.6, z + 4)));
+    keyPoints.push(new THREE.Vector3(0, 0, z + (theme === 'cyber' ? 6.5 : theme === 'japan' || theme === 'jungle' || theme === 'ocean' ? 4.8 : 3)));
+    if (theme === 'jungle' || theme === 'ocean') [-1, 1].forEach((side) => keyPoints.push(new THREE.Vector3(side * 7, 1.6, z + 4)));
     if (theme === 'space') {
       const a = L.spread + 0.3, r = L.frontR + 2;
       keyPoints.push(new THREE.Vector3(r * Math.sin(a) + 3, 10.8, -r * Math.cos(a)));

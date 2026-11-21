@@ -97,7 +97,7 @@ function save() {
 document.documentElement.dataset.theme = theme;
 window.tinyDoorsPoster?.(theme); // recipients' links name a calendar, not a theme
 document.documentElement.dataset.base = A.baseOf(theme);
-document.querySelector('meta[name=theme-color]').content = { snow: '#0b1638', summer: '#ff9a8b', gingerbread: '#2a1236', toys: '#3f8fe0', space: '#05031a', workshop: '#0b1730', jungle: '#123b3a', japan: '#7d84e0', cyber: '#05020f' }[theme];
+document.querySelector('meta[name=theme-color]').content = { snow: '#0b1638', summer: '#ff9a8b', gingerbread: '#2a1236', toys: '#3f8fe0', space: '#05031a', workshop: '#0b1730', jungle: '#123b3a', japan: '#7d84e0', cyber: '#05020f', ocean: '#2f8fc8' }[theme];
 A.Sound.theme = A.THEMES[theme].sound || 'snow';
 A.Sound.enabled = state.sound;
 A.FX.noAmbient = true;
@@ -157,7 +157,7 @@ try {
 }
 renderer.setPixelRatio(bgMode ? 1 : Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = { snow: 1.05, summer: 1.0, gingerbread: 1.05, toys: 1.0, space: 1.1, workshop: 1.05, jungle: 1.0, japan: 1.05, cyber: 1.0 }[theme];
+renderer.toneMappingExposure = { snow: 1.05, summer: 1.0, gingerbread: 1.05, toys: 1.0, space: 1.1, workshop: 1.05, jungle: 1.0, japan: 1.05, cyber: 1.0, ocean: 1.05 }[theme];
 if (theme === 'gingerbread') renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = !bgMode;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -166,7 +166,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 1000);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), { snow: 0.7, summer: 0.45, gingerbread: 0.6, toys: 0.35, space: 0.6, workshop: 0.7, jungle: 0.55, japan: 0.45, cyber: 0.48 }[theme], theme === 'cyber' ? 0.32 : 0.55, 0.97);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), { snow: 0.7, summer: 0.45, gingerbread: 0.6, toys: 0.35, space: 0.6, workshop: 0.7, jungle: 0.55, japan: 0.45, cyber: 0.48, ocean: 0.4 }[theme], theme === 'cyber' ? 0.32 : 0.55, 0.97);
 composer.addPass(bloom);
 if (theme === 'gingerbread') { bloom.strength = 0.18; bloom.radius = 0.35; }
 if (theme === 'space') { bloom.strength = 0.3; bloom.radius = 0.4; }
@@ -670,7 +670,11 @@ $('credit').addEventListener('click', () => { location.href = A.I18n.url('editor
 $('btnHome').addEventListener('click', goHome);
 
 // ---------------- Resize ----------------
+// A rebuild while shaders compile would dispose materials three.js is still waiting on,
+// leaving the loading message up for good, so resizes wait until compiling is done.
+let compiling = false, resizeWaiting = false;
 function resize() {
+  if (compiling) { resizeWaiting = true; return; }
   W = window.innerWidth;
   H = window.innerHeight;
   renderer.setSize(W, H, false);
@@ -776,7 +780,10 @@ if (bgMode) {
 }
 // Prepare every shader before the first frame, so the loading message (over the world's picture)
 // stays up while the GPU works instead of leaving an empty, frozen canvas.
+compiling = true;
 try { await renderer.compileAsync(scene, camera); } catch (e) { /* the first frame compiles instead */ }
+compiling = false;
+if (resizeWaiting) resize();
 $('loading3d').classList.add('done');
 $('splashGo').disabled = false;
 requestAnimationFrame(frame);
@@ -791,6 +798,7 @@ function intro() {
   if (theme === 'space') $('hint3d').textContent = tr('Tap the rocket to launch · tap its empty pad to recall it · try the crystals, solar panels and dish');
   if (theme === 'jungle') $('hint3d').textContent = tr('Tap the drum, butterfly flower, firefly lanterns or frog pond');
   if (theme === 'japan') $('hint3d').textContent = tr('Try the tea set and wish bell · tap the lucky cat, daruma and capsule machine');
+  if (theme === 'ocean') $('hint3d').textContent = tr('Tap the treasure chest, giant clam, anemones or jellyfish · can you spot the whale?');
   if (theme === 'cyber') $('hint3d').textContent = tr('Tap a vehicle for a boost · use the signal console to change routes · try the cargo teleporter');
   A.Sound.enabled = state.sound;
   A.Sound.init();

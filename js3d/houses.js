@@ -91,6 +91,26 @@ function doorTexture(theme, day, pal) {
       g.fillText(day, w / 2, h * 0.73);
       return;
     }
+    if (theme === 'reef') {
+      // A sea-glass door: wavy water lines, a few bubbles and a pearl with the day number
+      g.strokeStyle = 'rgba(255,255,255,.22)';
+      g.lineWidth = 6;
+      for (let y = 40; y < h; y += 46) {
+        g.beginPath();
+        for (let x = 0; x <= w; x += 8) { const yy = y + Math.sin(x / 26 + y) * 6; x ? g.lineTo(x, yy) : g.moveTo(x, yy); }
+        g.stroke();
+      }
+      g.fillStyle = 'rgba(255,255,255,.35)';
+      [[44, 70, 10], [64, 40, 6], [200, 300, 9], [212, 334, 5], [52, 330, 7]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); });
+      const pg = g.createRadialGradient(w / 2 - 22, h * 0.47 - 24, 8, w / 2, h * 0.47, 78);
+      pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.7, '#fff1f6'); pg.addColorStop(1, '#e8d6ef');
+      g.fillStyle = pg;
+      g.beginPath(); g.arc(w / 2, h * 0.47, 74, 0, Math.PI * 2); g.fill();
+      g.fillStyle = pal.door;
+      g.font = DISPLAY.replace('{s}', 100);
+      g.fillText(day, w / 2, h * 0.47 + 7);
+      return;
+    }
     if (theme === 'neon') {
       // metal shutter with a glowing neon number
       g.fillStyle = '#1a1c2b';
@@ -296,7 +316,7 @@ function peppermint() {
   return pepTex.t;
 }
 
-const STYLE_OF = { snow: 'cottage', summer: 'beachbox', gingerbread: 'gingerbread', toys: 'toy', space: 'dome', workshop: 'cottage', jungle: 'treehouse', japan: 'machiya', cyber: 'capsule' };
+const STYLE_OF = { snow: 'cottage', summer: 'beachbox', gingerbread: 'gingerbread', toys: 'toy', space: 'dome', workshop: 'cottage', jungle: 'treehouse', japan: 'machiya', cyber: 'capsule', ocean: 'reef' };
 
 const thatchCache = { t: null };
 function thatchTexture() {
@@ -766,6 +786,63 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
     mergeStatic(upper); mergeStatic(awning);
     height = H + 0.2 + H2 + 1.3;
     for (let k = 0; k <= 6; k++) lights.push(new THREE.Vector3(-W / 2 + (k * W) / 6, H + 0.26, fz + 0.06));
+  } else if (style === 'reef') {
+    // ---- Coral reef: a ribbed pastel sea shell with a spiral conch roof, brass portholes and a starfish ----
+    const R = 1.08, H = 1.85, B = 0.22;
+    lift = 0.26; doorW = 0.78; doorH = 1.3; fz = 1.2; plaqueY = 1.6;
+    const soft = (c, o = {}) => mat(c, { roughness: 0.5, flatShading: false, ...o });
+    const baseProfile = [[0, 0], [1.22, 0], [1.4, 0.08], [1.36, 0.2], [1.16, 0.28], [0, 0.28]].map(([r, y]) => new THREE.Vector2(r, y));
+    add(group, new THREE.LatheGeometry(baseProfile, 40), soft('#8e6aa8', { roughness: 0.9 }), 0, 0, 0);
+    const prof = [];
+    for (let k = 0; k <= 12; k++) prof.push(new THREE.Vector2(R * (0.92 + 0.12 * Math.sin((Math.PI * k) / 12)), (k / 12) * H));
+    prof.push(new THREE.Vector2(0, H));
+    const shell = new THREE.LatheGeometry(prof, 64);
+    const sp = shell.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      const x = sp.getX(i), z = sp.getZ(i), k = 1 + 0.035 * Math.cos(Math.atan2(x, z) * 18);
+      sp.setXYZ(i, x * k, sp.getY(i), z * k);
+    }
+    shell.computeVertexNormals();
+    add(group, shell, soft(pal.wall), 0, B, 0);
+    for (const y of [0.32, H - 0.12]) add(group, new THREE.TorusGeometry(R * (y < 1 ? 0.98 : 0.95) + 0.02, 0.05, 8, 48), soft(pal.wall2), 0, B + y, 0, Math.PI / 2);
+    // vestibule so the door sits snugly on the curved shell
+    add(group, new RoundedBoxGeometry(doorW + 0.36, doorH + 0.14, 0.42, 2, 0.08), soft(pal.wall2), 0, lift + (doorH + 0.14) / 2, fz - 0.21);
+    // spiral conch roof with bumpy whorls
+    const roofH = 1.75, roofR = R * 1.16;
+    const rp = [];
+    for (let k = 0; k <= 26; k++) { const t = k / 26; rp.push(new THREE.Vector2(Math.max(0.001, roofR * Math.pow(1 - t, 0.9) * (1 + 0.07 * Math.sin(t * Math.PI * 8))), t * roofH)); }
+    const roofY = B + H - 0.05;
+    add(group, new THREE.LatheGeometry(rp, 48), soft(pal.roof), 0, roofY, 0);
+    const helix = [];
+    for (let k = 0; k <= 80; k++) {
+      const t = k / 80, a = t * Math.PI * 2 * 4, r = roofR * Math.pow(1 - t, 0.9) * 1.02 + 0.02;
+      helix.push(new THREE.Vector3(Math.sin(a) * r, roofY + t * roofH * 0.97, Math.cos(a) * r));
+    }
+    add(group, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(helix), 160, 0.045, 5, false), soft(pal.wall2), 0, 0, 0);
+    add(group, new THREE.SphereGeometry(0.13, 14, 10), mat('#fff8f2', { roughness: 0.15, metalness: 0.35, emissive: '#fff0f6', emissiveIntensity: 0.4, flatShading: false }), 0, roofY + roofH + 0.05, 0);
+    // brass portholes with warm light
+    const brass = mat('#e0b04a', { metalness: 0.6, roughness: 0.35, flatShading: false });
+    const warm = mat('#ffe39a', { emissive: '#ffc85c', emissiveIntensity: 1.1, flatShading: false });
+    for (const a of [-0.88, 0.88]) {
+      const x = Math.sin(a) * (R + 0.1), z = Math.cos(a) * (R + 0.1);
+      add(group, new THREE.TorusGeometry(0.2, 0.05, 8, 20), brass, x, B + 1.05, z, 0, a);
+      add(group, new THREE.CircleGeometry(0.18, 20), warm, Math.sin(a) * (R + 0.08), B + 1.05, Math.cos(a) * (R + 0.08), 0, a);
+    }
+    // a starfish clinging to the shell
+    const sa = day % 2 ? 1.35 : -1.35;
+    const star = new THREE.Shape();
+    for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.08 : 0.22, a = (i / 10) * Math.PI * 2 + Math.PI / 2; i ? star.lineTo(Math.cos(a) * r, Math.sin(a) * r) : star.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    add(group, new THREE.ExtrudeGeometry(star, { depth: 0.05, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 }), mat(['#ff5e3a', '#ffb000', '#ff4f81'][day % 3], { flatShading: false }), Math.sin(sa) * (R + 0.07), B + 1.5, Math.cos(sa) * (R + 0.07), 0, sa, day * 0.7);
+    // seaweed by the door
+    const weed = mat(['#3fbf6a', '#7cc83f', '#2fa88a'][day % 3], { flatShading: false });
+    const wx = day % 2 ? -(doorW / 2 + 0.42) : doorW / 2 + 0.42;
+    for (let k = 0; k < 3; k++) {
+      const pts = Array.from({ length: 6 }, (_, i) => new THREE.Vector3(wx + (k - 1) * 0.1 + Math.sin(i * 1.3 + k) * 0.07, 0.24 + i * 0.16 * (1 + k * 0.15), fz + 0.05 + (k - 1) * 0.06));
+      add(group, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.04, 5, false), weed, 0, 0, 0);
+    }
+    height = roofY + roofH + 0.3;
+    chimneyTop = new THREE.Vector3(0, roofY + roofH + 0.15, 0);
+    for (let k = 0; k <= 8; k++) { const a = -1.25 + (k * 2.5) / 8; lights.push(new THREE.Vector3(Math.sin(a) * (roofR + 0.06), roofY + 0.06, Math.cos(a) * (roofR + 0.06))); }
   } else {
     // Soft lunar pods: matte lavender shells, pastel domes and warm portholes.
     const R = 1.12, H = 1.6;
@@ -799,8 +876,8 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
   const y0 = lift !== null ? lift : style === 'toy' ? 0.3 : style === 'capsule' ? 0.2 : 0.02;
   const interior = add(group, box(doorW, doorH, 0.04), interiorMat, 0, doorH / 2 + y0, fz + 0.01);
   interior.userData.keep = true;
-  const frameMat = style === 'capsule' ? mat('#2a2d40', { metalness: 0.5 }) : snow || style === 'machiya' || style === 'treehouse' ? mat(style === 'treehouse' ? '#e5b675' : '#3a2a22', { roughness: 0.95, flatShading: style !== 'treehouse' }) : style === 'dome' ? mat('#ded0e5', { roughness: 0.94, flatShading: false }) : ginger ? icingMat : mat('#ffffff');
-  const roundedDoor = ['dome', 'toy', 'treehouse'].includes(style);
+  const frameMat = style === 'reef' ? mat('#f6e7cf', { roughness: 0.6, flatShading: false }) : style === 'capsule' ? mat('#2a2d40', { metalness: 0.5 }) : snow || style === 'machiya' || style === 'treehouse' ? mat(style === 'treehouse' ? '#e5b675' : '#3a2a22', { roughness: 0.95, flatShading: style !== 'treehouse' }) : style === 'dome' ? mat('#ded0e5', { roughness: 0.94, flatShading: false }) : ginger ? icingMat : mat('#ffffff');
+  const roundedDoor = ['dome', 'toy', 'treehouse', 'reef'].includes(style);
   const frameBox = (w, h, d) => roundedDoor ? new RoundedBoxGeometry(w, h, d, 2, 0.05) : box(w, h, d);
   add(group, frameBox(0.12, doorH + 0.04, 0.1), frameMat, -(doorW / 2 + 0.06), doorH / 2 + y0, fz + 0.04);
   add(group, frameBox(0.12, doorH + 0.04, 0.1), frameMat, doorW / 2 + 0.06, doorH / 2 + y0, fz + 0.04);
@@ -812,7 +889,7 @@ export function makeHouse(theme, day, pal, iconEmoji, rng) {
   pivot.position.set(-doorW / 2, y0, fz + 0.06);
   const doorSide = mat(pal.door);
   const back = mat(new THREE.Color(pal.door).multiplyScalar(0.55).getStyle());
-  const front = new THREE.MeshStandardMaterial({ map: doorTexture(style === 'machiya' ? 'shoji' : style === 'capsule' ? 'neon' : style === 'dome' ? 'space' : ['toy','treehouse'].includes(style) ? style : snow || ginger ? 'snow' : 'summer', day, pal), roughness: roundedDoor ? 0.94 : 0.7, flatShading: !roundedDoor });
+  const front = new THREE.MeshStandardMaterial({ map: doorTexture(style === 'reef' ? 'reef' : style === 'machiya' ? 'shoji' : style === 'capsule' ? 'neon' : style === 'dome' ? 'space' : ['toy','treehouse'].includes(style) ? style : snow || ginger ? 'snow' : 'summer', day, pal), roughness: roundedDoor ? 0.94 : 0.7, flatShading: !roundedDoor });
   const door = new THREE.Mesh(roundedDoor ? new RoundedBoxGeometry(doorW, doorH, 0.09, 2, 0.06) : box(doorW, doorH, 0.07), [doorSide, doorSide, doorSide, doorSide, front, back]);
   door.position.set(doorW / 2, doorH / 2, 0);
   door.castShadow = true;

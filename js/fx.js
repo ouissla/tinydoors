@@ -11,6 +11,7 @@
     space: ['#7af7ff', '#c77dff', '#ffffff', '#ffd23f', '#ff6fd8'],
     workshop: ['#c8372d', '#ffffff', '#2e6a4f', '#f2b84b', '#a8e4ff'],
     jungle: ['#ffb347', '#7cf29a', '#ff6f4a', '#ffe08a', '#2ec4b6', '#ffffff'],
+    ocean: ['#4ff0ff', '#ff7ad9', '#ffd23f', '#7cf29a', '#ffffff', '#c77dff'],
     japan: ['#ff9ec4', '#ffffff', '#ffd36b', '#9fd8f5', '#b6a4f0', '#8fdcc0'],
     cyber: ['#ff2bd6', '#00e5ff', '#a6ff00', '#ffffff', '#7c4dff'],
   };

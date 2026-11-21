@@ -12,6 +12,7 @@
     space:       { instrument: 'alien', tune: -4, decay: 0.65, air: 0.14, cutoff: 2600, knock: 1400, partials: [[1, 1], [1.5, 0.12], [2, 0.08]] },
     workshop:    { tune: -1, decay: 0.75, air: 0.08, cutoff: 2700, knock: 1350, partials: [[1, 1], [2.02, 0.18], [3, 0.035]] },
     jungle:      { tune: -2, decay: 0.8,  air: 0.1,  cutoff: 2600, knock: 1000, partials: [[1, 1], [2.75, 0.1], [4, 0.025]] },
+    ocean:       { tune: 3, decay: 0.95, air: 0.16, cutoff: 2900, knock: 1150, partials: [[1, 1], [2.4, 0.12], [4.1, 0.03]] },
     japan:       { instrument: 'voice', tune: 5, decay: 0.2, air: 0.1, cutoff: 3800, knock: 1500, partials: [[1, 1], [2, 0.1], [3.8, 0.035]] },
     cyber:       { tune: -3, decay: 0.85, air: 0.12, cutoff: 2500, knock: 1900, partials: [[1, 1], [2, 0.24], [3, 0.06]] },
   };

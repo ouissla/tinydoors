@@ -39,10 +39,10 @@ test('environment checker rejects missing, placeholder and insecure settings', (
   assert.ok(validateEnvironment({SUPABASE_SECRET_KEY:'sb_secret_REPLACE_ME'}).includes('SUPABASE_SECRET_KEY'));
 });
 
-test('world chooser includes two free and seven premium illustrated options', async () => {
+test('world chooser includes two free and eight premium illustrated options', async () => {
   const html = await readFile(new URL('../editor.html', import.meta.url), 'utf8');
   const cards = [...html.matchAll(/<button[^>]+data-theme-pick="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)];
-  assert.deepEqual(cards.map((card) => card[1]).sort(), ['snow','summer','gingerbread','toys','space','workshop','jungle','japan','cyber'].sort());
+  assert.deepEqual(cards.map((card) => card[1]).sort(), ['snow','summer','gingerbread','toys','space','workshop','jungle','ocean','japan','cyber'].sort());
   for (const card of cards) {
     if (['snow','summer'].includes(card[1])) assert.match(card[2], /<svg/);
     else {
@@ -53,6 +53,6 @@ test('world chooser includes two free and seven premium illustrated options', as
     }
   }
   assert.equal(cards.filter((card) => /class="world-access free-access">Free</.test(card[2])).length, 2);
-  assert.equal(cards.filter((card) => /class="world-access paid-access">Season Pass</.test(card[2])).length, 7);
+  assert.equal(cards.filter((card) => /class="world-access paid-access">Season Pass</.test(card[2])).length, 8);
   assert.match(html, /id="selectedWorld" aria-live="polite"/);
 });

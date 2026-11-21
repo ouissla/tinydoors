@@ -168,7 +168,7 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
     if (!h.chimneyTop) return;
     const top = h.group.localToWorld(h.chimneyTop.clone());
     for (let k = 0; k < 4; k++) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puff, color: '#c9d2e6', transparent: true, depthWrite: false, opacity: 0 }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puff, color: theme === 'ocean' ? '#f0feff' : '#c9d2e6', transparent: true, depthWrite: false, opacity: 0 }));
       s.userData = { top, phase: k / 4 + rng() * 0.1, speed: 0.22 + rng() * 0.08 };
       root.add(s);
       smoke.push(s);
@@ -177,6 +177,13 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
   updaters.push((t) => {
     smoke.forEach((s) => {
       const k = (t * s.userData.speed + s.userData.phase) % 1;
+      if (theme === 'ocean') {
+        // bubbles from the conch tops
+        s.position.set(s.userData.top.x + Math.sin(t * 3 + s.userData.phase * 9) * 0.12, s.userData.top.y + k * 3.4, s.userData.top.z);
+        s.scale.setScalar(0.12 + k * 0.22);
+        s.material.opacity = Math.sin(k * Math.PI) * 0.7;
+        return;
+      }
       s.position.set(s.userData.top.x + k * 0.9 + Math.sin(t + s.userData.phase * 9) * 0.1, s.userData.top.y + k * 2.6, s.userData.top.z);
       s.scale.setScalar(0.35 + k * 1.2);
       s.material.opacity = Math.sin(k * Math.PI) * 0.3;
@@ -212,6 +219,16 @@ export function buildProps(theme, L, rng, root, houses, treePos) {
         root.add(mesh(new THREE.SphereGeometry(0.22, 12, 10), mat('#fff3c4', { emissive: '#ffcf6b', emissiveIntensity: 2.4, flatShading: false }), x, y + 1.95, z));
         root.add(mesh(new THREE.ConeGeometry(0.2, 0.22, 8), mat('#2e6a4f'), x, y + 2.2, z));
         root.add(mesh(new THREE.SphereGeometry(0.06, 6, 4), mat('#ffd23f'), x, y + 2.35, z));
+      } else if (theme === 'ocean') {
+        // glowing sea-orb lamps on twisting coral stalks
+        const col = ['#4ff0ff', '#ff7ad9', '#ffd36b', '#7cf29a'][i % 4];
+        root.add(mesh(new THREE.CylinderGeometry(0.05, 0.09, 1.7, 8), mat('#f4b0cc', { flatShading: false }), x, y + 0.85, z));
+        const cup = mesh(new THREE.TorusGeometry(0.2, 0.04, 6, 14), mat('#e0b04a', { metalness: 0.5, roughness: 0.4 }), x, y + 1.72, z);
+        cup.rotation.x = Math.PI / 2;
+        root.add(cup);
+        const orb = mesh(new THREE.SphereGeometry(0.22, 14, 10), mat(col, { emissive: col, emissiveIntensity: 2.2, flatShading: false, roughness: 0.2 }), x, y + 1.92, z);
+        orb.castShadow = false;
+        root.add(orb);
       } else if (theme === 'japan') {
         // stone lanterns (toro) with a warm glow and snow on the cap
         const stone = mat('#9a9ea8');

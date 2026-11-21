@@ -43,6 +43,9 @@ The ⚙️ button opens prototype controls: theme, pretend date, names, **your o
 
 ## 3D worlds (`3d.html`)
 
+Premium worlds include **Coral Reef Christmas** (`?theme=ocean`): pastel sea-shell houses with conch roofs, a lettuce-coral Christmas tree with a pearl garland and starfish on top, anemones with clownfish, kelp, sea fans, fish schools, glowing jellyfish, light rays and caustics on the sand, turtles in Santa hats, manta rays, diver elves, a humpback and her calf in the blue haze, and Santa's sleigh pulled by dolphins. Tap the treasure chest, giant clam, anemones, jellyfish or the whale.
+
+
 A full Three.js version of both worlds, alongside the 2D one (the **3D** / **2D** buttons switch between them, keeping the same calendar and opened doors).
 
 - **Snowy:** a terraced village of 24 lit cottages under the northern lights, a big tree on top, snowfall, mountains, a moonlit sleigh and a snowman

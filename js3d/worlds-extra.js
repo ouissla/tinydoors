@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, mat } from './houses.js';
 import { buildToyPlayground } from './toy-town.js';
 import { buildEnvironmentDetails } from './environment-details.js';
+import { buildCoralTree, buildOceanScenery } from './ocean.js';
 
 const A = window.Advent;
 const TAU = Math.PI * 2;
@@ -461,6 +462,7 @@ function tropicalTreeGeometry(palm = false) {
 // Each returns { H, surface(frac, angle) -> local Vector3, star? }
 export function buildTree(theme, g, rng, ctx) {
   const { makeStar, glowSprite, std } = ctx;
+  if (theme === 'ocean') return buildCoralTree(g, rng, ctx);
   if (theme === 'workshop') {
     // A tall fir wrapped in a candy-cane ribbon, with a big gold star
     const H = 13.4;
@@ -1593,6 +1595,10 @@ export function buildScenery(theme, c) {
     return;
   }
 
+  if (theme === 'ocean') {
+    buildOceanScenery(c, { fx: makeFx({ root, updaters, glowSprite, tappables: c.tappables }), sides, ring });
+    return;
+  }
   if (theme === 'jungle') {
     const fx = makeFx({ root, updaters, glowSprite, tappables: c.tappables });
     buildEnvironmentDetails(theme, c, fx);

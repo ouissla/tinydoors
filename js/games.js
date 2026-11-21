@@ -14,6 +14,7 @@
     space: ['🚀', '🪐', '⭐', '🌙', '👽', '🛸'],
     workshop: ['🎅', '🛠️', '🎁', '🦌', '🧸', '⭐'],
     jungle: ['🦜', '🐒', '🌴', '🥭', '🐸', '🌺'],
+    ocean: ['🐠', '🐙', '🐚', '🦀', '🐳', '⭐'],
     japan: ['🏮', '🍡', '🐱', '🌸', '🍙', '⭐'],
     cyber: ['🌃', '🤖', '🕹️', '⚡', '💾', '🎆'],
   };
@@ -25,6 +26,7 @@
     space: { top: '#010008', bottom: '#2a1a55', ground: '#9a9aa8', dots: 'rgba(255,255,255,.9)', emoji: '🚀' },
     workshop: { top: '#0b1730', bottom: '#46698a', ground: '#eef3f7', dots: 'rgba(255,255,255,.8)', emoji: '🎅' },
     jungle: { top: '#123b3a', bottom: '#e9c46e', ground: '#2d6a45', dots: 'rgba(255,240,160,.8)', emoji: '🦜' },
+    ocean: { top: '#0b5f8f', bottom: '#5fd4e6', ground: '#f0d6a0', dots: 'rgba(220,250,255,.85)', emoji: '🐠' },
     japan: { top: '#7d84e0', bottom: '#ffc9dc', ground: '#fff4f8', dots: 'rgba(255,200,225,.9)', emoji: '🌸' },
     cyber: { top: '#05020f', bottom: '#5a1a6e', ground: '#14121f', dots: 'rgba(0,229,255,.8)', emoji: '🌃' },
   };

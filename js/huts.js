@@ -57,6 +57,14 @@
       { wall: '#d8b878', wall2: '#c9a35b', roof: '#8a6a2e', door: '#c7781d', ink: '#fff' },
       { wall: '#a87a3e', wall2: '#9a6e36', roof: '#9c7a3a', door: '#2f8a4e', ink: '#fff' },
     ],
+    ocean: [
+      { wall: '#ff8fa3', wall2: '#ffe0e6', roof: '#ffb347', door: '#1f8a9a', ink: '#fff' },
+      { wall: '#5fd4e6', wall2: '#dcf8ff', roof: '#ff6f91', door: '#6a3fb5', ink: '#fff' },
+      { wall: '#c79bff', wall2: '#f1e6ff', roof: '#4fe0b0', door: '#e2483d', ink: '#fff' },
+      { wall: '#ffd23f', wall2: '#fff4c8', roof: '#ff7ad9', door: '#1f5fa8', ink: '#fff' },
+      { wall: '#7cf2b0', wall2: '#e2fff1', roof: '#ff8a5b', door: '#b8326a', ink: '#fff' },
+      { wall: '#ffb38a', wall2: '#ffeadc', roof: '#4fb8ff', door: '#2a7a5a', ink: '#fff' },
+    ],
     japan: [
       { wall: '#fff4ea', wall2: '#c9958a', roof: '#ff9ec4', door: '#fffaf2', ink: '#ff6f9e', noren: '#8fd3f5' },
       { wall: '#ffe9f1', wall2: '#b98a9a', roof: '#9fd8f5', door: '#fffaf2', ink: '#5aa9e6', noren: '#ff9ec4' },

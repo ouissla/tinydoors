@@ -26,7 +26,7 @@
     (function () {
       var el = document.getElementById('poster3d'), params = new URLSearchParams(location.search), shown = '';
       window.tinyDoorsPoster = function (theme) {
-        if (!/^(snow|summer|gingerbread|toys|space|workshop|jungle|japan|cyber)$/.test(theme || '') || shown) return;
+        if (!/^(snow|summer|gingerbread|toys|space|workshop|jungle|ocean|japan|cyber)$/.test(theme || '') || shown) return;
         shown = theme;
         var src = 'assets/worlds/posters/' + theme + (innerWidth / innerHeight < 0.8 ? '-tall' : '-wide') + '.webp';
         var img = new Image();

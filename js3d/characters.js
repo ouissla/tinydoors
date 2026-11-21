@@ -3,6 +3,7 @@
    Summer: elves with surfboards, little penguins, crabs, a kangaroo, seagulls. */
 import * as THREE from 'three';
 import { mat, canvasTexture } from './houses.js';
+import { makeTurtle, makeManta } from './ocean.js';
 
 const A = window.Advent;
 const TAU = Math.PI * 2;
@@ -63,7 +64,7 @@ export function makePenguin(scale = 1) {
   return { kind: 'penguin', root, body, feet, flippers };
 }
 
-export function makeElf({ summer = false, space = false, cyber = false, carry = 'gift', rng = Math.random } = {}) {
+export function makeElf({ summer = false, space = false, cyber = false, diver = false, carry = 'gift', rng = Math.random } = {}) {
   const root = new THREE.Group();
   const body = pivot(root, 0, 0, 0);
   const skin = mat('#ffd2b0');
@@ -73,7 +74,8 @@ export function makeElf({ summer = false, space = false, cyber = false, carry = 
   const legs = [-1, 1].map((s) => {
     const p = pivot(body, s * 0.08, 0.42, 0);
     part(p, cyl(0.055, 0.05, 0.36), legMat, 0, -0.18, 0);
-    if (summer) part(p, new THREE.BoxGeometry(0.11, 0.03, 0.2), mat('#ff9f1c'), 0, -0.38, 0.03);
+    if (diver) part(p, new THREE.BoxGeometry(0.13, 0.025, 0.32), mat(['#ff6f91', '#ffd23f', '#2ec4b6'][(rng() * 3) | 0]), 0, -0.38, 0.1);
+    else if (summer) part(p, new THREE.BoxGeometry(0.11, 0.03, 0.2), mat('#ff9f1c'), 0, -0.38, 0.03);
     else {
       const shoe = part(p, new THREE.ConeGeometry(0.06, 0.24, 6), mat('#1f6b48'), 0, -0.37, 0.07);
       shoe.rotation.x = Math.PI / 2 + 0.4;
@@ -112,7 +114,14 @@ export function makeElf({ summer = false, space = false, cyber = false, carry = 
     part(body, new THREE.BoxGeometry(0.26, 0.06, 0.06), glow, 0, 1.03, 0.13);
     part(body, new THREE.BoxGeometry(0.05, 0.4, 0.02), glow, 0, 0.66, 0.2);
   }
-  const hat = pivot(body, 0, 1.08, -0.02);
+  if (diver) {
+    // a glass diving helmet with a brass collar, and a little air tank
+    const helmet = part(body, sph(0.27, 16, 12), new THREE.MeshStandardMaterial({ color: '#d8f6ff', transparent: true, opacity: 0.3, roughness: 0.05, metalness: 0.2, depthWrite: false }), 0, 1.02, 0);
+    helmet.castShadow = false;
+    part(body, new THREE.TorusGeometry(0.2, 0.045, 6, 16), mat('#e0b04a', { metalness: 0.6, roughness: 0.35 }), 0, 0.82, 0).rotation.x = Math.PI / 2;
+    part(body, new THREE.CapsuleGeometry(0.08, 0.3, 3, 8), mat('#ffd23f', { metalness: 0.3 }), 0, 0.68, -0.22);
+  }
+  const hat = pivot(body, 0, diver ? 1.25 : 1.08, -0.02);
   hat.visible = !space;
   hat.rotation.x = -0.35;
   part(hat, new THREE.TorusGeometry(0.155, 0.045, 6, 14), white, 0, 0, 0).rotation.x = Math.PI / 2;
@@ -491,6 +500,8 @@ function animate(m, s, dt) {
     m.body.position.y = Math.abs(Math.sin(ph * 1.6)) * 0.02 * w;
   } else if (m.kind === 'gull' && m.wings) {
     m.wings.forEach((g, i) => { g.rotation.z = (i ? -1 : 1) * Math.sin(s.t * 7 + s.seed) * 0.55; });
+  } else if (m.tick) {
+    m.tick(s, dt);
   } else if (m.kind === 'reindeer') {
     const graze = (Math.sin(s.t * 0.35 + s.seed) + 1) / 2;
     m.head.rotation.x = graze > 0.6 ? 0.9 : 0;
@@ -520,7 +531,7 @@ class Agent {
     this.s.react = 1;
     this.s.baseY = this.m.root.position.y;
     if (A.Sound) {
-      const hi = { penguin: [900, 1500], elf: [700, 1100], crab: [1200, 1700], kangaroo: [300, 500], gull: [1400, 900], reindeer: [260, 420], cookie: [1000, 1600], soldier: [500, 800], ufo: [1800, 600], drone: [2000, 900], mochi: [1500, 2200] }[this.m.kind] || [800, 1200];
+      const hi = { penguin: [900, 1500], elf: [700, 1100], crab: [1200, 1700], kangaroo: [300, 500], gull: [1400, 900], reindeer: [260, 420], cookie: [1000, 1600], soldier: [500, 800], ufo: [1800, 600], drone: [2000, 900], mochi: [1500, 2200], turtle: [500, 800], ray: [700, 400] }[this.m.kind] || [800, 1200];
       A.Sound.init();
       A.Sound.pop(hi[0], hi[1], 0.18);
       setTimeout(() => A.Sound.pop(hi[1], hi[0], 0.12), 120);
@@ -659,7 +670,7 @@ export class Flyer extends Agent {
     const x = this.cx + Math.cos(this.a) * this.r, z = this.cz + Math.sin(this.a) * this.r;
     this.m.root.position.set(x, this.h + Math.sin(t * 0.8 + this.s.seed) * 0.8, z);
     // face along the direction of travel and bank into the turn
-    this.m.root.rotation.set(0, -this.a + (this.speed < 0 ? Math.PI : 0), this.m.kind === 'ufo' || this.m.kind === 'drone' ? 0.12 : 0.35);
+    this.m.root.rotation.set(0, -this.a + (this.speed < 0 ? Math.PI : 0), this.m.kind === 'ufo' || this.m.kind === 'drone' || this.m.noBank ? 0.12 : 0.35);
     if (this.s.react > 0) this.s.react = 0;
     animate(this.m, this.s, dt);
   }
@@ -683,6 +694,7 @@ export function populate(theme, L, rng, root, { lite = false, treePos } = {}) {
   const walker = (r) => {
     if (theme === 'workshop') return makeElf({ carry: r % 3 === 1 ? null : 'gift', rng });
     if (theme === 'jungle') return makeElf({ summer: true, carry: r % 2 ? 'gift' : 'ball', rng });
+    if (theme === 'ocean') return makeElf({ diver: true, carry: r % 2 ? null : 'gift', rng });
     if (theme === 'japan') return makeElf({ carry: r % 2 ? null : 'gift', rng });
     if (theme === 'cyber') return makeElf({ cyber: true, carry: r % 2 ? null : 'gift', rng });
     if (theme === 'gingerbread') return r % 2 ? makeElf({ carry: 'gift', rng }) : makeGingerbreadMan(rng);
@@ -726,6 +738,14 @@ export function populate(theme, L, rng, root, { lite = false, treePos } = {}) {
     for (let i = 0; i < (lite ? 2 : 5); i++) {
       add(new Flyer(makeSeagull(parrots[i % parrots.length]), rng, { cx: (rng() - 0.5) * 20, cz: -(L.R0 + rng() * 10), r: 7 + rng() * 9, h: L.topY + 6 + rng() * 6, speed: (rng() < 0.5 ? -1 : 1) * (3 + rng() * 2) }));
     }
+    return agents;
+  }
+  if (theme === 'ocean') {
+    // Diver elves and crabs on the sand; turtles in Santa hats and manta rays gliding overhead
+    for (let i = 0; i < (lite ? 1 : 2); i++) add(new Wanderer(makeElf({ diver: true, carry: i % 2 ? 'gift' : null, rng }), rng, { ...plaza, speed: 0.6, pauseMax: 3 }));
+    for (let i = 0; i < (lite ? 2 : 4); i++) add(new Wanderer(makeCrab(), rng, { ...plaza, rMin: L.frontR - 7, rMax: L.frontR - 1.5, speed: 0.6, sideways: true, pauseMax: 2.5 }));
+    for (let i = 0; i < (lite ? 1 : 3); i++) add(new Flyer(makeTurtle(), rng, { cx: (rng() - 0.5) * 18, cz: -(L.R0 + rng() * 10), r: 9 + rng() * 7, h: L.topY + 5.5 + rng() * 3, speed: (rng() < 0.5 ? -1 : 1) * (1.6 + rng() * 0.8) }));
+    for (let i = 0; i < (lite ? 1 : 2); i++) add(new Flyer(makeManta(), rng, { cx: (rng() - 0.5) * 24, cz: -(L.backR + rng() * 8), r: 12 + rng() * 8, h: L.topY + 11 + rng() * 4, speed: (rng() < 0.5 ? -1 : 1) * (2.2 + rng()) }));
     return agents;
   }
   if (theme === 'japan') {

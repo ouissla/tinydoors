@@ -4,19 +4,43 @@
     {
       "name": "advent",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "5178", "--bind", "127.0.0.1"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5178",
+        "--bind",
+        "127.0.0.1"
+      ],
       "port": 5178
+    },
+    {
+      "name": "advent-2",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5179",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 5179
     },
     {
       "name": "worker",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "export PATH=$HOME/.nvm/versions/node/v22.22.0/bin:$PATH && npm run dev -- --port 8790 --ip 127.0.0.1"],
+      "runtimeArgs": [
+        "-c",
+        "export PATH=$HOME/.nvm/versions/node/v22.22.0/bin:$PATH && npm run dev -- --port 8790 --ip 127.0.0.1"
+      ],
       "port": 8790
     },
     {
       "name": "worker-2",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "export PATH=$HOME/.nvm/versions/node/v22.22.0/bin:$PATH && npx wrangler dev --port 8791 --ip 127.0.0.1"],
+      "runtimeArgs": [
+        "-c",
+        "export PATH=$HOME/.nvm/versions/node/v22.22.0/bin:$PATH && npx wrangler dev --port 8791 --ip 127.0.0.1"
+      ],
       "port": 8791
     }
   ]

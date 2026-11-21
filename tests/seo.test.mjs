@@ -21,7 +21,7 @@ for (const locale of ['en','fr']) test(`${locale} public homepage contains crawl
  for(const language of ['en','fr','x-default'])assert.ok(html.includes(`hreflang="${language}"`));
  assert.equal((html.match(/<h1>/g)||[]).length,1);
  assert.ok(!html.includes('<main id="main" hidden'));
- assert.equal((html.match(/class="world"/g)||[]).length,9);
+ assert.equal((html.match(/class="world"/g)||[]).length,10);
  assert.match(html, /href="\/editor.html\?new&amp;lang=/);
  const schema=JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1]);
  assert.equal(schema['@graph'][0]['@type'],'WebSite');assert.equal(schema['@graph'][0].name,'Tiny Doors');

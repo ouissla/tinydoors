@@ -88,6 +88,16 @@
       scratchHint: tr("Wipe away the frost"),
       scratch: 'frost', base: 'snow', sound: 'japan', premium: true,
     },
+    ocean: {
+      name: tr("Coral Reef Christmas"),
+      title: tr("{to}'s Coral Reef Christmas"),
+      eyebrow: tr("{from} made this for you"),
+      splashTitle: tr("A Christmas under<br>the sea, just for you"),
+      emblem: '🐠',
+      finaleIcon: '🐳',
+      scratchHint: tr("Brush away the sand"),
+      scratch: 'sand', base: 'summer', sound: 'ocean', premium: true,
+    },
     cyber: {
       name: tr("Neon City"),
       title: tr("{to}'s Neon Christmas"),
@@ -99,7 +109,7 @@
       scratch: 'stardust', base: 'snow', sound: 'cyber', premium: true,
     },
   };
-  A.THEME_ORDER = ['snow', 'summer', 'gingerbread', 'toys', 'space', 'workshop', 'jungle', 'japan', 'cyber'];
+  A.THEME_ORDER = ['snow', 'summer', 'gingerbread', 'toys', 'space', 'workshop', 'jungle', 'ocean', 'japan', 'cyber'];
   A.baseOf = (t) => (A.THEMES[t] && A.THEMES[t].base) || 'snow';
 
   A.CONTENT = {
@@ -242,6 +252,18 @@
     12: { type: 'message', text: tr("Halfway there, {to}!\n\nTwelve treehouses lit. The fireflies have started practising for Christmas Eve. ✨") },
     23: { type: 'message', text: tr("Tomorrow is the big night, {to}.\n\nSanta is swapping his reindeer for parrots tonight. Leave a mango out, just in case. 🥭") },
     24: { type: 'finale', text: tr("Every lantern in the treetops is glowing for you.\n\nThank you for opening a door with me every day. I hope tomorrow is wild, warm and wonderful.") },
+  });
+  A.CONTENT.ocean = pack({
+    1: { type: 'message', text: tr("Dear {to},\n\nWelcome to your Coral Reef Christmas! The clownfish have strung up the lights and a new shell door opens every day.\n\nHold your breath… 🐠") },
+    2: { type: 'activity', emoji: '🐙', title: tr("Under-the-sea den"), body: tr("Build a blanket den, fill it with blue fairy lights and every soft sea creature in the house. Snacks are fish-shaped only."), chips: ['⏱ 30 min', tr("🛋️ Cosy")] },
+    4: { type: 'joke', q: tr("What do fish sing at Christmas?"), a: tr("Christmas corals! 🎶") },
+    5: { type: 'riddle', q: tr("I’m the biggest animal on Earth and I sing songs underwater. What am I?"), a: tr("A blue whale! 🐳") },
+    6: { type: 'activity', emoji: '🐚', title: tr("Paper plate jellyfish"), body: tr("Half a paper plate, paint, and long ribbons for tentacles. Hang them from the ceiling and make them dance."), chips: ['⏱ 30 min', tr("✂️ Crafty")] },
+    7: { type: 'voucher', title: tr("One trip to the aquarium"), body: tr("Or the beach, or the pool. Somewhere with water, and you choose.") },
+    8: { type: 'game', game: 'wordsearch', title: tr("Coral reef word search"), words: [tr("WHALE"), tr("CORAL"), tr("SHELL"), tr("CRAB"), tr("PEARL"), tr("SQUID"), tr("TURTLE")] },
+    12: { type: 'message', text: tr("Halfway there, {to}!\n\nTwelve shells open on the reef. The jellyfish are glowing brighter every night. ✨") },
+    23: { type: 'message', text: tr("Tomorrow is the big night, {to}.\n\nThe dolphins are hitched to Santa’s sleigh and the whale is warming up her best carol. 🐬") },
+    24: { type: 'finale', text: tr("Every fish on the reef is shimmering for you.\n\nThank you for opening a door with me every day. I hope tomorrow is deep, blue and full of wonder.") },
   });
   A.CONTENT.japan = pack({
     1: { type: 'message', text: tr("Dear {to},\n\nWelcome to Kawaii Sakura Town! Blossom on the breeze, smiling houses on every street, and a new door slides open every day.\n\nShoes off at the door, please. 🌸") },
