@@ -85,6 +85,8 @@
   "Christmas {year} · Season Pass refunded": "Noël {year} · Pass de Noël remboursé",
   "This Season Pass was refunded. Please contact support before purchasing again for this Christmas.": "Ce Pass de Noël a été remboursé. Contactez l’assistance avant de l’acheter à nouveau pour ce Noël.",
   "Your Season Pass was refunded. Your calendars are saved; choose a free world to share this calendar, or contact support.": "Votre Pass de Noël a été remboursé. Vos calendriers sont enregistrés ; choisissez un univers gratuit pour partager celui-ci, ou contactez l’assistance.",
+  "🎁 Up to {limit} premium calendars for this Christmas": "🎁 Jusqu’à {limit} calendriers premium pour ce Noël",
+  "Your Season Pass is ready. Sharing automatically uses one slot; {remaining} of {limit} slots are available.": "Votre Pass de Noël est prêt. Le partage utilise automatiquement une place ; {remaining} places sont disponibles sur {limit}.",
   "Your Season Pass": "Votre Pass de Noël",
   "Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of {limit} slots are available.": "Votre Pass de Noël est prêt. Activez ce calendrier quand vous souhaitez le partager ; {remaining} places sont disponibles sur {limit}.",
   "All {limit} premium calendars are used. Keep editing those calendars, or choose a free world for this one.": "Les {limit} calendriers premium ont été utilisés. Vous pouvez les modifier ou choisir un univers gratuit pour celui-ci.",

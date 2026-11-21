@@ -341,7 +341,7 @@
     const notice = $('doorsPassNotice');
     notice.hidden = !needsPass();
     notice.textContent = seasonPass?.active
-      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of {limit} slots are available.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 }) : tr('All {limit} premium calendars are used. Keep editing those calendars, or choose a free world for this one.', { limit: seasonPass.limit || 5 }))
+      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Sharing automatically uses one slot; {remaining} of {limit} slots are available.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 }) : tr('All {limit} premium calendars are used. Keep editing those calendars, or choose a free world for this one.', { limit: seasonPass.limit || 5 }))
       : tr("Season Pass selected · {price} once for up to 5 premium calendars this Christmas. Free to customise and preview; pay when you’re ready to share.", { price: priceLabel() });
   }
   function openPreview(src, title) {
@@ -1016,15 +1016,21 @@
     renderCheckoutButton();
     if (seasonPass.active) $('checkoutNote').textContent = tr('{remaining} of {limit} premium calendars available. Activating this calendar uses one slot; editing and resending it do not.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 });
   }
-  async function activatePremium() {
-    clearTimeout(saveT);
-    await persist();
-    await A.Auth.request('/api/season-pass', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendarId: cal.id }) });
-    cal.plan = 'season';
-    await refreshSeasonPass();
-    $('upsell').hidden = true;
-    updatePassNotice();
-    if (step === 'share') renderShare();
+  let premiumActivation = null;
+  async function activatePremium(render = true) {
+    // Repeated visits/clicks share one allocation request; the server enforces the limit.
+    if (!premiumActivation) {
+      premiumActivation = (async () => {
+        clearTimeout(saveT);
+        await persist();
+        await A.Auth.request('/api/season-pass', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendarId: cal.id }) });
+        await refreshSeasonPass();
+        $('upsell').hidden = true;
+        updatePassNotice();
+      })().finally(() => { premiumActivation = null; });
+    }
+    await premiumActivation;
+    if (render && step === 'share') await renderShare();
   }
   async function unlockSeasonPass() {
     if (A.DB.isCloud) {
@@ -1073,13 +1079,12 @@
   }
 
   let shareRevision = 0;
-  async function prepareShare() {
-    const revision = ++shareRevision;
+  async function prepareShare(revision = ++shareRevision) {
     $('shareLink').placeholder = tr("Preparing your private link…");
     try {
       clearTimeout(saveT);
       await persist();
-      if (needsPass()) return;
+      if (revision !== shareRevision || needsPass()) return;
       const token = A.DB.isCloud ? await A.DB.shareCalendar(cal.id) : null;
       if (revision !== shareRevision || needsPass()) return;
       shareToken = token;
@@ -1088,6 +1093,7 @@
       $('nativeShare').disabled = false;
       $('saved').textContent = tr("Saved ✓");
     } catch {
+      if (revision !== shareRevision) return;
       $('shareLink').value = '';
       $('shareLink').placeholder = tr("Couldn’t prepare the link. Go back and try again.");
       $('saved').textContent = tr("Couldn’t share");
@@ -1095,6 +1101,27 @@
   }
 
   async function renderShare() {
+    const revision = ++shareRevision;
+    // Never leave an old link or an upgrade prompt visible while checking paid access.
+    $('shareLink').value = '';
+    $('copyBtn').disabled = true;
+    $('nativeShare').disabled = true;
+    $('shareControls').hidden = true;
+    $('upgradeCard').hidden = true;
+    $('shareGateNotice').hidden = false;
+    $('shareGateNotice').textContent = tr("Preparing your private link…");
+    let passError = '';
+    if (A.DB.isCloud && A.Auth.user) {
+      try {
+        await refreshSeasonPass();
+        if (revision !== shareRevision) return;
+        // Paid creators get premium and a link in one step, including on free worlds.
+        if (cal.plan !== 'season' && seasonPass.active && seasonPass.remaining > 0) await activatePremium(false);
+      } catch (error) {
+        passError = error.message;
+      }
+      if (revision !== shareRevision) return;
+    }
     $('shareEmblem').textContent = A.THEMES[cal.theme].emblem;
     $('shareTitle').textContent = `${tr("Ready for")} ${cal.to}!`;
     const n = personalCount(), p = photoCount();
@@ -1102,26 +1129,27 @@
     $('previewBtn').href = linkFor('&preview');
     $('previewBtn').textContent = `${tr("👀 Preview as")} ${cal.to}`;
     $('preview2dBtn').href = linkFor('&preview', 'index.html');
-    ++shareRevision;
     const gated = needsPass();
     const guest = !!A.DB.isGuest && !gated;
     $('shareControls').hidden = gated || guest;
     $('shareGateNotice').hidden = !gated && !guest;
     $('guestSave').hidden = !guest;
-    $('shareGateNotice').textContent = seasonPass?.active
-      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Activate this calendar when you’re ready to share; {remaining} of {limit} slots are available.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 }) : tr('All {limit} premium calendars are used. Keep editing those calendars, or choose a free world for this one.', { limit: seasonPass.limit || 5 }))
+    $('shareGateNotice').textContent = passError || (seasonPass?.active
+      ? (seasonPass.remaining ? tr('Your Season Pass is ready. Sharing automatically uses one slot; {remaining} of {limit} slots are available.', { remaining: seasonPass.remaining, limit: seasonPass.limit || 5 }) : tr('All {limit} premium calendars are used. Keep editing those calendars, or choose a free world for this one.', { limit: seasonPass.limit || 5 }))
       : seasonPass?.refunded ? tr('Your Season Pass was refunded. Your calendars are saved; choose a free world to share this calendar, or contact support.')
       : guest ? tr('Your calendar is saved on this device. Save it to your account to get their private link.')
-      : tr('Free to customise and preview. Unlock the Season Pass below when you’re ready to share.');
+      : tr('Free to customise and preview. Unlock the Season Pass below when you’re ready to share.'));
     $('shareLink').value = '';
     $('copyBtn').disabled = true;
     $('nativeShare').disabled = true;
-    if (!gated && !guest) await prepareShare();
+    if (!gated && !guest) await prepareShare(revision);
     const tz = $('tz');
     const zones = ZONES.includes(cal.tz) ? ZONES : [cal.tz, ...ZONES];
     tz.innerHTML = zones.map((z) => `<option value="${esc(z)}"${z === cal.tz ? ' selected' : ''}>${esc(z.replace(/_/g, ' ').replace('/', ' — '))}</option>`).join('');
 
     const up = $('upgradeCard');
+    if (revision !== shareRevision) return;
+    up.hidden = false;
     if (cal.plan === 'season') {
       up.innerHTML = `<div class="paid"><span>🎉</span><div><b>${tr("Season Pass active")}</b><small>${tr("Every world, unlimited photos, no credit, open until 31 January. This calendar uses 1 of your {limit} seasonal slots.", { limit: seasonPass?.limit || 5 })}</small></div></div>`;
     } else {
@@ -1129,7 +1157,7 @@
         <p class="kicker">${gated ? tr("Season Pass selected") : tr("Free calendar")}</p>
         <h3>${seasonPass?.active ? tr('Your Season Pass') : gated ? tr("Ready to share their Christmas magic?") : tr("Want to go all out?")}</h3>
         <ul class="perks">
-          <li>${tr("🎁 Up to 5 premium calendars for this Christmas")}</li>
+          <li>${tr("🎁 Up to {limit} premium calendars for this Christmas", { limit: seasonPass?.limit || 5 })}</li>
           <li>${tr("✨ All seven Season Pass worlds, from Gingerbread Lane to Neon City")}</li>
           <li>${tr("📸 Unlimited photos (")}${p} ${tr("added; free sharing includes")} ${FREE_PHOTOS})</li>
           <li>${tr("✨ Remove the “Made with Tiny Doors” credit")}</li>
