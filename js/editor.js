@@ -607,7 +607,8 @@
           <button type="button" data-act="video"><span>🎥</span><b>${tr("Record a video")}</b><small>${tr("Up to 10 seconds")}</small></button>
           <button type="button" data-act="note"><span>💌</span><b>${isEve ? tr("Write the letter") : tr("Write a note")}</b></button>
           <button type="button" data-act="voucher"><span>🎟️</span><b>${tr("Make a voucher")}</b></button>
-          <button type="button" class="wide" data-act="drawing"><span>🖍️</span><b>${tr("Draw something")}</b><small>${tr("A quick doodle they’ll watch come to life")}</small></button>
+          <button type="button" data-act="drawing"><span>🖍️</span><b>${tr("Draw something")}</b><small>${tr("A doodle that comes to life")}</small></button>
+          <button type="button" data-act="riddle"><span>❓</span><b>${tr("Write a riddle")}</b><small>${tr("They guess, then reveal")}</small></button>
           <button type="button" class="wide" data-act="games"><span>🎮</span><b>${tr("Add a mini game")}</b><small>${tr("Sudoku, word search, memory…")}</small></button>
         </div>
         ${day.type === 'game' && day.game === 'wordsearch' ? `<button type="button" class="pick-preset" data-act="words">${tr("✏️ Use your own words in this word search")} <span>→</span></button>` : ''}
@@ -690,6 +691,24 @@
       const sync = () => ($('vPrevT').textContent = $('vTitle').value ? ($('vTitle').value.match(A.I18n.locale === 'fr' ? /^un(?: bon pour)?\b/i : /^one\b/i) ? '' : tr("One ")) + $('vTitle').value : tr("One…"));
       $('vTitle').addEventListener('input', sync);
       body.querySelectorAll('[data-idea]').forEach((b) => b.addEventListener('click', () => { $('vTitle').value = b.dataset.idea.charAt(0).toLowerCase() + b.dataset.idea.slice(1); sync(); }));
+    } else if (sheetMode === 'riddle') {
+      const cur = day.type === 'riddle' || day.type === 'joke' ? day : { q: '', a: '' };
+      body.innerHTML = `
+        <label class="field">${tr("Your riddle")}
+          <textarea id="rQ" rows="3" maxlength="200" placeholder="${tr("What has hands but can’t clap?")}">${esc(fill(cur.q))}</textarea>
+        </label>
+        <label class="field">${tr("The answer")} <small>${tr("(hidden until they tap)")}</small>
+          <input type="text" id="rA" maxlength="120" value="${esc(fill(cur.a))}" placeholder="${tr("A clock! ⏰")}">
+        </label>
+        <p class="hint" id="rHint" role="status">${tr("{to} can have a think before revealing the answer.", { to: esc(cal.to) })}</p>
+        <div class="sheet-foot"><button type="button" class="link" data-act="home">${tr("← Back")}</button><button type="button" class="btn primary" data-act="saveRiddle">${tr("Save riddle")}</button></div>`;
+      requestAnimationFrame(() => {
+        const q = $('rQ');
+        if (!q) return;
+        q.focus({ preventScroll: true });
+        if (day.personal) q.setSelectionRange(q.value.length, q.value.length);
+        else q.select();
+      });
     } else if (sheetMode === 'words') {
       const cur = day.type === 'game' && day.game === 'wordsearch' ? day : { title: '', words: [] };
       body.innerHTML = `
@@ -786,7 +805,7 @@
     switch (act) {
       case 'done': closeSheet(); break;
       case 'home': sheetMode = 'home'; renderSheet(); break;
-      case 'note': case 'voucher': case 'presets': case 'words': case 'link': case 'video': case 'drawing': sheetMode = act; renderSheet(); break;
+      case 'note': case 'voucher': case 'riddle': case 'presets': case 'words': case 'link': case 'video': case 'drawing': sheetMode = act; renderSheet(); break;
       case 'games': sheetMode = 'presets'; presetFilter = tr("Games"); renderSheet(); break;
       case 'saveLink': {
         const url = A.safeLink($('linkURL').value.trim());
@@ -876,6 +895,20 @@
         await setDay(d, { type: d === cal.days.length ? 'finale' : 'message', text, personal: true }, { celebrate: true });
         closeSheet();
         toast(A.doorDate(cal, d) === 24 ? tr("Christmas Eve letter saved 💌") : tr("Note saved 💌"));
+        break;
+      }
+      case 'saveRiddle': {
+        const q = $('rQ').value.trim();
+        const a = $('rA').value.trim();
+        if (!q || !a) {
+          $('rHint').textContent = !q ? tr("Write the riddle first.") : tr("Add the answer too.");
+          $('rHint').style.color = '#d22f4a';
+          $(!q ? 'rQ' : 'rA').focus();
+          return;
+        }
+        await setDay(d, { type: 'riddle', q, a, personal: true }, { celebrate: true });
+        closeSheet();
+        toast(tr("Riddle saved ❓"));
         break;
       }
       case 'saveVoucher': {
